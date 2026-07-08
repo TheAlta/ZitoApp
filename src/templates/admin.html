@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zito Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Tahoma, Arial, sans-serif;
+      color: #182230;
+      background: #f3f6fb;
+    }
+    main { width: min(1180px, 100%); margin: 0 auto; padding: 24px 18px; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    h1 { margin: 0; font-size: 25px; }
+    .muted { color: #667085; margin-top: 6px; font-size: 13px; }
+    .badge {
+      border: 1px solid #d0d5dd;
+      background: white;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #344054;
+      font-size: 13px;
+    }
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    input {
+      width: 100%;
+      border: 1px solid #d0d5dd;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 14px;
+      outline: none;
+      background: #ffffff;
+    }
+    input:focus { border-color: #155eef; box-shadow: 0 0 0 4px rgba(21, 94, 239, .12); }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 13px;
+      cursor: pointer;
+      background: #101828;
+      color: white;
+      font-weight: 700;
+    }
+    button.secondary { background: #155eef; }
+    button.danger { background: #b42318; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+    .card {
+      background: white;
+      border: 1px solid #e4e7ec;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 16px 34px rgba(16, 24, 40, .06);
+    }
+    .card-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .name { font-weight: 800; font-size: 17px; }
+    .meta { color: #667085; font-size: 12px; margin-top: 4px; }
+    .answer {
+      background: #f8fafc;
+      border: 1px solid #eef2f6;
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 8px;
+      line-height: 1.7;
+    }
+    .answer strong { display: block; margin-bottom: 4px; color: #344054; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .empty {
+      background: white;
+      border: 1px solid #e4e7ec;
+      border-radius: 8px;
+      padding: 24px;
+      color: #667085;
+    }
+    @media (max-width: 720px) {
+      header, .toolbar { grid-template-columns: 1fr; display: grid; }
+      .badge { width: fit-content; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>پنل مدیریت زیتو</h1>
+        <div class="muted">این مسیر مخصوص مدیر است و برای کاربران داخل چت نمایش داده نمی شود.</div>
+      </div>
+      <div id="count" class="badge">در حال بارگذاری</div>
+    </header>
+
+    <div class="toolbar">
+      <input id="search" placeholder="جستجو بر اساس نام، نام کاربری یا حرفه..." />
+      <button class="secondary" onclick="loadUsers()">به روزرسانی</button>
+    </div>
+
+    <section id="content" class="empty">در حال بارگذاری...</section>
+  </main>
+
+  <script>
+    const content = document.querySelector("#content");
+    const count = document.querySelector("#count");
+    const search = document.querySelector("#search");
+    let users = [];
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function filteredUsers() {
+      const term = search.value.trim().toLowerCase();
+      if (!term) return users;
+      return users.filter((user) => [
+        user.full_name,
+        user.username,
+        user.profession,
+        ...user.answers.map((answer) => answer.answer_text)
+      ].filter(Boolean).join(" ").toLowerCase().includes(term));
+    }
+
+    function render() {
+      const rows = filteredUsers();
+      count.textContent = `${users.length} کاربر ثبت شده`;
+      if (!rows.length) {
+        content.className = "empty";
+        content.textContent = users.length ? "نتیجه ای برای این جستجو پیدا نشد." : "هنوز کاربری ثبت نشده است.";
+        return;
+      }
+
+      content.className = "grid";
+      content.innerHTML = rows.map((user) => `
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <div class="name">${escapeHtml(user.full_name || "کاربر بدون نام")}</div>
+              <div class="meta">ID: ${user.id} | ${escapeHtml(user.username || "بدون نام کاربری")}</div>
+            </div>
+            <div class="badge">${escapeHtml(user.profession || "حرفه نامشخص")}</div>
+          </div>
+          ${user.answers.map((answer) => `
+            <div class="answer">
+              <strong>${escapeHtml(answer.question_text)}</strong>
+              <div>${escapeHtml(answer.answer_text)}</div>
+              <div class="actions">
+                <button class="secondary" onclick="editAnswer(${answer.id}, '${escapeAttr(answer.answer_text)}')">ویرایش</button>
+              </div>
+            </div>
+          `).join("") || "<div class='answer'>هنوز پاسخی ثبت نشده است.</div>"}
+          <div class="actions">
+            <button class="danger" onclick="deleteUser(${user.id})">حذف کاربر</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function escapeAttr(value) {
+      return String(value ?? "").replaceAll("\\", "\\\\").replaceAll("'", "\\'").replaceAll("\n", "\\n");
+    }
+
+    async function loadUsers() {
+      const res = await fetch("/api/admin/users");
+      if (!res.ok) throw new Error("دسترسی ادمین تایید نشد یا دریافت اطلاعات ناموفق بود.");
+      users = await res.json();
+      render();
+    }
+
+    async function editAnswer(id, current) {
+      const next = prompt("متن جدید پاسخ:", current);
+      if (!next || next.trim() === current.trim()) return;
+      const res = await fetch(`/api/admin/answers/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answer_text: next.trim() })
+      });
+      if (!res.ok) {
+        alert("ویرایش انجام نشد.");
+        return;
+      }
+      await loadUsers();
+    }
+
+    async function deleteUser(id) {
+      if (!confirm("این کاربر حذف شود؟")) return;
+      const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        alert("حذف انجام نشد.");
+        return;
+      }
+      await loadUsers();
+    }
+
+    search.addEventListener("input", render);
+    loadUsers().catch((error) => {
+      count.textContent = "خطا";
+      content.className = "empty";
+      content.textContent = error.message;
+    });
+  </script>
+</body>
+</html>

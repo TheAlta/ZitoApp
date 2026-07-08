@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zito</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      color-scheme: dark;
+      --bg: #080b12;
+      --panel: rgba(16, 21, 34, .78);
+      --panel-strong: rgba(22, 28, 45, .96);
+      --line: rgba(148, 163, 184, .18);
+      --text: #e6edf7;
+      --muted: #97a3b6;
+      --accent: #7c3aed;
+      --accent-2: #06b6d4;
+      --good: #22c55e;
+      --shadow: 0 24px 80px rgba(0, 0, 0, .45);
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Tahoma, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 50% -10%, rgba(124, 58, 237, .32), transparent 34%),
+        radial-gradient(circle at 15% 20%, rgba(6, 182, 212, .16), transparent 28%),
+        radial-gradient(circle at 90% 70%, rgba(34, 197, 94, .10), transparent 26%),
+        var(--bg);
+      overflow: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(circle at center, black, transparent 70%);
+      pointer-events: none;
+    }
+    .app {
+      position: relative;
+      width: min(920px, 100%);
+      height: 100vh;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 4px 4px 0;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 28px rgba(124, 58, 237, .45);
+      font-weight: 900;
+    }
+    h1 { margin: 0; font-size: 20px; letter-spacing: 0; }
+    .subtitle {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 520px;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      border-radius: 999px;
+      padding: 9px 12px;
+      color: #cbd5e1;
+      font-size: 12px;
+      backdrop-filter: blur(14px);
+    }
+    .chat-wrap {
+      min-height: 0;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(15, 23, 42, .70), rgba(15, 23, 42, .46));
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 1fr;
+    }
+    .chat {
+      min-height: 0;
+      overflow-y: auto;
+      padding: 28px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scroll-behavior: smooth;
+    }
+    .msg {
+      width: fit-content;
+      max-width: min(720px, 88%);
+      padding: 13px 15px;
+      border-radius: 8px;
+      line-height: 1.9;
+      white-space: pre-wrap;
+      animation: floatIn .22s ease-out both;
+    }
+    .bot {
+      align-self: flex-start;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.08);
+      color: #eef4ff;
+    }
+    .user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #6d28d9, #0891b2);
+      color: white;
+      box-shadow: 0 14px 35px rgba(8, 145, 178, .16);
+    }
+    .lesson {
+      width: min(760px, 100%);
+      align-self: center;
+      border: 1px solid rgba(124, 58, 237, .32);
+      background:
+        linear-gradient(180deg, rgba(124, 58, 237, .16), rgba(6, 182, 212, .08)),
+        rgba(15, 23, 42, .86);
+      border-radius: 8px;
+      padding: 18px;
+      line-height: 1.9;
+      animation: floatIn .26s ease-out both;
+    }
+    .lesson h2 { margin: 0 0 10px; font-size: 20px; }
+    .lesson ul { margin: 12px 0; padding-right: 20px; color: #dbeafe; }
+    .lesson .label { color: #a5b4fc; font-weight: 800; margin-top: 10px; }
+    .meter {
+      height: 7px;
+      background: rgba(255,255,255,.10);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 16px;
+    }
+    .bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--good));
+      transition: width .45s ease;
+    }
+    .typing {
+      display: none;
+      align-self: flex-start;
+      gap: 5px;
+      padding: 10px 13px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.06);
+      border-radius: 8px;
+    }
+    .typing.show { display: flex; }
+    .typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      animation: pulse 1s infinite ease-in-out;
+    }
+    .typing span:nth-child(2) { animation-delay: .16s; }
+    .typing span:nth-child(3) { animation-delay: .32s; }
+    .composer {
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      border-radius: 8px;
+      box-shadow: 0 18px 55px rgba(0,0,0,.36);
+      padding: 10px;
+      display: grid;
+      gap: 9px;
+    }
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 0 4px;
+      text-align: center;
+    }
+    form { display: flex; gap: 9px; }
+    input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 14px 15px;
+      outline: none;
+      font-size: 15px;
+    }
+    input::placeholder { color: #7f8ca3; }
+    input:focus {
+      border-color: rgba(6, 182, 212, .70);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, .10);
+    }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 0 18px;
+      color: white;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .16s ease, opacity .16s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: .55; cursor: wait; transform: none; }
+    @keyframes floatIn {
+      from { transform: translateY(8px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: .35; transform: translateY(0); }
+      40% { opacity: 1; transform: translateY(-3px); }
+    }
+    @media (max-width: 720px) {
+      body { overflow: auto; }
+      .app { height: 100svh; padding: 12px; }
+      .subtitle { max-width: 240px; }
+      .pill { display: none; }
+      .chat { padding: 18px 12px; }
+      .msg { max-width: 94%; }
+      button { padding: 0 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">Z</div>
+        <div>
+          <h1>زیتو</h1>
+          <div class="subtitle">مربی هوشمند برای آموزش AI در حسابداری، روانشناسی و حقوق</div>
+        </div>
+      </div>
+      <div id="status" class="pill">شروع گفتگو</div>
+    </header>
+
+    <section class="chat-wrap">
+      <div id="chat" class="chat">
+        <div id="typing" class="typing"><span></span><span></span><span></span></div>
+      </div>
+    </section>
+
+    <section class="composer">
+      <div id="hint" class="hint">جواب بده یا اگر سوالی درباره درس داری همان‌جا بپرس؛ زیتو خودش مسیر را تشخیص می‌دهد.</div>
+      <form id="form">
+        <input id="answer" autocomplete="off" placeholder="پیامت را بنویس..." />
+        <button id="send" type="submit">ارسال</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    let userId = null;
+    let currentQuestion = null;
+    let currentLesson = null;
+    let stage = "onboarding";
+
+    const chat = document.querySelector("#chat");
+    const form = document.querySelector("#form");
+    const input = document.querySelector("#answer");
+    const button = document.querySelector("#send");
+    const statusBox = document.querySelector("#status");
+    const hint = document.querySelector("#hint");
+    const typing = document.querySelector("#typing");
+
+    function setStatus(text) {
+      statusBox.textContent = text;
+    }
+
+    function setBusy(isBusy) {
+      button.disabled = isBusy;
+      typing.classList.toggle("show", isBusy);
+      chat.appendChild(typing);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function addMessage(text, who = "bot") {
+      const div = document.createElement("div");
+      div.className = `msg ${who}`;
+      div.textContent = text;
+      chat.insertBefore(div, typing);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function renderLesson(lesson) {
+      currentLesson = lesson;
+      const card = document.createElement("article");
+      card.className = "lesson";
+      card.innerHTML = `
+        <h2>${escapeHtml(lesson.title)}</h2>
+        <div>${escapeHtml(lesson.lesson)}</div>
+        <ul>${lesson.key_points.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+        <div class="label">تمرین مرحله</div>
+        <div>${escapeHtml(lesson.exercise)}</div>
+        <div class="label">راهنمای پاسخ</div>
+        <div>${escapeHtml(lesson.check_question)}</div>
+        <div class="meter"><div class="bar" style="width: ${lesson.percentage}%"></div></div>
+      `;
+      chat.insertBefore(card, typing);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function api(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "درخواست ناموفق بود.");
+      return data;
+    }
+
+    async function start() {
+      setStatus("شناخت اولیه");
+      const data = await api("/api/onboarding/start", { method: "POST" });
+      userId = data.user_id;
+      currentQuestion = data.question;
+      addMessage(currentQuestion.text);
+    }
+
+    async function loadLesson(intro = "خوب، حالا مسیر آموزشی را شروع می‌کنیم.") {
+      stage = "training";
+      setStatus("آموزش فعال");
+      hint.textContent = "پاسخ تمرین را بنویس. اگر وسط درس سوال داشتی، همان‌جا بپرس.";
+      addMessage(intro);
+      const lesson = await api(`/api/training/${userId}/lesson`, { method: "POST" });
+      renderLesson(lesson);
+    }
+
+    async function submitOnboarding(value) {
+      const data = await api(`/api/onboarding/${userId}/answer`, {
+        method: "POST",
+        body: JSON.stringify({ question_id: currentQuestion.id, answer_text: value })
+      });
+
+      if (!data.valid) {
+        currentQuestion = data.next_question;
+        addMessage(`${data.reason}\n${data.guidance}\n\n${currentQuestion.text}`);
+        return;
+      }
+
+      if (data.completed) {
+        currentQuestion = null;
+        await loadLesson();
+        return;
+      }
+
+      currentQuestion = data.next_question;
+      addMessage(currentQuestion.text);
+    }
+
+    async function submitTrainingMessage(value) {
+      if (!currentLesson) {
+        await loadLesson("یک درس تازه آماده می‌کنم.");
+        return;
+      }
+
+      const data = await api(`/api/training/${userId}/message`, {
+        method: "POST",
+        body: JSON.stringify({
+          lesson: currentLesson.lesson,
+          check_question: currentLesson.check_question,
+          message: value
+        })
+      });
+
+      if (data.kind === "next_lesson") {
+        addMessage(data.message);
+        renderLesson(data.lesson);
+        return;
+      }
+
+      if (data.kind === "complete") {
+        setStatus("مسیر کامل شد");
+        addMessage(data.message);
+        return;
+      }
+
+      addMessage(data.message);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const value = input.value.trim();
+      if (!value) return;
+
+      addMessage(value, "user");
+      input.value = "";
+      setBusy(true);
+
+      try {
+        if (stage === "onboarding") await submitOnboarding(value);
+        else await submitTrainingMessage(value);
+      } catch (error) {
+        addMessage(error.message);
+      } finally {
+        setBusy(false);
+        input.focus();
+      }
+    });
+
+    start().catch((error) => addMessage(error.message));
+  </script>
+</body>
+</html>

@@ -136,7 +136,7 @@ async def ask_ai(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=settings.arvan_timeout_seconds) as client:
+        async with httpx.AsyncClient(timeout=settings.arvan_timeout_seconds, trust_env=False) as client:
             response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
@@ -144,7 +144,7 @@ async def ask_ai(
         body = exc.response.text[:500] if exc.response is not None else ""
         raise ArvanAIError(f"Arvan AIaaS returned HTTP {exc.response.status_code}: {body}") from exc
     except (httpx.RequestError, ValueError) as exc:
-        raise ArvanAIError(f"Could not call Arvan AIaaS: {exc}") from exc
+        raise ArvanAIError(f"Could not call Arvan AIaaS ({type(exc).__name__}): {exc}") from exc
 
     try:
         content = data["choices"][0]["message"]["content"]
@@ -154,3 +154,4 @@ async def ask_ai(
     if not isinstance(content, str) or not content.strip():
         raise ArvanAIError("Arvan AIaaS returned an empty response.")
     return content.strip()
+

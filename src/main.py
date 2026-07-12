@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.api.routes import router
 from src.config import get_settings
@@ -14,6 +15,11 @@ app = FastAPI(title=settings.app_name)
 app.include_router(router)
 
 ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = ROOT.parent
+LANDING_ROOT = PROJECT_ROOT / "landing"
+
+if LANDING_ROOT.exists():
+    app.mount("/landing-static", StaticFiles(directory=LANDING_ROOT), name="landing-static")
 
 
 @app.on_event("startup")
@@ -30,6 +36,9 @@ def _html(name: str) -> HTMLResponse:
 
 @app.get("/", response_class=HTMLResponse)
 def root() -> HTMLResponse:
+    landing = LANDING_ROOT / "zito.html"
+    if landing.exists():
+        return HTMLResponse(landing.read_text(encoding="utf-8"))
     return _html("chat.html")
 
 

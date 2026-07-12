@@ -15,6 +15,9 @@ from src.schemas import (
     KnowledgeOut,
     OnboardingAnswerOut,
     OnboardingStartOut,
+    OnboardingStateOut,
+    PhoneLoginIn,
+    PhoneLoginOut,
     QuestionOut,
     TrainingAnswerIn,
     TrainingLessonOut,
@@ -29,6 +32,17 @@ from src.services.training import answer_training_question, generate_lesson, loo
 from src.services.validation import evaluate_training_answer, validate_initial_answer, validate_training_question
 
 router = APIRouter()
+
+
+def _normalize_phone(phone: str) -> str:
+    digits = re.sub(r"\D", "", phone)
+    if digits.startswith("0098"):
+        digits = "0" + digits[4:]
+    elif digits.startswith("98") and len(digits) == 12:
+        digits = "0" + digits[2:]
+    if not re.fullmatch(r"09\d{9}", digits):
+        raise HTTPException(status_code=422, detail="شماره موبایل را با فرمت درست وارد کن؛ مثلا 09123456789.")
+    return digits
 
 
 def _answer_out(answer: Answer) -> AnswerOut:
@@ -73,10 +87,7 @@ def _guidance_for(question: Question) -> str:
 
 def _apply_profile_field(user: User, question: Question, answer_text: str) -> None:
     if question.key == "identity":
-        username_match = re.search(r"@?([A-Za-z0-9_\\.]{3,})", answer_text)
         user.full_name = answer_text.strip()
-        if username_match:
-            user.username = username_match.group(1)
     elif question.key == "profession":
         user.profession = answer_text.strip()
 
@@ -85,6 +96,18 @@ def _apply_profile_field(user: User, question: Question, answer_text: str) -> No
 def health(db: Session = Depends(get_db)) -> dict:
     db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "ok"}
+
+
+@router.post("/api/auth/phone", response_model=PhoneLoginOut)
+def login_with_phone(payload: PhoneLoginIn, db: Session = Depends(get_db)) -> PhoneLoginOut:
+    phone = _normalize_phone(payload.phone)
+    user = db.scalars(select(User).where(User.username == phone).order_by(User.id.desc()).limit(1)).first()
+    if not user:
+        user = User(username=phone)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return PhoneLoginOut(user_id=user.id, username=phone, redirect_url=f"/chat?user_id={user.id}")
 
 
 @router.post("/api/onboarding/start", response_model=OnboardingStartOut)
@@ -98,6 +121,20 @@ def start_onboarding(db: Session = Depends(get_db)) -> OnboardingStartOut:
     if not question:
         raise HTTPException(status_code=500, detail="No onboarding questions are configured.")
     return OnboardingStartOut(user_id=user.id, question=QuestionOut.model_validate(question))
+
+
+@router.get("/api/onboarding/{user_id}/state", response_model=OnboardingStateOut)
+def onboarding_state(user_id: int, db: Session = Depends(get_db)) -> OnboardingStateOut:
+    seed_questions(db)
+    user = db.get(User, user_id, options=[selectinload(User.answers).selectinload(Answer.question)])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    question = _next_question(db, user)
+    return OnboardingStateOut(
+        user_id=user.id,
+        completed=question is None,
+        question=QuestionOut.model_validate(question) if question else None,
+    )
 
 
 @router.post("/api/onboarding/{user_id}/answer", response_model=OnboardingAnswerOut)

@@ -61,15 +61,23 @@
     .phone-shell {
       position: relative;
       z-index: 1;
-      width: min(480px, 100%);
+      width: min(1080px, 100%);
       height: 100svh;
       margin: 0 auto;
       padding: 14px;
       display: grid;
+      grid-template-columns: minmax(360px, 480px) minmax(360px, 520px);
       grid-template-rows: auto 1fr auto;
+      grid-template-areas:
+        "topbar topbar"
+        "hero lesson"
+        "composer lesson";
       gap: 12px;
+      direction: ltr;
     }
     .topbar {
+      grid-area: topbar;
+      direction: rtl;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -112,6 +120,8 @@
       backdrop-filter: blur(16px);
     }
     .hero {
+      grid-area: hero;
+      direction: rtl;
       min-height: 0;
       position: relative;
       border: 1px solid var(--line);
@@ -225,11 +235,11 @@
       background: linear-gradient(135deg, #8d39ff 0%, #5f3fff 46%, #176fff 100%);
       box-shadow: 0 16px 38px rgba(87, 74, 255, .27);
     }
-    .lesson {
-      width: 100%;
-      align-self: center;
-      padding: 16px;
-      border-radius: 22px;
+    .lesson-dock {
+      grid-area: lesson;
+      min-height: 0;
+      padding: 18px;
+      border-radius: 28px;
       color: #eef3ff;
       line-height: 1.95;
       background:
@@ -237,11 +247,59 @@
         radial-gradient(circle at top right, rgba(148, 82, 255, .23), transparent 42%);
       border: 1px solid rgba(126, 116, 255, .32);
       box-shadow: 0 22px 60px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06);
+      overflow-y: auto;
       animation: pop .28s ease both;
+      direction: rtl;
     }
-    .lesson h2 { margin: 0 0 10px; font-size: 18px; }
-    .lesson ul { margin: 12px 0; padding-right: 21px; color: #dce6ff; }
-    .lesson .label { margin-top: 12px; color: #b79cff; font-weight: 900; }
+    .lesson-dock.empty {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--soft);
+    }
+    .lesson-dock h2 { margin: 0 0 10px; font-size: 18px; }
+    .lesson-dock ul { margin: 12px 0; padding-right: 21px; color: #dce6ff; }
+    .lesson-dock .label { margin-top: 12px; color: #b79cff; font-weight: 900; }
+    .lesson-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .lesson-avatar {
+      flex: none;
+      width: 72px;
+      height: 84px;
+      position: relative;
+      filter: drop-shadow(0 0 22px rgba(115, 96, 255, .86));
+      animation: hover 4.4s ease-in-out infinite;
+    }
+    .lesson-avatar .body {
+      position: absolute;
+      inset: 18px 14px 6px;
+      border-radius: 54% 54% 46% 46%;
+      background: linear-gradient(180deg, rgba(120, 100, 255, .92), rgba(35, 68, 190, .88));
+      border: 1px solid rgba(218, 226, 255, .74);
+      box-shadow: inset 0 0 18px rgba(255,255,255,.22), 0 0 28px rgba(82, 101, 255, .76);
+    }
+    .lesson-avatar .flame {
+      position: absolute;
+      width: 42px;
+      height: 40px;
+      top: 3px;
+      left: 16px;
+      border-radius: 70% 30% 62% 38%;
+      transform: rotate(-18deg);
+      background: linear-gradient(135deg, rgba(151, 125, 255, .96), rgba(42, 113, 255, .82));
+      border: 1px solid rgba(214, 219, 255, .68);
+    }
+    .lesson-avatar .eye { position: absolute; top: 43px; width: 7px; height: 12px; border-radius: 999px; background: white; box-shadow: 0 0 8px white; }
+    .lesson-avatar .eye.left { left: 28px; }
+    .lesson-avatar .eye.right { right: 28px; }
+    .lesson-avatar .smile { position: absolute; top: 57px; left: 31px; width: 10px; height: 7px; border-bottom: 2px solid white; border-radius: 0 0 12px 12px; }
+    .lesson-empty-title { margin: 12px 0 6px; font-size: 18px; font-weight: 900; color: var(--text); }
+    .lesson-empty-copy { margin: 0; max-width: 300px; line-height: 2; }
     .meter { height: 8px; margin-top: 16px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
     .bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #9c3fff, #2372ff 68%, #37e6ff); box-shadow: 0 0 18px rgba(71, 112, 255, .75); transition: width .55s ease; }
     .typing { display: none; align-self: flex-start; gap: 6px; padding: 12px 14px; border-radius: 17px; background: rgba(23, 32, 70, .86); border: 1px solid rgba(147, 164, 255, .16); }
@@ -250,6 +308,8 @@
     .typing span:nth-child(2) { animation-delay: .14s; }
     .typing span:nth-child(3) { animation-delay: .28s; }
     .composer {
+      grid-area: composer;
+      direction: rtl;
       padding: 11px;
       border-radius: 24px;
       border: 1px solid var(--line);
@@ -293,7 +353,23 @@
     @keyframes rise { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes typing { 0%, 80%, 100% { opacity: .35; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
     @keyframes starDrift { from { transform: translateY(0); } to { transform: translateY(44px); } }
-    @media (min-width: 820px) { .phone-shell { padding-block: 20px; } .hero { border-radius: 32px; } }
+    @media (min-width: 820px) { .phone-shell { padding-block: 20px; } .hero, .lesson-dock { border-radius: 32px; } }
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .phone-shell {
+        height: auto;
+        min-height: 100svh;
+        width: min(480px, 100%);
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(520px, 72svh) auto auto;
+        grid-template-areas:
+          "topbar"
+          "hero"
+          "composer"
+          "lesson";
+      }
+      .lesson-dock { min-height: 300px; }
+    }
     @media (max-width: 420px) { .phone-shell { padding: 10px; } .hero { border-radius: 24px; } .welcome { padding-top: 2px; } .zito-orb { width: 108px; height: 132px; } .msg { max-width: 90%; } .subtitle { max-width: 205px; } }
   </style>
 </head>
@@ -331,6 +407,17 @@
         <button id="send" type="submit" aria-label="ارسال">›</button>
       </form>
     </section>
+
+    <aside id="lessonPanel" class="lesson-dock empty">
+      <div>
+        <div class="lesson-avatar" aria-hidden="true">
+          <div class="flame"></div><div class="body"></div>
+          <div class="eye left"></div><div class="eye right"></div><div class="smile"></div>
+        </div>
+        <div class="lesson-empty-title">پنل آموزش زیتو</div>
+        <p class="lesson-empty-copy">بعد از انتخاب مسیر، درس و تمرین اینجا نمایش داده می‌شود تا چت فقط برای پاسخ و سوال‌های تو بماند.</p>
+      </div>
+    </aside>
   </main>
 
   <script>
@@ -338,6 +425,10 @@
     let currentQuestion = null;
     let currentLesson = null;
     let stage = "onboarding";
+    const urlUserId = new URLSearchParams(window.location.search).get("user_id");
+    const savedUserId = localStorage.getItem("zito_user_id");
+    const sessionUserId = urlUserId || savedUserId;
+    if (urlUserId) localStorage.setItem("zito_user_id", urlUserId);
 
     const chat = document.querySelector("#chat");
     const form = document.querySelector("#form");
@@ -346,6 +437,7 @@
     const statusBox = document.querySelector("#status");
     const hint = document.querySelector("#hint");
     const typing = document.querySelector("#typing");
+    const lessonPanel = document.querySelector("#lessonPanel");
 
     function setStatus(text) { statusBox.textContent = text; }
     function setBusy(isBusy) { button.disabled = isBusy; typing.classList.toggle("show", isBusy); chat.appendChild(typing); chat.scrollTop = chat.scrollHeight; }
@@ -354,17 +446,24 @@
 
     function renderLesson(lesson) {
       currentLesson = lesson;
-      const card = document.createElement("article");
-      card.className = "lesson";
-      card.innerHTML = `
-        <h2>${escapeHtml(lesson.title)}</h2>
+      lessonPanel.classList.remove("empty");
+      lessonPanel.innerHTML = `
+        <div class="lesson-head">
+          <div>
+            <h2>${escapeHtml(lesson.title)}</h2>
+            <div class="subtitle">درس فعال زیتو</div>
+          </div>
+          <div class="lesson-avatar" aria-hidden="true">
+            <div class="flame"></div><div class="body"></div>
+            <div class="eye left"></div><div class="eye right"></div><div class="smile"></div>
+          </div>
+        </div>
         <div>${escapeHtml(lesson.lesson)}</div>
         <ul>${lesson.key_points.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
         <div class="label">تمرین مرحله</div><div>${escapeHtml(lesson.exercise)}</div>
         <div class="label">راهنمای پاسخ</div><div>${escapeHtml(lesson.check_question)}</div>
         <div class="meter"><div class="bar" style="width: ${lesson.percentage}%"></div></div>`;
-      chat.insertBefore(card, typing);
-      chat.scrollTop = chat.scrollHeight;
+      lessonPanel.scrollTop = 0;
     }
 
     async function api(url, options = {}) {
@@ -376,8 +475,15 @@
 
     async function start() {
       setStatus("شناخت اولیه");
-      const data = await api("/api/onboarding/start", { method: "POST" });
+      const data = sessionUserId
+        ? await api(`/api/onboarding/${sessionUserId}/state`)
+        : await api("/api/onboarding/start", { method: "POST" });
       userId = data.user_id;
+      localStorage.setItem("zito_user_id", String(userId));
+      if (data.completed) {
+        await loadLesson("خوش برگشتی؛ مسیر آموزشی‌ات را ادامه می‌دهیم.");
+        return;
+      }
       currentQuestion = data.question;
       addMessage(currentQuestion.text);
     }

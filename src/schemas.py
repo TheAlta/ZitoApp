@@ -17,6 +17,22 @@ class OnboardingStartOut(BaseModel):
     question: QuestionOut
 
 
+class PhoneLoginIn(BaseModel):
+    phone: str = Field(min_length=8, max_length=20)
+
+
+class PhoneLoginOut(BaseModel):
+    user_id: int
+    username: str
+    redirect_url: str
+
+
+class OnboardingStateOut(BaseModel):
+    user_id: int
+    completed: bool = False
+    question: QuestionOut | None = None
+
+
 class AnswerIn(BaseModel):
     question_id: int
     answer_text: str = Field(min_length=1, max_length=2000)

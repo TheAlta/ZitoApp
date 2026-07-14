@@ -1,7 +1,9 @@
 ﻿from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.models import KnowledgeDocument, Question
+from src.config import get_settings
+from src.models import Admin, KnowledgeDocument, Question
+from src.security import hash_password
 
 
 DEFAULT_QUESTIONS = [
@@ -100,6 +102,16 @@ def seed_knowledge(db: Session) -> None:
     db.commit()
 
 
+def seed_admin(db: Session) -> None:
+    settings = get_settings()
+    existing_admin = db.scalars(select(Admin).limit(1)).first()
+    if existing_admin:
+        return
+    db.add(Admin(username=settings.admin_username, password_hash=hash_password(settings.admin_password)))
+    db.commit()
+
+
 def seed_defaults(db: Session) -> None:
     seed_questions(db)
     seed_knowledge(db)
+    seed_admin(db)

@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     admin_username: str = Field("zito_admin", alias="ADMIN_USERNAME")
     admin_password: str = Field("change-me", alias="ADMIN_PASSWORD")
+    admin_session_secret: str = Field("change-me-admin-session-secret", alias="ADMIN_SESSION_SECRET")
+    admin_session_days: int = Field(3650, alias="ADMIN_SESSION_DAYS")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

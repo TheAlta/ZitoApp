@@ -69,6 +69,16 @@ class AdminAnswerUpdate(BaseModel):
     answer_text: str = Field(min_length=1, max_length=2000)
 
 
+class AdminLoginIn(BaseModel):
+    username: str = Field(min_length=2, max_length=100)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class AdminLoginOut(BaseModel):
+    ok: bool = True
+    username: str
+
+
 class KnowledgeIn(BaseModel):
     title: str = Field(min_length=2, max_length=255)
     content: str = Field(min_length=10)

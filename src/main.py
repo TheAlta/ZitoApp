@@ -1,13 +1,13 @@
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.api.routes import router
 from src.config import get_settings
-from src.db import Base, SessionLocal, engine
-from src.security import require_admin
+from src.db import Base, SessionLocal, engine, get_db
+from src.security import get_admin_from_request
 from src.seed import seed_defaults
 
 settings = get_settings()
@@ -47,6 +47,13 @@ def chat_ui() -> HTMLResponse:
     return _html("chat.html")
 
 
-@app.get("/admin", response_class=HTMLResponse, dependencies=[Depends(require_admin)])
-def admin_ui() -> HTMLResponse:
+@app.get("/admin/login", response_class=HTMLResponse)
+def admin_login_ui() -> HTMLResponse:
+    return _html("admin_login.html")
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_ui(request: Request, db=Depends(get_db)):
+    if not get_admin_from_request(request, db):
+        return RedirectResponse("/admin/login", status_code=303)
     return _html("admin.html")

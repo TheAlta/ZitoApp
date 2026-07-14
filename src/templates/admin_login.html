@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ورود مدیر زیتو</title>
+  <style>
+    @font-face { font-family: "YekanZito"; src: local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan"); font-display: swap; }
+    * { box-sizing: border-box; }
+    :root { color-scheme: dark; --text: #f4f7ff; --muted: #98a7cb; --line: rgba(131,119,255,.26); --purple: #8d3dff; --blue: #2372ff; --danger: #ff6d91; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      font-family: "YekanZito", Tahoma, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 50% -10%, rgba(141,61,255,.38), transparent 34%),
+        radial-gradient(circle at 10% 25%, rgba(55,230,255,.13), transparent 28%),
+        linear-gradient(180deg, #050817, #071026 62%, #030613);
+    }
+    body::before { content: ""; position: fixed; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255,255,255,.62) 0 1px, transparent 1.6px); background-size: 96px 96px; opacity: .16; }
+    .card {
+      position: relative;
+      z-index: 1;
+      width: min(420px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(18,30,68,.9), rgba(9,18,45,.86));
+      box-shadow: 0 28px 90px rgba(0,0,0,.46), inset 0 1px 0 rgba(255,255,255,.07);
+    }
+    .mark { width: 58px; height: 58px; margin: 0 auto 14px; border-radius: 20px; display: grid; place-items: center; font-size: 30px; font-weight: 900; background: linear-gradient(135deg, var(--purple), var(--blue) 70%, #37e6ff); box-shadow: 0 0 34px rgba(112,92,255,.5); }
+    h1 { margin: 0; text-align: center; font-size: 23px; }
+    p { margin: 8px 0 22px; text-align: center; color: var(--muted); line-height: 1.9; font-size: 13px; }
+    label { display: block; margin: 12px 0 7px; color: #dce5ff; font-size: 13px; font-weight: 800; }
+    input {
+      width: 100%;
+      height: 52px;
+      border: 1px solid rgba(151,164,255,.2);
+      border-radius: 17px;
+      background: rgba(3,8,25,.68);
+      color: var(--text);
+      padding: 0 14px;
+      font: inherit;
+      outline: none;
+    }
+    input:focus { border-color: rgba(55,230,255,.72); box-shadow: 0 0 0 4px rgba(55,230,255,.1); }
+    button {
+      width: 100%;
+      height: 52px;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 17px;
+      cursor: pointer;
+      color: white;
+      font: inherit;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--purple), var(--blue));
+      box-shadow: 0 14px 34px rgba(91,83,255,.34);
+    }
+    button:disabled { opacity: .62; cursor: wait; }
+    .error { min-height: 25px; margin-top: 12px; text-align: center; color: var(--danger); font-size: 12px; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="mark">Z</div>
+    <h1>ورود مدیر زیتو</h1>
+    <p>برای ورود به پنل مدیریت، نام کاربری و رمز عبور مدیر را وارد کن.</p>
+    <form id="loginForm">
+      <label for="username">نام کاربری</label>
+      <input id="username" autocomplete="username" value="zito_admin">
+      <label for="password">رمز عبور</label>
+      <input id="password" type="password" autocomplete="current-password" autofocus>
+      <button id="submit" type="submit">ورود به پنل</button>
+      <div id="error" class="error"></div>
+    </form>
+  </main>
+  <script>
+    const form = document.querySelector("#loginForm");
+    const username = document.querySelector("#username");
+    const password = document.querySelector("#password");
+    const submit = document.querySelector("#submit");
+    const error = document.querySelector("#error");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      error.textContent = "";
+      submit.disabled = true;
+      try {
+        const res = await fetch("/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username.value.trim(), password: password.value })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "ورود ناموفق بود.");
+        window.location.href = "/admin";
+      } catch (err) {
+        error.textContent = err.message;
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

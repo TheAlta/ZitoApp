@@ -1,6 +1,6 @@
 ﻿import re
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session, selectinload
 
@@ -9,6 +9,8 @@ from src.lib.arvan_client import ArvanAIError
 from src.models import Answer, KnowledgeDocument, Question, User, UserProgress
 from src.schemas import (
     AdminAnswerUpdate,
+    AdminLoginIn,
+    AdminLoginOut,
     AnswerIn,
     AnswerOut,
     KnowledgeIn,
@@ -25,7 +27,7 @@ from src.schemas import (
     TrainingQuestionIn,
     UserOut,
 )
-from src.security import require_admin
+from src.security import authenticate_admin, clear_admin_cookie, create_admin_session, require_admin, set_admin_cookie
 from src.seed import seed_questions
 from src.services.rag import build_user_context
 from src.services.training import answer_training_question, generate_lesson, looks_like_question
@@ -96,6 +98,26 @@ def _apply_profile_field(user: User, question: Question, answer_text: str) -> No
 def health(db: Session = Depends(get_db)) -> dict:
     db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "ok"}
+
+
+@router.post("/api/admin/login", response_model=AdminLoginOut)
+def admin_login(payload: AdminLoginIn, response: Response, db: Session = Depends(get_db)) -> AdminLoginOut:
+    admin = authenticate_admin(db, payload.username.strip(), payload.password)
+    if not admin:
+        raise HTTPException(status_code=401, detail="نام کاربری یا رمز عبور مدیر درست نیست.")
+    set_admin_cookie(response, create_admin_session(admin))
+    return AdminLoginOut(username=admin.username)
+
+
+@router.post("/api/admin/logout")
+def admin_logout(response: Response) -> dict:
+    clear_admin_cookie(response)
+    return {"ok": True}
+
+
+@router.get("/api/admin/me", dependencies=[Depends(require_admin)])
+def admin_me() -> dict:
+    return {"ok": True}
 
 
 @router.post("/api/auth/phone", response_model=PhoneLoginOut)

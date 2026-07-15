@@ -388,21 +388,6 @@
       pointer-events: none;
     }
 
-    .brand::before {
-      content: '';
-      position: absolute;
-      top: -28px;
-      left: 50%;
-      width: 230px;
-      height: 210px;
-      border-radius: 45%;
-      background:
-        radial-gradient(circle at 50% 42%, rgba(1, 7, 33, 0.96) 0%, rgba(1, 7, 33, 0.86) 42%, rgba(1, 7, 33, 0) 72%);
-      filter: blur(10px);
-      transform: translateX(-50%);
-      z-index: -1;
-    }
-
     /* درخشش لوگو حذف شد تا پس‌زمینه‌ی عکس معلوم نشه */
     .logo-img {
       width: 130px;
@@ -439,18 +424,6 @@
       z-index: 2;
       animation: floaty 3.5s ease-in-out infinite;
     }
-
-    .avatar-wrap::before {
-      content: '';
-      position: absolute;
-      inset: -22px -30px -18px;
-      border-radius: 44%;
-      background:
-        radial-gradient(circle at 50% 50%, rgba(1, 8, 27, 0.96) 0%, rgba(1, 8, 27, 0.78) 46%, rgba(1, 8, 27, 0) 74%);
-      filter: blur(9px);
-      z-index: -1;
-    }
-
 
     @keyframes floaty {
 
@@ -867,7 +840,7 @@
 
   <!-- لوگو -->
   <div class="brand">
-    <img class="logo-img" src="/landing-static/logo-z.png" alt="Z Logo">
+    <img class="logo-img" src="/landing-static/logo-z-transparent.png" alt="Z Logo">
 
     <div class="wordmark-zito">ZITO</div>
     <div class="sub-en">
@@ -877,7 +850,7 @@
 
   <!-- آواتار -->
   <div class="avatar-wrap">
-    <img class="avatar-img" src="/landing-static/zito-avatar.png" alt="Zito Avatar">
+    <img class="avatar-img" src="/landing-static/zito-avatar-transparent.png" alt="Zito Avatar">
   </div>
 
   <!-- چت‌باکس -->

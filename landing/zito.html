@@ -223,48 +223,85 @@
       position: absolute;
       left: var(--start-x);
       top: var(--start-y);
-      width: var(--meteor-size, 180px);
-      height: 2px;
+      width: var(--meteor-size, 88px);
+      height: var(--meteor-size, 88px);
       border-radius: 999px;
-      background: linear-gradient(90deg, transparent 0%, rgba(160, 195, 255, 0.18) 28%, rgba(255, 255, 255, 0.98) 100%);
-      box-shadow: 0 0 16px rgba(110, 154, 255, 0.45);
+      background:
+        radial-gradient(circle at 68% 42%, rgba(255, 255, 255, 0.92) 0 4%, rgba(182, 224, 255, 0.46) 5% 12%, transparent 24%),
+        radial-gradient(circle at 42% 56%, rgba(139, 104, 255, 0.36), transparent 46%),
+        radial-gradient(circle, rgba(72, 127, 255, 0.18), transparent 68%);
+      filter: blur(0.2px);
+      box-shadow:
+        0 0 18px rgba(128, 174, 255, 0.26),
+        0 0 44px rgba(124, 81, 255, 0.14);
       opacity: 0;
-      transform: rotate(-32deg) translate3d(-18vw, -14vh, 0);
-      animation: meteorTrail var(--duration, 4.8s) linear infinite;
+      transform: translate3d(-12vw, 8vh, 0) scale(0.72) rotate(var(--tilt, -8deg));
+      animation: meteorTrail var(--duration, 11s) ease-in-out infinite;
       animation-delay: var(--delay, 0s);
     }
 
     .meteor::before {
       content: '';
       position: absolute;
-      right: -3px;
+      right: 58%;
       top: 50%;
-      width: 7px;
-      height: 7px;
+      width: 128%;
+      height: 34%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(101, 141, 255, 0.16), rgba(179, 231, 255, 0.04));
+      filter: blur(10px);
+      transform: translateY(-50%) rotate(-9deg);
+      transform-origin: right center;
+    }
+
+    .meteor::after {
+      content: '';
+      position: absolute;
+      inset: 28%;
       border-radius: 50%;
-      background: #ffffff;
-      box-shadow: 0 0 18px 4px rgba(125, 173, 255, 0.9), 0 0 34px 8px rgba(125, 64, 255, 0.35);
-      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow:
+        0 0 12px rgba(255, 255, 255, 0.88),
+        0 0 26px rgba(100, 170, 255, 0.46),
+        0 0 48px rgba(137, 78, 255, 0.24);
+      animation: cosmicBlink 2.8s ease-in-out infinite;
     }
 
     @keyframes meteorTrail {
       0% {
         opacity: 0;
-        transform: rotate(-32deg) translate3d(-18vw, -14vh, 0);
+        transform: translate3d(-12vw, 8vh, 0) scale(0.72) rotate(var(--tilt, -8deg));
       }
 
-      8% {
-        opacity: 1;
+      12% {
+        opacity: 0.42;
       }
 
-      44% {
-        opacity: 0.95;
+      48% {
+        opacity: 0.82;
+        transform: translate3d(var(--float-x, 38vw), var(--float-y, 20vh), 0) scale(1) rotate(calc(var(--tilt, -8deg) + 8deg));
       }
 
-      68%,
+      82% {
+        opacity: 0.28;
+      }
+
       100% {
         opacity: 0;
-        transform: rotate(-32deg) translate3d(78vw, 62vh, 0);
+        transform: translate3d(82vw, var(--end-y, 46vh), 0) scale(0.74) rotate(calc(var(--tilt, -8deg) + 18deg));
+      }
+    }
+
+    @keyframes cosmicBlink {
+      0%,
+      100% {
+        opacity: 0.55;
+        transform: scale(0.86);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.08);
       }
     }
 
@@ -755,7 +792,8 @@
       }
 
       .meteor {
-        width: var(--meteor-size-mobile, 118px);
+        width: var(--meteor-size-mobile, 58px);
+        height: var(--meteor-size-mobile, 58px);
       }
     }
 
@@ -783,9 +821,9 @@
     <div class="orb three"></div>
   </div>
   <div class="meteor-field" aria-hidden="true">
-    <span class="meteor" style="--start-x: 4vw; --start-y: 9vh; --delay: .4s; --duration: 5.6s; --meteor-size: 210px; --meteor-size-mobile: 130px;"></span>
-    <span class="meteor" style="--start-x: 54vw; --start-y: 3vh; --delay: 2.7s; --duration: 6.2s; --meteor-size: 170px; --meteor-size-mobile: 112px;"></span>
-    <span class="meteor" style="--start-x: 16vw; --start-y: 31vh; --delay: 5.1s; --duration: 5.9s; --meteor-size: 145px; --meteor-size-mobile: 96px;"></span>
+    <span class="meteor" style="--start-x: 7vw; --start-y: 10vh; --float-x: 38vw; --float-y: 16vh; --end-y: 34vh; --tilt: -14deg; --delay: .4s; --duration: 12.5s; --meteor-size: 92px; --meteor-size-mobile: 58px;"></span>
+    <span class="meteor" style="--start-x: 58vw; --start-y: 5vh; --float-x: 18vw; --float-y: 25vh; --end-y: 52vh; --tilt: 10deg; --delay: 3.6s; --duration: 14s; --meteor-size: 74px; --meteor-size-mobile: 48px;"></span>
+    <span class="meteor" style="--start-x: 18vw; --start-y: 32vh; --float-x: 44vw; --float-y: 8vh; --end-y: 28vh; --tilt: -4deg; --delay: 7.2s; --duration: 13.2s; --meteor-size: 62px; --meteor-size-mobile: 42px;"></span>
   </div>
   <div class="sparkle-big s1"></div>
   <div class="sparkle-big s2"></div>

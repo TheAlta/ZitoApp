@@ -24,8 +24,10 @@
   <style>
     :root {
       /* رنگ‌های پس‌زمینه گرادیان */
-      --bg-top: #020628;
+      --bg-top: #010721;
       /* رنگ بالای صفحه (هماهنگ با لوگو) */
+      --bg-avatar: #01081b;
+      /* رنگ محدوده آواتار */
       --bg-bottom: #03081b;
       /* رنگ پایین صفحه (هماهنگ با آواتار) */
 
@@ -54,7 +56,15 @@
       color: var(--ink);
       /* تغییر پس‌زمینه به گرادیان از بالا به پایین */
       background:
-        linear-gradient(180deg, var(--bg-top) 0%, #020720 46%, var(--bg-bottom) 100%);
+        linear-gradient(
+          180deg,
+          var(--bg-top) 0%,
+          var(--bg-top) 22%,
+          #01071f 38%,
+          var(--bg-avatar) 58%,
+          var(--bg-avatar) 76%,
+          var(--bg-bottom) 100%
+        );
       min-height: 100vh;
       width: 100vw;
       position: relative;
@@ -378,6 +388,21 @@
       pointer-events: none;
     }
 
+    .brand::before {
+      content: '';
+      position: absolute;
+      top: -28px;
+      left: 50%;
+      width: 230px;
+      height: 210px;
+      border-radius: 45%;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(1, 7, 33, 0.96) 0%, rgba(1, 7, 33, 0.86) 42%, rgba(1, 7, 33, 0) 72%);
+      filter: blur(10px);
+      transform: translateX(-50%);
+      z-index: -1;
+    }
+
     /* درخشش لوگو حذف شد تا پس‌زمینه‌ی عکس معلوم نشه */
     .logo-img {
       width: 130px;
@@ -413,6 +438,17 @@
       transform: translateX(-50%);
       z-index: 2;
       animation: floaty 3.5s ease-in-out infinite;
+    }
+
+    .avatar-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -22px -30px -18px;
+      border-radius: 44%;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(1, 8, 27, 0.96) 0%, rgba(1, 8, 27, 0.78) 46%, rgba(1, 8, 27, 0) 74%);
+      filter: blur(9px);
+      z-index: -1;
     }
 
 

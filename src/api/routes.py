@@ -129,7 +129,7 @@ def login_with_phone(payload: PhoneLoginIn, db: Session = Depends(get_db)) -> Ph
         db.add(user)
         db.commit()
         db.refresh(user)
-    return PhoneLoginOut(user_id=user.id, username=phone, redirect_url=f"/chat?user_id={user.id}")
+    return PhoneLoginOut(user_id=user.id, username=phone, redirect_url="/app/")
 
 
 @router.post("/api/onboarding/start", response_model=OnboardingStartOut)

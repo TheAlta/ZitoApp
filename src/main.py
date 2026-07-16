@@ -43,7 +43,13 @@ def root() -> HTMLResponse:
 
 
 @app.get("/chat", response_class=HTMLResponse)
-def chat_ui() -> HTMLResponse:
+def legacy_chat_ui(request: Request):
+    query = f"?{request.url.query}" if request.url.query else ""
+    return RedirectResponse(f"/app/{query}", status_code=303)
+
+
+@app.get("/app/", response_class=HTMLResponse)
+def app_ui() -> HTMLResponse:
     return _html("chat.html")
 
 

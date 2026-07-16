@@ -428,7 +428,10 @@
     const urlUserId = new URLSearchParams(window.location.search).get("user_id");
     const savedUserId = localStorage.getItem("zito_user_id");
     const sessionUserId = urlUserId || savedUserId;
-    if (urlUserId) localStorage.setItem("zito_user_id", urlUserId);
+    if (urlUserId) {
+      localStorage.setItem("zito_user_id", urlUserId);
+      window.history.replaceState({}, "", "/app/");
+    }
 
     const chat = document.querySelector("#chat");
     const form = document.querySelector("#form");

@@ -965,7 +965,7 @@
       event.stopImmediatePropagation();
       const savedUserId = localStorage.getItem('zito_user_id');
       if (savedUserId) {
-        window.location.href = `/chat?user_id=${encodeURIComponent(savedUserId)}`;
+        window.location.href = '/app/';
         return;
       }
       phoneModal.classList.add('show');

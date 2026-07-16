@@ -6,20 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ZITO | Z Generation Intelligent</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/gh/hemedani/yekan@v3.0.0/font-face.css" rel="stylesheet" type="text/css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Poppins&display=swap"
-    rel="stylesheet">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+Arabic:wght@100..900&family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Poppins&display=swap"
-    rel="stylesheet">
 
   <style>
     :root {
@@ -34,8 +21,9 @@
       --purple: #7d40ff;
       --blue: #3069ff;
       --ink: #ffffff;
-      --font-fa: 'Yekan', "Noto Sans Arabic", 'Vazirmatn', Tahoma, sans-serif;
-      --font-en: "Nunito", 'Poppins', sans-serif;
+      --font-yekan: 'Yekan', "YekanZito", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif;
+      --font-fa: var(--font-yekan);
+      --font-en: var(--font-yekan);
     }
 
     * {
@@ -52,7 +40,7 @@
     }
 
     body {
-      font-family: var(--font-en);
+      font-family: var(--font-yekan);
       color: var(--ink);
       /* تغییر پس‌زمینه به گرادیان از بالا به پایین */
       background:
@@ -126,14 +114,14 @@
     }
 
     .nunito-regular {
-      font-family: "Nunito", sans-serif;
+      font-family: var(--font-yekan);
       font-optical-sizing: auto;
       font-weight: 200;
       font-style: normal;
     }
 
     .noto-sans-arabic-regular {
-      font-family: "Noto Sans Arabic", sans-serif;
+      font-family: var(--font-yekan);
       font-optical-sizing: auto;
       font-weight: 100;
       font-style: normal;

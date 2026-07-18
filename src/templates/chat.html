@@ -10,6 +10,7 @@
     * { box-sizing: border-box; }
     :root {
       color-scheme: dark;
+      --font-yekan: "YekanZito", "Yekan", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif;
       --bg-0: #030615;
       --bg-1: #070d24;
       --card: rgba(12, 21, 48, .74);
@@ -29,9 +30,11 @@
       --glow: 0 0 28px rgba(126, 88, 255, .36), 0 0 70px rgba(38, 116, 255, .22);
     }
     html, body { margin: 0; min-height: 100%; }
+    html, body, button, input, textarea, select { font-family: var(--font-yekan); }
+    body * { font-family: inherit; }
     body {
       min-height: 100vh;
-      font-family: "YekanZito", "Yekan", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif;
+      font-family: var(--font-yekan);
       background:
         radial-gradient(circle at 50% -12%, rgba(107, 53, 255, .50), transparent 35%),
         radial-gradient(circle at 13% 18%, rgba(49, 214, 255, .16), transparent 30%),

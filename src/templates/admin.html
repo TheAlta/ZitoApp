@@ -8,8 +8,10 @@
   <style>
     @font-face { font-family: "YekanZito"; src: local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan"); font-display: swap; }
     * { box-sizing: border-box; }
-    :root { color-scheme: dark; --bg: #050817; --card: rgba(13, 23, 54, .78); --card2: rgba(18, 30, 68, .92); --line: rgba(131, 119, 255, .24); --text: #f4f7ff; --muted: #95a3c5; --purple: #8d3dff; --blue: #2372ff; --cyan: #37e6ff; --danger: #ff4f7b; --ok: #52eba0; }
-    body { margin: 0; min-height: 100vh; font-family: "YekanZito", "Yekan", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif; color: var(--text); background: radial-gradient(circle at 50% -10%, rgba(141, 61, 255, .34), transparent 35%), radial-gradient(circle at 10% 25%, rgba(55, 230, 255, .12), transparent 28%), linear-gradient(180deg, #050817, #071026 62%, #030613); }
+    :root { color-scheme: dark; --font-yekan: "YekanZito", "Yekan", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif; --bg: #050817; --card: rgba(13, 23, 54, .78); --card2: rgba(18, 30, 68, .92); --line: rgba(131, 119, 255, .24); --text: #f4f7ff; --muted: #95a3c5; --purple: #8d3dff; --blue: #2372ff; --cyan: #37e6ff; --danger: #ff4f7b; --ok: #52eba0; }
+    html, body, button, input, textarea, select { font-family: var(--font-yekan); }
+    body * { font-family: inherit; }
+    body { margin: 0; min-height: 100vh; font-family: var(--font-yekan); color: var(--text); background: radial-gradient(circle at 50% -10%, rgba(141, 61, 255, .34), transparent 35%), radial-gradient(circle at 10% 25%, rgba(55, 230, 255, .12), transparent 28%), linear-gradient(180deg, #050817, #071026 62%, #030613); }
     body::before { content: ""; position: fixed; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255,255,255,.6) 0 1px, transparent 1.6px); background-size: 96px 96px; opacity: .18; }
     main { position: relative; z-index: 1; width: min(1180px, 100%); margin: 0 auto; padding: 22px 16px 34px; }
     .top { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; margin-bottom: 18px; }

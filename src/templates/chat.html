@@ -123,11 +123,10 @@
       border-radius: 16px;
       display: grid;
       place-items: center;
-      font-size: 24px;
-      font-weight: 900;
-      background: linear-gradient(135deg, #9b5cff, #226cff 62%, #3ee4ff);
-      box-shadow: var(--glow);
+      background: rgba(9, 17, 44, .72);
+      box-shadow: 0 0 24px rgba(80, 125, 255, .30);
       position: relative;
+      overflow: visible;
     }
     .mark::after {
       content: "";
@@ -135,6 +134,12 @@
       inset: -6px;
       border-radius: 22px;
       border: 1px solid rgba(151, 128, 255, .28);
+    }
+    .mark img {
+      width: 50px;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 0 13px rgba(72, 139, 255, .62));
     }
     h1 { margin: 0; font-size: 18px; letter-spacing: 0; }
     .subtitle { margin-top: 3px; color: var(--soft); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
@@ -202,6 +207,11 @@
       position: relative;
       filter: drop-shadow(0 0 26px rgba(115, 96, 255, .92));
       animation: hover 4.4s ease-in-out infinite;
+    }
+    .zito-orb img {
+      width: 132px;
+      height: auto;
+      display: block;
     }
     .zito-orb .body {
       position: absolute;
@@ -418,6 +428,11 @@
       filter: drop-shadow(0 0 22px rgba(115, 96, 255, .86));
       animation: hover 4.4s ease-in-out infinite;
     }
+    .lesson-avatar img {
+      width: 76px;
+      height: auto;
+      display: block;
+    }
     .lesson-avatar .body {
       position: absolute;
       inset: 18px 14px 6px;
@@ -564,7 +579,7 @@
   <main id="appShell" class="phone-shell mode-onboarding">
     <header class="topbar">
       <div class="brand">
-        <div class="mark">Z</div>
+        <div class="mark"><img src="/landing-static/logo-z-transparent.png" alt="Zito logo"></div>
         <div>
           <h1>زیتو</h1>
           <div class="subtitle">همراه هوشمند مسیر یادگیری تو</div>
@@ -577,8 +592,7 @@
       <div id="chat" class="chat">
         <div class="welcome">
           <div class="zito-orb" aria-hidden="true">
-            <div class="flame"></div><div class="body"></div><div class="orbit"></div>
-            <div class="eye left"></div><div class="eye right"></div><div class="smile"></div><div class="z">Z.</div>
+            <img src="/landing-static/zito-avatar-transparent.png" alt="">
           </div>
           <h2 class="welcome-title">سلام، من زیتو هستم 👋</h2>
           <p class="welcome-sub">برای ساختن مسیر آموزشی هوشمند، چند سوال کوتاه ازت می‌پرسم.</p>
@@ -609,8 +623,7 @@
     <aside id="lessonPanel" class="lesson-dock empty">
       <div>
         <div class="lesson-avatar" aria-hidden="true">
-          <div class="flame"></div><div class="body"></div>
-          <div class="eye left"></div><div class="eye right"></div><div class="smile"></div>
+          <img src="/landing-static/zito-avatar-transparent.png" alt="">
         </div>
         <div class="lesson-empty-title">پنل آموزش زیتو</div>
         <p class="lesson-empty-copy">بعد از انتخاب مسیر، درس و تمرین اینجا نمایش داده می‌شود تا چت فقط برای پاسخ و سوال‌های تو بماند.</p>

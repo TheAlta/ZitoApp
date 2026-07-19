@@ -28,6 +28,27 @@ Copy-Item .env.example .env
 
 Then edit `.env` locally and replace every placeholder with real local values.
 
+## Local Password Manager
+
+This repository includes a small local helper at `tools/zito-secrets.ps1`.
+It stores secrets in `.secrets/zito-vault.local.json`, which is ignored by Git and encrypted with Windows DPAPI.
+
+Initialize it:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 init
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 import-env
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 set-server-password
+```
+
+List saved secret names without revealing values:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 list
+```
+
+The SSH server password belongs in this local vault or a real password manager, not in `.env`.
+
 ## Production Rules
 
 - Set `APP_ENV=production` on the server.

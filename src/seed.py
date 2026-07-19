@@ -103,10 +103,12 @@ def seed_knowledge(db: Session) -> None:
 
 
 def seed_admin(db: Session) -> None:
-    settings = get_settings()
     existing_admin = db.scalars(select(Admin).limit(1)).first()
     if existing_admin:
         return
+    settings = get_settings()
+    if settings.is_production and not settings.has_safe_admin_seed_password:
+        raise RuntimeError("Cannot seed the first production admin with an unsafe ADMIN_PASSWORD.")
     db.add(Admin(username=settings.admin_username, password_hash=hash_password(settings.admin_password)))
     db.commit()
 

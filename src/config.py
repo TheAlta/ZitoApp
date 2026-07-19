@@ -31,8 +31,6 @@ class Settings(BaseSettings):
             return self
 
         missing = []
-        if self.admin_password in {"", "change-me", "replace_with_strong_admin_password"}:
-            missing.append("ADMIN_PASSWORD")
         if self.admin_session_secret in {"", "change-me-admin-session-secret", "replace_with_long_random_secret"}:
             missing.append("ADMIN_SESSION_SECRET")
         if not self.arvan_mock_ai and (not self.arvan_api_base_url or not self.arvan_api_key):
@@ -42,6 +40,14 @@ class Settings(BaseSettings):
             joined = ", ".join(missing)
             raise ValueError(f"Unsafe production configuration. Set secure values for: {joined}")
         return self
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.lower() in {"prod", "production"}
+
+    @property
+    def has_safe_admin_seed_password(self) -> bool:
+        return self.admin_password not in {"", "change-me", "replace_with_strong_admin_password"}
 
 
 @lru_cache

@@ -34,6 +34,7 @@ Then edit `.env` locally and replace every placeholder with real local values.
 - Use PostgreSQL for `DATABASE_URL`.
 - Use `ARVAN_MOCK_AI=false`.
 - Use a strong `ADMIN_PASSWORD` and a long random `ADMIN_SESSION_SECRET`.
+- `ADMIN_PASSWORD` is only used when the very first admin is seeded. Existing admins keep their hashed password in the database.
 - Rotate any secret that was ever posted in chat, issue trackers, screenshots, or logs.
 
 ## Before Push

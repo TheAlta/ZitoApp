@@ -1,11 +1,38 @@
+# Local secrets and environment files
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Python
 .venv/
+venv/
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+
+# Local databases and runtime output
+*.sqlite
 *.sqlite3
 *.db
+*.db-journal
+*.log
+
+# Build artifacts
 dist/
 build/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+!.vscode/extensions.json

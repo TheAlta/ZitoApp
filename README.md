@@ -13,7 +13,7 @@ Zito is a FastAPI-based AI onboarding and training service.
 ## Local URLs
 After setup:
 - Chat: `http://127.0.0.1:8000/chat`
-- Admin: `http://127.0.0.1:8000/admin` with HTTP Basic auth
+- Admin: `http://127.0.0.1:8000/admin` with the admin login page
 - API docs: `http://127.0.0.1:8000/docs`
 - Health: `http://127.0.0.1:8000/health`
 

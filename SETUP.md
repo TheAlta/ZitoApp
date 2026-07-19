@@ -8,7 +8,7 @@ cd C:\Users\ASUS\Desktop\ZitoApp
 $env:DATABASE_URL="sqlite:///./local_test.db"
 $env:ARVAN_MOCK_AI="true"
 $env:ADMIN_USERNAME="zito_admin"
-$env:ADMIN_PASSWORD="change-me"
+$env:ADMIN_PASSWORD="local-dev-only-password"
 .\.venv\Scripts\python.exe -m uvicorn src.main:app --reload
 ```
 
@@ -19,7 +19,7 @@ Open in browser:
 
 Admin login for local test:
 - username: `zito_admin`
-- password: `change-me`
+- password: `local-dev-only-password`
 
 ## What To Test In The Browser
 1. Open `/chat`.
@@ -43,9 +43,11 @@ ARVAN_API_KEY=your_real_key
 ARVAN_MODEL=GPT-5.4-Mini
 ADMIN_USERNAME=zito_admin
 ADMIN_PASSWORD=choose_a_strong_password
+ADMIN_SESSION_SECRET=choose_a_long_random_session_secret
 ```
 
 Important: do not commit `.env`. If an API key was shared in chat, rotate it in Arvan and use a new one.
+SSH/server passwords do not belong in `.env`; keep them in your password manager or replace password login with SSH keys.
 
 ## PostgreSQL Production Setup
 PostgreSQL is not required for quick local testing. For production or a serious dev database:

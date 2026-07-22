@@ -1,7 +1,10 @@
 # PROJECT_REPORT.md - مستندسازی فنی وضعیت فعلی Zito
 
 تاریخ تهیه: 2026-07-20  
-ریپازیتوری: `https://github.com/TheAlta/ZitoApp`  
+آخرین به‌روزرسانی: 2026-07-22  
+ریپازیتوری‌های GitHub:
+- `https://github.com/TheAlta/ZitoApp`
+- `https://github.com/elmsaz/elmsazZito`
 دامنه production: `https://zito.ir`  
 نکته امنیتی: هیچ مقدار واقعی secret، API key، رمز دیتابیس، رمز SSH یا token در این سند آورده نشده است.
 
@@ -40,7 +43,9 @@ Zito یک سرویس onboarding و آموزش هوش مصنوعی است که ک
 - فاز ۳، پنل مدیریت با login و CRUD پایه: انجام شده در سطح MVP.
 - فاز ۴، آموزش + RAG داخلی + تولید درس/ارزیابی تمرین: انجام شده در سطح MVP، اما Knowledge Base واقعی شرکت هنوز جایگزین seed پیش‌فرض نشده است.
 
-درصد تخمینی تکمیل کل پروژه: حدود 65 تا 70 درصد. پروژه قابل اجرا و deploy شده است، اما برای نسخه رسمی هنوز نیاز به test suite، مدیریت حرفه‌ای secretها، CI/CD، hardening امنیتی، Knowledge Base واقعی، migration discipline و monitoring دارد.
+درصد تخمینی تکمیل کل پروژه فعلی: حدود 65 تا 70 درصد. پروژه قابل اجرا و deploy شده است، اما این وضعیت مربوط به MVP/فاز ۱ است.
+
+وضعیت فاز ۲: هنوز پیاده‌سازی نشده و در مرحله طراحی معماری و زمان‌بندی است. تصمیم فعلی این است که فاز ۲ با سه بخش `CMS`، `Core` و `UI` جلو برود. CMS واقعی در اسپرینت‌های پایانی ساخته می‌شود، اما از ابتدا یک Fake CMS/Seed CMS روی schema واقعی ساخته می‌شود تا Core از همان قرارداد دیتابیسی آینده بخواند و بعداً اتصال CMS واقعی باعث بازنویسی Core نشود.
 
 ---
 
@@ -103,6 +108,121 @@ Browser -> Arvan CDN/DNS -> Nginx :443 -> Uvicorn 127.0.0.1:8000 -> FastAPI
 - تماس LLM در یک wrapper واحد متمرکز شده تا اگر endpoint یا فرمت Arvan تغییر کرد فقط `src/lib/arvan_client.py` تغییر کند.
 - RAG فعلاً داخلی و SQL-based است چون هنوز Knowledge Base رسمی شرکت وجود ندارد؛ این مسیر برای MVP ساده، قابل فهم و کم‌هزینه است.
 - UI به صورت HTML/CSS/JS server-rendered از FastAPI سرو می‌شود تا پیچیدگی build frontend در MVP کم بماند.
+
+### معماری پیشنهادی فاز ۲
+
+فاز ۲ باید از فاز فعلی جدا دیده شود. اصل اصلی طراحی:
+
+```text
+CMS تولید و تایید محتوا را مدیریت می‌کند.
+Core فقط محتوای approved/published را مصرف می‌کند.
+UI هر قالب آموزشی را با تجربه بصری اختصاصی نمایش می‌دهد.
+```
+
+در فاز ۲ کاربر دیگر پاسخ‌های فرم اولیه را با AI validation نمی‌فرستد. ورود با شماره موبایل و OTP انجام می‌شود، سپس فرم اطلاعات کاربر بدون AI check ذخیره می‌شود:
+
+- نام و نام خانوادگی
+- حوزه کاری
+- منبع آشنایی با Zito
+- زمان روزانه مطالعه
+
+بعد کاربر دوره منتشرشده را انتخاب می‌کند و مسیر آموزشی را طی می‌کند.
+
+#### Fake CMS در ابتدای فاز ۲
+
+با توجه به تصمیم جدید پروژه، CMS اصلی در اسپرینت ۵ ساخته می‌شود. برای اینکه Core از ابتدا روی مسیر درست توسعه پیدا کند، در اسپرینت ۰ باید یک Fake CMS/Seed CMS ساخته شود:
+
+```text
+Fake CMS = UI ادمین و تولید AI ندارد،
+ولی schema واقعی CMS را دارد و دیتابیس را با یک دوره نمونه published پر می‌کند.
+```
+
+کار اشتباه:
+
+```text
+Core از فایل hardcode یا mock جدا بخواند
+بعداً CMS واقعی اضافه شود
+بعد Core دوباره سیم‌کشی شود
+```
+
+کار درست:
+
+```text
+Core از جدول‌های واقعی CMS بخواند
+اما محتوا فعلاً با seed ساخته شده باشد
+```
+
+قرارداد اصلی داده برای فاز ۲:
+
+```text
+courses
+  ↓
+course_versions
+  ↓
+course_stage_contents
+  ↓
+published version
+  ↓
+Core training engine
+```
+
+این versioning مهم است چون اگر اپراتور بعداً دوره را ویرایش کند، کاربری که وسط نسخه قبلی دوره است نباید ناگهان محتوای متفاوت ببیند.
+
+#### ۲۰ قالب آموزشی فاز ۲
+
+مسیر آموزشی فاز ۲ شامل ۲۰ قالب/مرحله است. لیست اولیه اعلام‌شده ۱۹ مورد داشت؛ تصمیم پیشنهادی این است که مورد ۲۰ به عنوان «پروژه نهایی / جمع‌بندی شخصی‌سازی‌شده» اضافه شود و بعد از آن آزمون نهایی و مدرک بیاید.
+
+```text
+01. خلاصه درس
+02. فلش‌کارت‌ها و مرور سریع مفاهیم
+03. پرسش و پاسخ
+04. نمایش مسیر یادگیری
+05. آزمون کوچک برای تثبیت یادگیری
+06. سوال‌های چهارگزینه‌ای
+07. مثال‌های واقعی
+08. سناریوهای تعاملی
+09. چک‌لیست اجرایی
+10. تمرین عملی
+11. ماموریت روزانه و چالش کوچک
+12. گفت‌وگو با آواتار
+13. مرور هوشمند
+14. خلاصه صوتی درس
+15. اینفوگرافیک مفاهیم مهم
+16. نقشه ذهنی
+17. کارت‌های نکات طلایی
+18. اشتباهات رایج
+19. مسیر شخصی‌سازی‌شده
+20. پروژه نهایی / جمع‌بندی شخصی‌سازی‌شده
+Final. آزمون نهایی و صدور مدرک
+```
+
+#### نقش‌های AI در فاز ۲
+
+دو نقش AI باید جدا بمانند:
+
+```text
+AI شماره ۱: Content Generator
+فقط در CMS واقعی استفاده می‌شود.
+برای هر دوره و هر stage محتوای خام تولید می‌کند.
+خروجی باید توسط اپراتور انسانی بازبینی/تایید شود.
+
+AI شماره ۲: Avatar Tutor / Controller
+در Core با کاربر تعامل دارد.
+فقط روی RAG/KB نسخه منتشرشده دوره grounded می‌شود.
+سوال کاربر، کنترل مسیر، آزمون نهایی و نمره‌دهی را مدیریت می‌کند.
+```
+
+#### زمان‌بندی پیشنهادی فاز ۲ با Fake CMS
+
+| اسپرینت | بازه | تمرکز | خروجی |
+|---|---:|---|---|
+| ۰ - مدل داده + Fake CMS Seed | روز ۱ تا ۳ | schema واقعی فاز ۲، stage types، seed یک دوره نمونه با ۲۰ مرحله | دیتابیس آماده + یک دوره fake published |
+| ۱ - Core ورود | روز ۴ تا ۸ | OTP، فرم اطلاعات بدون AI، انتخاب/ثبت‌نام دوره | کاربر وارد می‌شود و دوره fake را انتخاب می‌کند |
+| ۲ - موتور ۲۰ مرحله | روز ۹ تا ۱۸ | خواندن از `course_stage_contents`، پیشروی، progress | کاربر ۲۰ مرحله را با محتوای seed طی می‌کند |
+| ۳ - آواتار زنده + UI قالب‌ها | روز ۱۹ تا ۳۰ | RAG از KB همان دوره، avatar chat، UI اختصاصی ۲۰ قالب | تجربه آموزشی کامل با محتوای fake |
+| ۴ - آزمون و مدرک | روز ۳۱ تا ۳۹ | آزمون، grading AI، certificate | مسیر کامل تا مدرک با course نمونه |
+| ۵ - CMS واقعی | روز ۴۰ تا ۵۲ | CRUD دوره، آپلود KB، تولید AI، review/approve/publish | course واقعی جایگزین fake می‌شود |
+| ۶ - تست نهایی | روز ۵۳ تا ۶۰ | تست با course واقعی، رفع باگ، deploy | فاز ۲ آماده ارائه |
 
 ---
 
@@ -730,6 +850,9 @@ Arvancloud AIaaS GPT-5.4-Mini /chat/completions
 ### خروجی کامل `git log --oneline --all`
 
 ```text
+5c0ab1c Add technical project report
+aab3cbf Merge elmsaz repository history
+76091ee Initial commit
 4b02592 Add local secrets manager
 660ab15 Relax production admin env guard
 9946fde Harden environment and secret handling
@@ -752,6 +875,9 @@ d5e545a Start version 2 phone login flow
 
 ### توضیح commitهای مهم
 
+- `76091ee Initial commit`: commit اولیه ریپوی دوم `elmsaz/elmsazZito` که فقط README اولیه داشت.
+- `aab3cbf Merge elmsaz repository history`: اتصال تاریخچه ریپوی دوم به تاریخچه اصلی پروژه بدون force push و بدون تغییر فایل‌های Zito.
+- `5c0ab1c Add technical project report`: افزودن مستند فنی کامل پروژه در `PROJECT_REPORT.md`.
 - `881610a Initial Zito app`: پایه FastAPI، دیتابیس، onboarding، Arvan client، prompts، RAG seed و UI اولیه را ساخت.
 - `4fbee09 Polish Zito dark UI`: UI تیره و ظاهر شکیل‌تر برای تجربه چت/پنل اضافه شد.
 - `5ab6e01 Bypass proxy for Arvan client`: در `httpx.AsyncClient` مقدار `trust_env=False` اضافه شد تا proxy/env سیستم باعث خرابی تماس Arvan نشود.
@@ -770,9 +896,11 @@ d5e545a Start version 2 phone login flow
 
 ### وضعیت GitHub و production
 
-- آخرین commit روی GitHub در زمان گزارش: `4b02592`
+- آخرین commit روی هر دو GitHub repo در زمان به‌روزرسانی 2026-07-22: `5c0ab1c`
+- ریپوی `TheAlta/ZitoApp`: روی `5c0ab1c`
+- ریپوی `elmsaz/elmsazZito`: روی `5c0ab1c`
 - commit اجراشده روی production در آخرین SSH check: `660ab15`
-- تفاوت: commit `4b02592` فقط ابزار local secrets manager و مستندات امنیتی اضافه می‌کند و روی runtime سایت اثر ندارد.
+- تفاوت production با GitHub: commitهای بعد از `660ab15` شامل hardening مستندات/secret handling، ابزار local secrets manager، merge تاریخچه ریپوی دوم و `PROJECT_REPORT.md` هستند. این تغییرات runtime-critical نیستند، اما برای نظم تیمی بهتر است در deploy بعدی سرور هم pull شود.
 
 ---
 
@@ -1029,6 +1157,9 @@ SQLite برای تست سریع local بدون نصب DB مناسب است. Post
 - مسیرهای آموزشی فقط سه حوزه دارند و ساختار course/chapter رسمی ندارند.
 - `last_lesson` در `user_progress` فعلاً string ذخیره می‌شود؛ بهتر است JSONB یا جدول lesson/session مستقل شود.
 - progress فعلی هر pass را 25 درصد افزایش می‌دهد؛ ساختار pedagogical دقیق‌تر لازم است.
+- فاز ۲ هنوز پیاده‌سازی نشده و باید با schema واقعی CMS و Fake CMS/Seed CMS شروع شود.
+- در فاز ۲ باید قرارداد JSON هرکدام از ۲۰ قالب آموزشی مشخص شود تا Core و UI از ابتدا با CMS واقعی سازگار باشند.
+- مرحله ۲۰ باید به صورت رسمی تایید شود. پیشنهاد فعلی: «پروژه نهایی / جمع‌بندی شخصی‌سازی‌شده».
 
 ### Backend/API
 
@@ -1038,6 +1169,8 @@ SQLite برای تست سریع local بدون نصب DB مناسب است. Post
 - error monitoring مثل Sentry یا logging مرکزی وجود ندارد.
 - OpenAPI docs وجود دارد، اما مستند رسمی request/response با مثال هنوز کامل نشده است.
 - endpointهای admin برای ساخت/ویرایش admin users هنوز کامل نیستند.
+- APIهای فاز ۲ هنوز ساخته نشده‌اند: OTP، profile v2، enroll، stage engine، avatar chat v2، exam و certificate.
+- CMS واقعی فاز ۲ هنوز ساخته نشده است: CRUD دوره، upload KB، AI generation async، review/approve/publish.
 
 ### امنیت
 
@@ -1045,11 +1178,13 @@ SQLite برای تست سریع local بدون نصب DB مناسب است. Post
 - ورود SSH هنوز password-based است؛ بهتر است SSH key و سپس disable password login انجام شود.
 - secretهای production در فایل `.env` سرور هستند؛ بهتر است در مرحله بعد به secret manager یا حداقل permission سخت‌گیرانه‌تر منتقل شوند.
 - API key آروان قبلاً در چت مطرح شده؛ باید در dashboard آروان rotate شود.
+- وضعیت Git در زمان به‌روزرسانی 2026-07-22: فایل‌های tracked شامل `.env`، `.secrets/`، دیتابیس local یا private key واقعی نیستند. موارد دیده‌شده در `.env.example` و `SETUP.md` placeholder آموزشی هستند.
 
 ### Deploy/DevOps
 
 - CI/CD وجود ندارد؛ deploy دستی با `git pull` و `systemctl restart` انجام می‌شود.
-- server و GitHub در زمان گزارش یک commit اختلاف دارند: GitHub روی `4b02592` و production روی `660ab15`. این اختلاف runtime-critical نیست، اما برای نظم تیمی بهتر است production هم pull شود.
+- دو ریپوی GitHub همزمان نگهداری می‌شوند: `TheAlta/ZitoApp` و `elmsaz/elmsazZito`. در زمان به‌روزرسانی هر دو روی `5c0ab1c` هستند.
+- production در آخرین SSH check روی `660ab15` بود. اختلاف با GitHub فعلاً runtime-critical نیست، اما برای نظم تیمی بهتر است در deploy بعدی سرور هم pull شود.
 - backup برنامه‌ریزی‌شده PostgreSQL مستند/فعال نشده است.
 - migration discipline باید جدی‌تر شود؛ `AUTO_CREATE_TABLES=true` برای production بلندمدت مناسب نیست.
 - health check فقط دیتابیس را تست می‌کند؛ وضعیت Arvan AIaaS را جداگانه چک نمی‌کند.
@@ -1064,4 +1199,3 @@ SQLite برای تست سریع local بدون نصب DB مناسب است. Post
 
 - `PROJECT_CONTEXT.md` در بخش Admin هنوز نوشته «HTTP Basic auth»، در حالی که وضعیت فعلی login page + cookie session است. باید در یک اصلاح مستنداتی آپدیت شود.
 - Runbook کامل incident/deploy/rollback هنوز جداگانه نوشته نشده است.
-

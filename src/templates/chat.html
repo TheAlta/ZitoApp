@@ -659,7 +659,7 @@
     let selectedTrack = localStorage.getItem("zito_track") || "accounting";
     const urlUserId = new URLSearchParams(window.location.search).get("user_id");
     const savedUserId = localStorage.getItem("zito_user_id");
-    const sessionUserId = urlUserId || savedUserId;
+    let sessionUserId = urlUserId || savedUserId;
     if (urlUserId) {
       localStorage.setItem("zito_user_id", urlUserId);
       window.history.replaceState({}, "", "/app/");
@@ -709,6 +709,24 @@
     };
 
     function setStatus(text) { statusBox.textContent = text; }
+    function clearSavedSession() {
+      localStorage.removeItem("zito_user_id");
+      localStorage.removeItem("zito_username");
+      localStorage.removeItem("zito_track");
+      sessionUserId = null;
+      userId = null;
+      currentQuestion = null;
+      currentLesson = null;
+      selectedTrack = "accounting";
+      window.history.replaceState({}, "", "/app/");
+    }
+    function handleMissingUser(error) {
+      if (error.status !== 404 || !String(error.message || "").toLowerCase().includes("user")) return false;
+      clearSavedSession();
+      addMessage("حساب ذخیره‌شده قبلی دیگر در دیتابیس وجود ندارد. اطلاعات ورود قبلی پاک شد و مسیر تازه‌ای شروع می‌کنیم.");
+      start().catch((nextError) => addMessage(nextError.message));
+      return true;
+    }
     function setBusy(isBusy) { button.disabled = isBusy; typing.classList.toggle("show", isBusy); chat.appendChild(typing); chat.scrollTop = chat.scrollHeight; }
     function addMessage(text, who = "bot") { const div = document.createElement("div"); div.className = `msg ${who}`; div.textContent = text; chat.insertBefore(div, typing); chat.scrollTop = chat.scrollHeight; }
     function addModalMessage(text, who = "bot") { const div = document.createElement("div"); div.className = `msg ${who}`; div.textContent = text; modalMessages.appendChild(div); modalMessages.scrollTop = modalMessages.scrollHeight; }
@@ -785,16 +803,30 @@
     async function api(url, options = {}) {
       const res = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "درخواست ناموفق بود.");
+      if (!res.ok) {
+        const error = new Error(data.detail || "درخواست ناموفق بود.");
+        error.status = res.status;
+        throw error;
+      }
       return data;
     }
 
     async function start() {
       setMode("onboarding");
       setStatus("شناخت اولیه");
-      const data = sessionUserId
-        ? await api(`/api/onboarding/${sessionUserId}/state`)
-        : await api("/api/onboarding/start", { method: "POST" });
+      let data;
+      if (sessionUserId) {
+        try {
+          data = await api(`/api/onboarding/${sessionUserId}/state`);
+        } catch (error) {
+          if (error.status !== 404) throw error;
+          clearSavedSession();
+          addMessage("حساب ذخیره‌شده قبلی دیگر در دیتابیس وجود ندارد. اطلاعات ورود قبلی پاک شد و مسیر تازه‌ای شروع می‌کنیم.");
+          data = await api("/api/onboarding/start", { method: "POST" });
+        }
+      } else {
+        data = await api("/api/onboarding/start", { method: "POST" });
+      }
       userId = data.user_id;
       localStorage.setItem("zito_user_id", String(userId));
       if (data.completed) {
@@ -852,7 +884,7 @@
       input.value = "";
       setBusy(true);
       try { await submitOnboarding(value); }
-      catch (error) { addMessage(error.message); }
+      catch (error) { if (!handleMissingUser(error)) addMessage(error.message); }
       finally { setBusy(false); input.focus(); }
     });
 
@@ -864,7 +896,12 @@
       planetStart.disabled = true;
       planetButton.disabled = true;
       try { await loadLesson(); }
-      catch (error) { showPlanet(); planetCopy.textContent = error.message; }
+      catch (error) {
+        if (!handleMissingUser(error)) {
+          showPlanet();
+          planetCopy.textContent = error.message;
+        }
+      }
       finally { planetStart.disabled = false; planetButton.disabled = false; }
     }
 
@@ -880,7 +917,7 @@
       modalInput.value = "";
       setModalBusy(true);
       try { await submitTrainingMessage(value); }
-      catch (error) { addModalMessage(error.message); }
+      catch (error) { if (!handleMissingUser(error)) addModalMessage(error.message); }
       finally { setModalBusy(false); modalInput.focus(); }
     });
 

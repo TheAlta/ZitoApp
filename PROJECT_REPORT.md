@@ -1,7 +1,7 @@
 # PROJECT_REPORT.md - مستندسازی فنی وضعیت فعلی Zito
 
 تاریخ تهیه: 2026-07-20  
-آخرین به‌روزرسانی: 2026-07-22  
+آخرین به‌روزرسانی: 2026-07-23
 ریپازیتوری‌های GitHub:
 - `https://github.com/TheAlta/ZitoApp`
 - `https://github.com/elmsaz/elmsazZito`
@@ -46,6 +46,8 @@ Zito یک سرویس onboarding و آموزش هوش مصنوعی است که ک
 درصد تخمینی تکمیل کل پروژه فعلی: حدود 65 تا 70 درصد. پروژه قابل اجرا و deploy شده است، اما این وضعیت مربوط به MVP/فاز ۱ است.
 
 وضعیت فاز ۲: هنوز پیاده‌سازی نشده و در مرحله طراحی معماری و زمان‌بندی است. تصمیم فعلی این است که فاز ۲ با سه بخش `CMS`، `Core` و `UI` جلو برود. CMS واقعی در اسپرینت‌های پایانی ساخته می‌شود، اما از ابتدا یک Fake CMS/Seed CMS روی schema واقعی ساخته می‌شود تا Core از همان قرارداد دیتابیسی آینده بخواند و بعداً اتصال CMS واقعی باعث بازنویسی Core نشود.
+
+به‌روزرسانی اسپرینت ۰ فاز ۲ در تاریخ 2026-07-23: قرارداد دیتابیسی واقعی فاز ۲ به پروژه اضافه شد. migration جدید با شناسه `20260723_0003_phase2_schema` جدول‌های دوره، نسخه دوره، محتوای ۲۰ مرحله، KB اختصاصی دوره، پروفایل فاز ۲، ثبت‌نام دوره، پیشرفت مرحله‌ای، آزمون، تلاش آزمون و مدرک را اضافه می‌کند. همچنین Fake CMS Seed در `src/seed.py` یک دوره نمونه published با slug `personal-development-ai`، نسخه published شماره ۱، ۲۰ stage تاییدشده، ۳ سند KB و یک آزمون نهایی نمونه می‌سازد. این کار باعث می‌شود Core فاز ۲ از همین ابتدا از جدول‌های واقعی CMS بخواند و بعداً CMS واقعی فقط producer همین contract شود.
 
 ---
 
@@ -420,6 +422,7 @@ ZitoApp/
 - migrations:
   - `migrations/versions/20260707_0001_initial.py`
   - `migrations/versions/20260714_0002_admins.py`
+  - `migrations/versions/20260723_0003_phase2_schema.py`
 
 ### جدول `users`
 
@@ -505,6 +508,51 @@ ZitoApp/
 | `tags` | varchar(255) | yes | tagهای ساده برای جستجو |
 | `created_at` | timestamptz | no | زمان ساخت |
 
+### جدول‌های فاز ۲ / Fake CMS
+
+Migration مرجع: `migrations/versions/20260723_0003_phase2_schema.py`
+
+این جدول‌ها فعلاً برای Sprint 0 اضافه شده‌اند و توسط `seed_phase2_fake_course` در `src/seed.py` با داده نمونه پر می‌شوند. هنوز APIهای Core فاز ۲ و CMS واقعی روی آن‌ها کامل نشده‌اند.
+
+| جدول | نقش | وضعیت فعلی |
+|---|---|---|
+| `courses` | تعریف دوره؛ شامل `title`, `slug`, `domain`, `status` | یک دوره sample با slug `personal-development-ai` و status `published` seed می‌شود |
+| `course_versions` | نسخه‌بندی محتوای دوره برای جلوگیری از تغییر ناگهانی مسیر کاربر | نسخه `1` دوره sample با status `published` seed می‌شود |
+| `course_stage_contents` | محتوای ۲۰ قالب آموزشی هر نسخه دوره در `content_json` | ۲۰ stage تاییدشده با `review_status=approved` seed می‌شود |
+| `course_kb_documents` | KB اختصاصی هر دوره برای RAG آواتار و کنترل مسیر | ۳ سند sample برای دوره فاز ۲ seed می‌شود |
+| `user_profiles_v2` | پروفایل جدید فاز ۲ بعد از OTP؛ فرم بدون AI validation | schema آماده، هنوز Core API فاز ۲ روی آن کامل نشده |
+| `profile_builder_answers` | پاسخ خام/ساختاریافته هر قدم فرم پروفایل | schema آماده |
+| `user_course_enrollments` | ثبت‌نام کاربر در یک course version مشخص | schema آماده |
+| `user_stage_progress` | پیشرفت کاربر در هر stage از مسیر ۲۰ مرحله‌ای | schema آماده |
+| `exams` | آزمون نهایی هر نسخه دوره، سوال‌ها در `questions_json` | یک آزمون sample با `passing_score=70` seed می‌شود |
+| `exam_attempts` | پاسخ‌ها، نمره و feedback آزمون کاربر | schema آماده |
+| `certificates` | مدرک صادرشده پس از قبولی آزمون | schema آماده |
+
+قرارداد مرحله‌های آموزشی فاز ۲:
+
+```text
+01 lesson_summary
+02 flashcards
+03 qa
+04 learning_path
+05 mini_quiz
+06 multiple_choice
+07 real_examples
+08 interactive_scenario
+09 checklist
+10 practical_exercise
+11 daily_mission
+12 avatar_dialog
+13 smart_review
+14 audio_summary
+15 infographic
+16 mind_map
+17 golden_tips
+18 common_mistakes
+19 personalized_path
+20 final_project
+```
+
 ### جدول `alembic_version`
 
 در production وجود دارد و نسخه migration جاری را نگه می‌دارد:
@@ -525,6 +573,8 @@ ZitoApp/
 | `knowledge_documents` | 6 |
 
 جدول خالی وجود ندارد. اما `knowledge_documents` فعلاً Knowledge Base واقعی شرکت نیست و فقط seed پیش‌فرض دارد. همچنین `user_progress` برای همه کاربران وجود ندارد؛ 12 رکورد progress برای 16 کاربر ثبت شده، یعنی بعضی کاربران وارد آموزش نشده‌اند یا progress آن‌ها هنوز ساخته نشده است.
+
+نکته فاز ۲: migration جدید `20260723_0003_phase2_schema` در local/test با موفقیت اجرا شده است. اجرای آن روی production باید در زمان deploy فاز ۲ با backup دیتابیس و دستور Alembic کنترل‌شده انجام شود.
 
 ### سوال‌های onboarding در production
 

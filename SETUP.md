@@ -29,15 +29,15 @@ Admin login for local test:
 - password: `local-dev-only-password`
 
 ## What To Test In The Browser
-1. Open `/chat`.
-2. Enter an invalid answer like `asdf`; Zito should reject it and show guidance.
-3. Enter a valid name and username.
-4. Enter a valid profession.
-5. Zito should immediately generate a lesson in one of three tracks: accounting, psychology, or law with AI.
-6. In the same input, either ask a question or answer the exercise. There is no separate mode switch.
-7. If your answer is good enough, Zito moves to the next lesson. If not, it gives guidance and asks again.
-8. Open `/admin`; the browser should ask for admin username and password.
-9. After login, you should see saved users and answers.
+1. Open `/`.
+2. Click `شروع کنید`.
+3. Enter a phone number.
+4. If `OTP_MOCK=true`, the modal shows the local test code. If `OTP_MOCK=false`, read the SMS code.
+5. Enter the OTP code and submit.
+6. `/app/` opens and shows the Phase 2 profile form.
+7. Fill the profile form. This form is saved without AI validation.
+8. After submit, Zito enrolls the user in the current published Fake CMS course and shows the learning planet.
+9. Open `/admin/login`; after login, you should see saved users.
 
 ## Real Arvan Mode
 Create `.env` from `.env.example` and set:

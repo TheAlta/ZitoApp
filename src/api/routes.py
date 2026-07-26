@@ -6,13 +6,27 @@ from sqlalchemy.orm import Session, selectinload
 
 from src.db import get_db
 from src.lib.arvan_client import ArvanAIError
-from src.models import Answer, KnowledgeDocument, Question, User, UserProgress
+from src.models import (
+    Answer,
+    Course,
+    CourseStageContent,
+    CourseVersion,
+    KnowledgeDocument,
+    ProfileBuilderAnswer,
+    Question,
+    User,
+    UserCourseEnrollment,
+    UserProfileV2,
+    UserProgress,
+)
 from src.schemas import (
     AdminAnswerUpdate,
     AdminLoginIn,
     AdminLoginOut,
     AnswerIn,
     AnswerOut,
+    CourseOut,
+    EnrollmentOut,
     KnowledgeIn,
     KnowledgeOut,
     OnboardingAnswerOut,
@@ -23,6 +37,8 @@ from src.schemas import (
     OtpVerifyIn,
     PhoneLoginIn,
     PhoneLoginOut,
+    ProfileV2In,
+    ProfileV2Out,
     QuestionOut,
     TrainingAnswerIn,
     TrainingLessonOut,
@@ -109,6 +125,43 @@ def _get_or_create_phone_user(db: Session, phone: str) -> User:
     return user
 
 
+def _profile_out(user_id: int, profile: UserProfileV2 | None) -> ProfileV2Out:
+    if not profile:
+        return ProfileV2Out(user_id=user_id, completed=False)
+    completed = bool(profile.full_name and profile.work_domain and profile.daily_study_minutes)
+    return ProfileV2Out(
+        user_id=user_id,
+        completed=completed,
+        full_name=profile.full_name,
+        work_domain=profile.work_domain,
+        referral_source=profile.referral_source,
+        daily_study_minutes=profile.daily_study_minutes,
+        learning_goal=profile.learning_goal,
+        experience_level=profile.experience_level,
+        preferred_learning_style=profile.preferred_learning_style,
+    )
+
+
+def _published_version_for(course: Course) -> CourseVersion | None:
+    versions = sorted(course.versions, key=lambda item: item.version_number, reverse=True)
+    return next((version for version in versions if version.status == "published"), None)
+
+
+def _course_out(course: Course) -> CourseOut | None:
+    version = _published_version_for(course)
+    if not version:
+        return None
+    return CourseOut(
+        id=course.id,
+        title=course.title,
+        slug=course.slug,
+        domain=course.domain,
+        version_id=version.id,
+        version_number=version.version_number,
+        stage_count=len([stage for stage in version.stages if stage.status == "approved"]),
+    )
+
+
 @router.get("/health")
 def health(db: Session = Depends(get_db)) -> dict:
     db.execute(text("SELECT 1"))
@@ -173,6 +226,127 @@ def verify_phone_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> Pho
         raise HTTPException(status_code=401, detail="کد تایید اشتباه است یا منقضی شده.")
     user = _get_or_create_phone_user(db, phone)
     return PhoneLoginOut(user_id=user.id, username=phone, redirect_url="/app/")
+
+
+@router.get("/api/profile/{user_id}", response_model=ProfileV2Out)
+def get_profile_v2(user_id: int, db: Session = Depends(get_db)) -> ProfileV2Out:
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    profile = db.scalars(select(UserProfileV2).where(UserProfileV2.user_id == user.id)).first()
+    return _profile_out(user.id, profile)
+
+
+@router.post("/api/profile/{user_id}", response_model=ProfileV2Out)
+def submit_profile_v2(user_id: int, payload: ProfileV2In, db: Session = Depends(get_db)) -> ProfileV2Out:
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    profile = db.scalars(select(UserProfileV2).where(UserProfileV2.user_id == user.id)).first()
+    if not profile:
+        profile = UserProfileV2(user_id=user.id)
+        db.add(profile)
+
+    profile.full_name = payload.full_name.strip()
+    profile.work_domain = payload.work_domain.strip()
+    profile.referral_source = payload.referral_source.strip() if payload.referral_source else None
+    profile.daily_study_minutes = payload.daily_study_minutes
+    profile.learning_goal = payload.learning_goal.strip() if payload.learning_goal else None
+    profile.experience_level = payload.experience_level.strip() if payload.experience_level else None
+    profile.preferred_learning_style = (
+        payload.preferred_learning_style.strip() if payload.preferred_learning_style else None
+    )
+
+    user.full_name = profile.full_name
+    user.profession = profile.work_domain
+
+    answers = {
+        "full_name": profile.full_name,
+        "work_domain": profile.work_domain,
+        "referral_source": profile.referral_source,
+        "daily_study_minutes": profile.daily_study_minutes,
+        "learning_goal": profile.learning_goal,
+        "experience_level": profile.experience_level,
+        "preferred_learning_style": profile.preferred_learning_style,
+    }
+    for step_key, value in answers.items():
+        current = db.scalars(
+            select(ProfileBuilderAnswer).where(
+                ProfileBuilderAnswer.user_id == user.id,
+                ProfileBuilderAnswer.step_key == step_key,
+            )
+        ).first()
+        answer_json = {"value": value}
+        if current:
+            current.answer_json = answer_json
+        else:
+            db.add(ProfileBuilderAnswer(user_id=user.id, step_key=step_key, answer_json=answer_json))
+
+    db.commit()
+    db.refresh(profile)
+    return _profile_out(user.id, profile)
+
+
+@router.get("/api/courses", response_model=list[CourseOut])
+def list_published_courses(db: Session = Depends(get_db)) -> list[CourseOut]:
+    courses = db.scalars(
+        select(Course)
+        .where(Course.status == "published")
+        .options(
+            selectinload(Course.versions).selectinload(CourseVersion.stages),
+        )
+        .order_by(Course.id)
+    ).all()
+    output = [_course_out(course) for course in courses]
+    return [course for course in output if course]
+
+
+@router.post("/api/courses/{course_id}/enroll", response_model=EnrollmentOut)
+def enroll_course(course_id: int, user_id: int, db: Session = Depends(get_db)) -> EnrollmentOut:
+    user = db.get(User, user_id)
+    course = db.get(
+        Course,
+        course_id,
+        options=[selectinload(Course.versions).selectinload(CourseVersion.stages)],
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    if not course or course.status != "published":
+        raise HTTPException(status_code=404, detail="Course not found.")
+
+    version = _published_version_for(course)
+    if not version:
+        raise HTTPException(status_code=409, detail="Course does not have a published version.")
+
+    enrollment = db.scalars(
+        select(UserCourseEnrollment).where(
+            UserCourseEnrollment.user_id == user.id,
+            UserCourseEnrollment.course_version_id == version.id,
+        )
+    ).first()
+    if not enrollment:
+        enrollment = UserCourseEnrollment(
+            user_id=user.id,
+            course_id=course.id,
+            course_version_id=version.id,
+            status="active",
+            current_stage_number=1,
+            progress_percentage=0,
+        )
+        db.add(enrollment)
+        db.commit()
+        db.refresh(enrollment)
+
+    return EnrollmentOut(
+        id=enrollment.id,
+        user_id=enrollment.user_id,
+        course_id=enrollment.course_id,
+        course_version_id=enrollment.course_version_id,
+        status=enrollment.status,
+        current_stage_number=enrollment.current_stage_number,
+        progress_percentage=enrollment.progress_percentage,
+    )
 
 
 @router.post("/api/onboarding/start", response_model=OnboardingStartOut)

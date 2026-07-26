@@ -32,6 +32,14 @@ Required sms.ir values from the panel before real SMS can be enabled:
 - `SMSIR_TEMPLATE_ID`
 - `SMSIR_CODE_PARAMETER` (default: `Code`)
 
+Sprint 1 current implemented flow:
+- Landing requests OTP through `POST /api/auth/otp/request`.
+- Landing verifies OTP through `POST /api/auth/otp/verify`.
+- `/app/` checks `GET /api/profile/{user_id}` for phone-authenticated users.
+- If the profile is incomplete, `/app/` shows the Phase 2 profile form and saves it with `POST /api/profile/{user_id}`.
+- After profile submission, `/app/` reads published courses from `GET /api/courses` and enrolls the user through `POST /api/courses/{course_id}/enroll?user_id=...`.
+- The current Fake CMS course is used until the real CMS is built.
+
 Main Phase 2 contract:
 
 ```text
@@ -121,6 +129,10 @@ Because there is no company knowledge base yet, the app seeds default internal d
 - `POST /api/onboarding/start`
 - `POST /api/auth/otp/request`
 - `POST /api/auth/otp/verify`
+- `GET /api/profile/{user_id}`
+- `POST /api/profile/{user_id}`
+- `GET /api/courses`
+- `POST /api/courses/{course_id}/enroll`
 - `POST /api/onboarding/{user_id}/answer`
 - `POST /api/training/{user_id}/lesson`
 - `POST /api/training/{user_id}/question`

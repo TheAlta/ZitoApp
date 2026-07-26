@@ -644,6 +644,10 @@
       direction: ltr;
     }
 
+    .phone-form.is-hidden {
+      display: none;
+    }
+
     .phone-input {
       flex: 1;
       min-width: 0;
@@ -689,6 +693,27 @@
       font-size: 12px;
       line-height: 1.8;
       text-align: center;
+    }
+
+    .phone-helper {
+      min-height: 24px;
+      margin-top: 12px;
+      color: rgba(255,255,255,.72);
+      font-family: var(--font-fa);
+      font-size: 12px;
+      line-height: 1.8;
+      text-align: center;
+    }
+
+    .phone-link {
+      margin-top: 8px;
+      border: 0;
+      background: transparent;
+      color: rgba(255,255,255,.72);
+      font-family: var(--font-fa);
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
     }
 
     /* ========================================================= */
@@ -877,12 +902,18 @@
   <div class="phone-modal" id="phoneModal" aria-hidden="true">
     <div class="phone-card">
       <div class="phone-title">ورود به زیتو</div>
-      <div class="phone-copy">شماره موبایلت را وارد کن تا مسیر یادگیریت با همین نام کاربری ذخیره شود.</div>
+      <div class="phone-copy" id="phoneCopy">شماره موبایلت را وارد کن تا مسیر یادگیریت با همین نام کاربری ذخیره شود.</div>
       <form class="phone-form" id="phoneForm">
         <input class="phone-input" id="phoneInput" inputmode="numeric" autocomplete="tel" placeholder="09123456789" maxlength="20">
-        <button class="phone-submit" id="phoneSubmit" type="submit">ادامه</button>
+        <button class="phone-submit" id="phoneSubmit" type="submit">ارسال کد</button>
       </form>
+      <form class="phone-form is-hidden" id="otpForm">
+        <input class="phone-input" id="otpInput" inputmode="numeric" autocomplete="one-time-code" placeholder="کد تایید" maxlength="8">
+        <button class="phone-submit" id="otpSubmit" type="submit">ورود</button>
+      </form>
+      <div class="phone-helper" id="phoneHelper"></div>
       <div class="phone-error" id="phoneError"></div>
+      <button class="phone-link is-hidden" id="changePhone" type="button">تغییر شماره موبایل</button>
     </div>
   </div>
 
@@ -919,9 +950,16 @@
     const ctaWrap = document.getElementById('ctaWrap');
     const phoneModal = document.getElementById('phoneModal');
     const phoneForm = document.getElementById('phoneForm');
+    const otpForm = document.getElementById('otpForm');
     const phoneInput = document.getElementById('phoneInput');
+    const otpInput = document.getElementById('otpInput');
     const phoneSubmit = document.getElementById('phoneSubmit');
+    const otpSubmit = document.getElementById('otpSubmit');
+    const phoneCopy = document.getElementById('phoneCopy');
+    const phoneHelper = document.getElementById('phoneHelper');
     const phoneError = document.getElementById('phoneError');
+    const changePhone = document.getElementById('changePhone');
+    let pendingPhone = '';
     const fullText = 'سلام من زیتو هستم و قراره به تمام سوالاتی که تو حوزه کاریت داری جواب بدم. اگه آماده ای شروع کنیم؟';
 
     function typeWriter(text, el, speed) {
@@ -981,25 +1019,80 @@
       }
     });
 
+    function getErrorMessage(data, fallback) {
+      if (!data) return fallback;
+      if (typeof data.detail === 'string') return data.detail;
+      if (data.detail && typeof data.detail.message === 'string') return data.detail.message;
+      return fallback;
+    }
+
+    function showOtpStep(phone, data) {
+      pendingPhone = phone;
+      phoneForm.classList.add('is-hidden');
+      otpForm.classList.remove('is-hidden');
+      changePhone.classList.remove('is-hidden');
+      phoneCopy.textContent = `کد تایید برای ${phone} ارسال شد.`;
+      phoneHelper.textContent = data.mock_code
+        ? `حالت تست: کد تایید ${data.mock_code}`
+        : 'کد پیامک‌شده را وارد کن. این کد چند دقیقه بیشتر اعتبار ندارد.';
+      otpInput.value = '';
+      otpInput.focus();
+    }
+
+    function showPhoneStep() {
+      pendingPhone = '';
+      otpForm.classList.add('is-hidden');
+      phoneForm.classList.remove('is-hidden');
+      changePhone.classList.add('is-hidden');
+      phoneCopy.textContent = 'شماره موبایلت را وارد کن تا مسیر یادگیریت با همین نام کاربری ذخیره شود.';
+      phoneHelper.textContent = '';
+      phoneError.textContent = '';
+      phoneInput.focus();
+    }
+
+    changePhone.addEventListener('click', showPhoneStep);
+
     phoneForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       phoneError.textContent = '';
+      phoneHelper.textContent = '';
       phoneSubmit.disabled = true;
       try {
-        const response = await fetch('/api/auth/phone', {
+        const phone = phoneInput.value.trim();
+        const response = await fetch('/api/auth/otp/request', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: phoneInput.value.trim() })
+          body: JSON.stringify({ phone })
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || 'ورود ناموفق بود. شماره را دوباره بررسی کن.');
+        if (!response.ok) throw new Error(getErrorMessage(data, 'ارسال کد ناموفق بود. شماره را دوباره بررسی کن.'));
+        showOtpStep(phone, data);
+      } catch (error) {
+        phoneError.textContent = error.message;
+      } finally {
+        phoneSubmit.disabled = false;
+      }
+    });
+
+    otpForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      phoneError.textContent = '';
+      otpSubmit.disabled = true;
+      try {
+        const response = await fetch('/api/auth/otp/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: pendingPhone, code: otpInput.value.trim() })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(getErrorMessage(data, 'کد تایید درست نیست یا منقضی شده.'));
         localStorage.setItem('zito_user_id', String(data.user_id));
         localStorage.setItem('zito_username', data.username);
         window.location.href = data.redirect_url;
       } catch (error) {
         phoneError.textContent = error.message;
       } finally {
-        phoneSubmit.disabled = false;
+        otpSubmit.disabled = false;
       }
     });
   </script>

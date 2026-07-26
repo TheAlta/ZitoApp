@@ -45,6 +45,48 @@ class OtpVerifyIn(BaseModel):
     code: str = Field(min_length=4, max_length=8)
 
 
+class ProfileV2In(BaseModel):
+    full_name: str = Field(min_length=2, max_length=255)
+    work_domain: str = Field(min_length=2, max_length=255)
+    referral_source: str | None = Field(default=None, max_length=120)
+    daily_study_minutes: int = Field(ge=5, le=600)
+    learning_goal: str | None = Field(default=None, max_length=255)
+    experience_level: str | None = Field(default=None, max_length=80)
+    preferred_learning_style: str | None = Field(default=None, max_length=120)
+
+
+class ProfileV2Out(BaseModel):
+    user_id: int
+    completed: bool
+    full_name: str | None = None
+    work_domain: str | None = None
+    referral_source: str | None = None
+    daily_study_minutes: int | None = None
+    learning_goal: str | None = None
+    experience_level: str | None = None
+    preferred_learning_style: str | None = None
+
+
+class CourseOut(BaseModel):
+    id: int
+    title: str
+    slug: str
+    domain: str
+    version_id: int
+    version_number: int
+    stage_count: int
+
+
+class EnrollmentOut(BaseModel):
+    id: int
+    user_id: int
+    course_id: int
+    course_version_id: int
+    status: str
+    current_stage_number: int
+    progress_percentage: int
+
+
 class OnboardingStateOut(BaseModel):
     user_id: int
     completed: bool = False

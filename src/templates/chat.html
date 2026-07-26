@@ -539,6 +539,25 @@
     .modal-close { width: 38px; height: 38px; border-radius: 13px; font-size: 18px; background: rgba(255,255,255,.08); box-shadow: none; }
     .modal-messages { min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
     .modal-form { padding: 12px; border-top: 1px solid rgba(151, 164, 255, .12); background: rgba(5, 11, 31, .58); }
+    .profile-form {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+      border-top: 1px solid rgba(151, 164, 255, .12);
+      background: rgba(5, 11, 31, .40);
+    }
+    .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .profile-field { display: grid; gap: 6px; }
+    .profile-field.full { grid-column: 1 / -1; }
+    .profile-field label { color: #bfc9ea; font-size: 12px; }
+    .profile-field input {
+      width: 100%;
+      height: 46px;
+      border-radius: 15px;
+      font-size: 13px;
+    }
+    .profile-error { min-height: 22px; color: #ff9db5; font-size: 12px; text-align: center; }
+    .profile-submit { width: 100%; font-size: 14px; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
     @keyframes planetFloat { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-12px) scale(1.025); } }
@@ -576,6 +595,7 @@
       .lesson-dock { min-height: 300px; }
     }
     @media (max-width: 420px) { .phone-shell { padding: 10px; } .hero { border-radius: 24px; } .welcome { padding-top: 2px; } .zito-orb { width: 108px; height: 132px; } .msg { max-width: 90%; } .subtitle { max-width: 205px; } }
+    @media (max-width: 560px) { .profile-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -651,6 +671,51 @@
     </section>
   </div>
 
+  <div id="profileModal" class="answer-modal" aria-hidden="true">
+    <section class="modal-chat" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+      <div class="modal-head">
+        <div>
+          <div id="profileTitle" class="modal-title">ساخت پروفایل یادگیری</div>
+          <div class="subtitle">این اطلاعات بدون بررسی AI ذخیره می‌شود و مسیر آموزشی تو را آماده می‌کند.</div>
+        </div>
+      </div>
+      <form id="profileForm" class="profile-form">
+        <div class="profile-grid">
+          <div class="profile-field">
+            <label for="profileName">نام و نام خانوادگی</label>
+            <input id="profileName" autocomplete="name" required placeholder="مثلا امیر مسعود" />
+          </div>
+          <div class="profile-field">
+            <label for="profileDomain">حوزه کاری</label>
+            <input id="profileDomain" required placeholder="مثلا توسعه فردی" />
+          </div>
+          <div class="profile-field">
+            <label for="profileReferral">از کجا با زیتو آشنا شدی؟</label>
+            <input id="profileReferral" placeholder="مثلا اینستاگرام" />
+          </div>
+          <div class="profile-field">
+            <label for="profileMinutes">زمان مطالعه روزانه</label>
+            <input id="profileMinutes" type="number" min="5" max="600" required placeholder="30" />
+          </div>
+          <div class="profile-field full">
+            <label for="profileGoal">هدف یادگیری</label>
+            <input id="profileGoal" placeholder="مثلا استفاده بهتر از AI در کارم" />
+          </div>
+          <div class="profile-field">
+            <label for="profileLevel">سطح تجربه</label>
+            <input id="profileLevel" placeholder="مبتدی، متوسط، حرفه‌ای" />
+          </div>
+          <div class="profile-field">
+            <label for="profileStyle">سبک یادگیری ترجیحی</label>
+            <input id="profileStyle" placeholder="ویدیو، تمرین عملی، مطالعه" />
+          </div>
+        </div>
+        <div id="profileError" class="profile-error"></div>
+        <button id="profileSubmit" class="profile-submit" type="submit">ذخیره و شروع مسیر</button>
+      </form>
+    </section>
+  </div>
+
   <script>
     let userId = null;
     let currentQuestion = null;
@@ -686,6 +751,17 @@
     const modalInput = document.querySelector("#modalInput");
     const modalSend = document.querySelector("#modalSend");
     const modalClose = document.querySelector("#modalClose");
+    const profileModal = document.querySelector("#profileModal");
+    const profileForm = document.querySelector("#profileForm");
+    const profileName = document.querySelector("#profileName");
+    const profileDomain = document.querySelector("#profileDomain");
+    const profileReferral = document.querySelector("#profileReferral");
+    const profileMinutes = document.querySelector("#profileMinutes");
+    const profileGoal = document.querySelector("#profileGoal");
+    const profileLevel = document.querySelector("#profileLevel");
+    const profileStyle = document.querySelector("#profileStyle");
+    const profileError = document.querySelector("#profileError");
+    const profileSubmit = document.querySelector("#profileSubmit");
 
     const TRACKS = {
       accounting: {
@@ -706,6 +782,12 @@
         copy: "اینجا مسیر هوش مصنوعی در حقوق شروع می‌شود. روی سیاره کلیک کن تا آموزش را ببینی.",
         colors: ["#6b5cff", "#255fff", "#8dd6ff"],
       },
+      personal_development: {
+        planet: "سیاره توسعه فردی",
+        title: "سیاره توسعه فردی آماده است",
+        copy: "مسیر اختصاصی تو آماده است. روی سیاره کلیک کن تا آموزش مرحله‌ای زیتو شروع شود.",
+        colors: ["#9a5cff", "#2471ff", "#37e6ff"],
+      },
     };
 
     function setStatus(text) { statusBox.textContent = text; }
@@ -723,8 +805,8 @@
     function handleMissingUser(error) {
       if (error.status !== 404 || !String(error.message || "").toLowerCase().includes("user")) return false;
       clearSavedSession();
-      addMessage("حساب ذخیره‌شده قبلی دیگر در دیتابیس وجود ندارد. اطلاعات ورود قبلی پاک شد و مسیر تازه‌ای شروع می‌کنیم.");
-      start().catch((nextError) => addMessage(nextError.message));
+      addMessage("حساب ذخیره‌شده قبلی دیگر در دیتابیس وجود ندارد. اطلاعات ورود قبلی پاک شد و به صفحه ورود برمی‌گردی.");
+      setTimeout(() => { window.location.href = "/"; }, 900);
       return true;
     }
     function setBusy(isBusy) { button.disabled = isBusy; typing.classList.toggle("show", isBusy); chat.appendChild(typing); chat.scrollTop = chat.scrollHeight; }
@@ -775,6 +857,28 @@
       modalInput.value = "";
     }
     function setModalBusy(isBusy) { modalSend.disabled = isBusy; modalInput.disabled = isBusy; }
+    function openProfileModal(profile = {}) {
+      profileName.value = profile.full_name || "";
+      profileDomain.value = profile.work_domain || "";
+      profileReferral.value = profile.referral_source || "";
+      profileMinutes.value = profile.daily_study_minutes || "";
+      profileGoal.value = profile.learning_goal || "";
+      profileLevel.value = profile.experience_level || "";
+      profileStyle.value = profile.preferred_learning_style || "";
+      profileError.textContent = "";
+      profileModal.classList.add("show");
+      profileModal.setAttribute("aria-hidden", "false");
+      setTimeout(() => profileName.focus(), 80);
+    }
+    function closeProfileModal() {
+      profileModal.classList.remove("show");
+      profileModal.setAttribute("aria-hidden", "true");
+    }
+    function setProfileBusy(isBusy) {
+      profileSubmit.disabled = isBusy;
+      [profileName, profileDomain, profileReferral, profileMinutes, profileGoal, profileLevel, profileStyle]
+        .forEach((field) => { field.disabled = isBusy; });
+    }
 
     function renderLesson(lesson) {
       currentLesson = lesson;
@@ -804,7 +908,11 @@
       const res = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
       const data = await res.json();
       if (!res.ok) {
-        const error = new Error(data.detail || "درخواست ناموفق بود.");
+        let message = "درخواست ناموفق بود.";
+        if (typeof data.detail === "string") message = data.detail;
+        else if (Array.isArray(data.detail) && data.detail.length) message = data.detail[0].msg || message;
+        else if (data.detail && typeof data.detail.message === "string") message = data.detail.message;
+        const error = new Error(message);
         error.status = res.status;
         throw error;
       }
@@ -812,6 +920,10 @@
     }
 
     async function start() {
+      if (sessionUserId) {
+        await startPhase2();
+        return;
+      }
       setMode("onboarding");
       setStatus("شناخت اولیه");
       let data;
@@ -835,6 +947,40 @@
       }
       currentQuestion = data.question;
       addMessage(currentQuestion.text);
+    }
+
+    async function startPhase2() {
+      setMode("onboarding");
+      setStatus("پروفایل");
+      userId = Number(sessionUserId);
+      localStorage.setItem("zito_user_id", String(userId));
+      let profile;
+      try {
+        profile = await api(`/api/profile/${userId}`);
+      } catch (error) {
+        if (handleMissingUser(error)) return;
+        throw error;
+      }
+      if (!profile.completed) {
+        addMessage("برای شروع مسیر جدید زیتو، اول چند اطلاعات کوتاه ازت می‌گیرم. این بخش با AI بررسی نمی‌شود و فقط برای ساخت مسیر یادگیری ذخیره می‌شود.");
+        openProfileModal(profile);
+        return;
+      }
+      selectedTrack = "personal_development";
+      localStorage.setItem("zito_track", selectedTrack);
+      await enrollDefaultCourse();
+      showPlanet();
+    }
+
+    async function enrollDefaultCourse() {
+      const courses = await api("/api/courses");
+      if (!courses.length) throw new Error("فعلا دوره منتشرشده‌ای برای شروع پیدا نشد.");
+      const course = courses[0];
+      selectedTrack = course.domain || "personal_development";
+      localStorage.setItem("zito_track", selectedTrack);
+      localStorage.setItem("zito_course_id", String(course.id));
+      localStorage.setItem("zito_course_version_id", String(course.version_id));
+      await api(`/api/courses/${course.id}/enroll?user_id=${userId}`, { method: "POST" });
     }
 
     async function loadLesson() {
@@ -909,6 +1055,33 @@
     planetStart.addEventListener("click", beginLesson);
     modalClose.addEventListener("click", closeAnswerModal);
     answerModal.addEventListener("click", (event) => { if (event.target === answerModal) closeAnswerModal(); });
+    profileForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      profileError.textContent = "";
+      setProfileBusy(true);
+      try {
+        await api(`/api/profile/${userId}`, {
+          method: "POST",
+          body: JSON.stringify({
+            full_name: profileName.value.trim(),
+            work_domain: profileDomain.value.trim(),
+            referral_source: profileReferral.value.trim() || null,
+            daily_study_minutes: Number(profileMinutes.value),
+            learning_goal: profileGoal.value.trim() || null,
+            experience_level: profileLevel.value.trim() || null,
+            preferred_learning_style: profileStyle.value.trim() || null,
+          }),
+        });
+        await enrollDefaultCourse();
+        closeProfileModal();
+        addMessage("پروفایل ذخیره شد و مسیر یادگیریت آماده است. حالا سیاره اختصاصی تو ظاهر می‌شود.");
+        showPlanet();
+      } catch (error) {
+        if (!handleMissingUser(error)) profileError.textContent = error.message;
+      } finally {
+        setProfileBusy(false);
+      }
+    });
     modalForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const value = modalInput.value.trim();

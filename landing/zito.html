@@ -1021,9 +1021,20 @@
 
     function getErrorMessage(data, fallback) {
       if (!data) return fallback;
+      if (typeof data === 'string') return data;
       if (typeof data.detail === 'string') return data.detail;
       if (data.detail && typeof data.detail.message === 'string') return data.detail.message;
       return fallback;
+    }
+
+    async function readApiResponse(response) {
+      const text = await response.text();
+      if (!text) return {};
+      try {
+        return JSON.parse(text);
+      } catch (_) {
+        return { detail: text };
+      }
     }
 
     function showOtpStep(phone, data) {
@@ -1064,7 +1075,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone })
         });
-        const data = await response.json();
+        const data = await readApiResponse(response);
         if (!response.ok) throw new Error(getErrorMessage(data, 'ارسال کد ناموفق بود. شماره را دوباره بررسی کن.'));
         showOtpStep(phone, data);
       } catch (error) {
@@ -1084,7 +1095,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: pendingPhone, code: otpInput.value.trim() })
         });
-        const data = await response.json();
+        const data = await readApiResponse(response);
         if (!response.ok) throw new Error(getErrorMessage(data, 'کد تایید درست نیست یا منقضی شده.'));
         localStorage.setItem('zito_user_id', String(data.user_id));
         localStorage.setItem('zito_username', data.username);

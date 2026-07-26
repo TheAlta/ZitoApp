@@ -151,3 +151,11 @@ class SmsIrAdapterTests(unittest.IsolatedAsyncioTestCase):
         with patch("src.services.otp._post_smsir_verify", FakeSmsIrPost.post):
             with self.assertRaises(OtpError):
                 await _send_smsir_code("09123456789", "123456")
+
+    async def test_smsir_adapter_rejects_non_ascii_api_key_placeholder(self) -> None:
+        os.environ["SMSIR_API_KEY"] = "کلید واقعی sms.ir"
+        get_settings.cache_clear()
+
+        with patch("src.services.otp._post_smsir_verify", FakeSmsIrPost.post):
+            with self.assertRaisesRegex(OtpError, "SMSIR_API_KEY"):
+                await _send_smsir_code("09123456789", "123456")

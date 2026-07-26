@@ -58,6 +58,14 @@ def _generate_code() -> str:
     return f"{secrets.randbelow(upper_bound):0{digits}d}"
 
 
+def _require_ascii_header_value(name: str, value: str) -> str:
+    try:
+        value.encode("latin-1")
+    except UnicodeEncodeError as exc:
+        raise OtpError(f"{name} must be the real sms.ir ASCII value from .env, not a placeholder.") from exc
+    return value
+
+
 def _latest_code(db: Session, phone: str) -> PhoneOtpCode | None:
     return db.scalars(
         select(PhoneOtpCode)
@@ -86,7 +94,7 @@ async def _send_smsir_code(phone: str, code: str) -> None:
     headers = {
         "Accept": "text/plain",
         "Content-Type": "application/json",
-        "X-API-KEY": settings.smsir_api_key,
+        "X-API-KEY": _require_ascii_header_value("SMSIR_API_KEY", settings.smsir_api_key),
     }
     url = f"{settings.smsir_api_url.rstrip('/')}/send/verify"
     try:
@@ -97,7 +105,7 @@ async def _send_smsir_code(phone: str, code: str) -> None:
             headers,
             settings.smsir_timeout_seconds,
         )
-    except OSError as exc:
+    except (OSError, UnicodeError) as exc:
         raise OtpError(f"Could not call sms.ir: {exc}") from exc
 
     if status_code >= 400:

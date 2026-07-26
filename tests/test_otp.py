@@ -82,32 +82,20 @@ class OtpFlowTests(unittest.TestCase):
             self.assertEqual(reused_response.status_code, 401)
 
 
-class FakeSmsIrResponse:
-    def __init__(self, status_code: int = 200, body: dict | None = None) -> None:
-        self.status_code = status_code
-        self._body = body or {"status": 1, "message": "موفق", "data": {"messageId": 89545112, "cost": 1.0}}
-
-    def json(self) -> dict:
-        return self._body
-
-
-class FakeSmsIrClient:
-    next_response = FakeSmsIrResponse()
+class FakeSmsIrPost:
+    next_status_code = 200
+    next_body = '{"status":1,"message":"موفق","data":{"messageId":89545112,"cost":1.0}}'
     last_request: dict | None = None
 
-    def __init__(self, *args, **kwargs) -> None:
-        self.args = args
-        self.kwargs = kwargs
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb) -> None:
-        return None
-
-    async def post(self, url: str, json: dict, headers: dict):
-        FakeSmsIrClient.last_request = {"url": url, "json": json, "headers": headers}
-        return FakeSmsIrClient.next_response
+    @classmethod
+    def post(cls, url: str, payload: dict, headers: dict, timeout_seconds: int):
+        cls.last_request = {
+            "url": url,
+            "payload": payload,
+            "headers": headers,
+            "timeout_seconds": timeout_seconds,
+        }
+        return cls.next_status_code, cls.next_body
 
 
 class SmsIrAdapterTests(unittest.IsolatedAsyncioTestCase):
@@ -135,19 +123,20 @@ class SmsIrAdapterTests(unittest.IsolatedAsyncioTestCase):
         get_settings.cache_clear()
 
     async def test_smsir_adapter_uses_verify_contract(self) -> None:
-        FakeSmsIrClient.next_response = FakeSmsIrResponse()
-        FakeSmsIrClient.last_request = None
+        FakeSmsIrPost.next_status_code = 200
+        FakeSmsIrPost.next_body = '{"status":1,"message":"موفق","data":{"messageId":89545112,"cost":1.0}}'
+        FakeSmsIrPost.last_request = None
 
-        with patch("src.services.otp.httpx.AsyncClient", FakeSmsIrClient):
+        with patch("src.services.otp._post_smsir_verify", FakeSmsIrPost.post):
             await _send_smsir_code("09123456789", "123456")
 
-        request = FakeSmsIrClient.last_request
+        request = FakeSmsIrPost.last_request
         self.assertIsNotNone(request)
         self.assertEqual(request["url"], "https://api.sms.ir/v1/send/verify")
         self.assertEqual(request["headers"]["X-API-KEY"], "test-smsir-key")
         self.assertEqual(request["headers"]["Accept"], "text/plain")
         self.assertEqual(
-            request["json"],
+            request["payload"],
             {
                 "mobile": "09123456789",
                 "templateId": 123456,
@@ -156,8 +145,9 @@ class SmsIrAdapterTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_smsir_adapter_rejects_logical_error_response(self) -> None:
-        FakeSmsIrClient.next_response = FakeSmsIrResponse(body={"status": 113, "message": "قالب یافت نشد"})
+        FakeSmsIrPost.next_status_code = 200
+        FakeSmsIrPost.next_body = '{"status":113,"message":"قالب یافت نشد"}'
 
-        with patch("src.services.otp.httpx.AsyncClient", FakeSmsIrClient):
+        with patch("src.services.otp._post_smsir_verify", FakeSmsIrPost.post):
             with self.assertRaises(OtpError):
                 await _send_smsir_code("09123456789", "123456")

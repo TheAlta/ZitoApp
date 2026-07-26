@@ -1,10 +1,13 @@
+import asyncio
 import hashlib
 import hmac
+import http.client
+import json
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
-import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -87,22 +90,44 @@ async def _send_smsir_code(phone: str, code: str) -> None:
     }
     url = f"{settings.smsir_api_url.rstrip('/')}/send/verify"
     try:
-        async with httpx.AsyncClient(timeout=settings.smsir_timeout_seconds) as client:
-            response = await client.post(url, json=payload, headers=headers)
-    except httpx.HTTPError as exc:
+        status_code, response_text = await asyncio.to_thread(
+            _post_smsir_verify,
+            url,
+            payload,
+            headers,
+            settings.smsir_timeout_seconds,
+        )
+    except OSError as exc:
         raise OtpError(f"Could not call sms.ir: {exc}") from exc
 
-    if response.status_code >= 400:
-        raise OtpError(f"sms.ir rejected OTP request with status {response.status_code}.")
+    if status_code >= 400:
+        raise OtpError(f"sms.ir rejected OTP request with status {status_code}.")
 
     try:
-        data = response.json()
-    except ValueError as exc:
+        data = json.loads(response_text)
+    except json.JSONDecodeError as exc:
         raise OtpError("sms.ir returned an invalid response body.") from exc
 
     if int(data.get("status", 0)) != 1:
         message = data.get("message") or "sms.ir did not accept OTP request."
         raise OtpError(f"sms.ir OTP failed: {message}")
+
+
+def _post_smsir_verify(url: str, payload: dict, headers: dict, timeout_seconds: int) -> tuple[int, str]:
+    parsed = urlparse(url)
+    path = parsed.path or "/"
+    if parsed.query:
+        path = f"{path}?{parsed.query}"
+
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    conn = http.client.HTTPSConnection(parsed.netloc, timeout=timeout_seconds)
+    try:
+        conn.request("POST", path, body=body, headers=headers)
+        response = conn.getresponse()
+        response_body = response.read().decode("utf-8")
+        return response.status, response_body
+    finally:
+        conn.close()
 
 
 async def request_otp(db: Session, phone: str) -> OtpRequestResult:

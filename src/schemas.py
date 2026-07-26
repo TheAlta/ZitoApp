@@ -27,6 +27,24 @@ class PhoneLoginOut(BaseModel):
     redirect_url: str
 
 
+class OtpRequestIn(BaseModel):
+    phone: str = Field(min_length=8, max_length=20)
+
+
+class OtpRequestOut(BaseModel):
+    ok: bool = True
+    phone: str
+    expires_in_seconds: int
+    resend_after_seconds: int
+    provider: str
+    mock_code: str | None = None
+
+
+class OtpVerifyIn(BaseModel):
+    phone: str = Field(min_length=8, max_length=20)
+    code: str = Field(min_length=4, max_length=8)
+
+
 class OnboardingStateOut(BaseModel):
     user_id: int
     completed: bool = False

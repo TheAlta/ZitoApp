@@ -20,6 +20,18 @@ Fake CMS seed:
 - KB documents: 3 seeded documents
 - Final exam: one published seed exam with passing score `70`
 
+Sprint 1 starts with OTP as the first building block. OTP must support:
+- local/dev mock mode with `OTP_MOCK=true`
+- production sms.ir mode with `OTP_MOCK=false`
+- hashed OTP storage in `phone_otp_codes`
+- no plain OTP code stored in the database
+- sms.ir verify endpoint adapter controlled by `.env`
+
+Required sms.ir values from the panel before real SMS can be enabled:
+- `SMSIR_API_KEY`
+- `SMSIR_TEMPLATE_ID`
+- `SMSIR_CODE_PARAMETER` (default: `Code`)
+
 Main Phase 2 contract:
 
 ```text
@@ -36,6 +48,7 @@ users
       -> user_stage_progress
       -> exam_attempts
       -> certificates
+  -> phone_otp_codes
 ```
 
 ## Current User Flow
@@ -96,6 +109,8 @@ Because there is no company knowledge base yet, the app seeds default internal d
 - `src/prompts/`: editable system prompts
 - `src/seed.py`: default questions, default knowledge documents, and Phase 2 Fake CMS seed course
 - `migrations/versions/20260723_0003_phase2_schema.py`: Phase 2 CMS/Core schema contract
+- `migrations/versions/20260726_0004_phone_otp_codes.py`: Sprint 1 OTP schema
+- `src/services/otp.py`: OTP generation, hashing, verification, and sms.ir adapter
 - `src/templates/chat.html`: user chat and training UI
 - `src/templates/admin.html`: protected admin UI
 
@@ -104,6 +119,8 @@ Because there is no company knowledge base yet, the app seeds default internal d
 - `GET /admin`: protected admin UI
 - `GET /health`: API and database health check
 - `POST /api/onboarding/start`
+- `POST /api/auth/otp/request`
+- `POST /api/auth/otp/verify`
 - `POST /api/onboarding/{user_id}/answer`
 - `POST /api/training/{user_id}/lesson`
 - `POST /api/training/{user_id}/question`

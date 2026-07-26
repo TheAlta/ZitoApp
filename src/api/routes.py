@@ -18,6 +18,9 @@ from src.schemas import (
     OnboardingAnswerOut,
     OnboardingStartOut,
     OnboardingStateOut,
+    OtpRequestIn,
+    OtpRequestOut,
+    OtpVerifyIn,
     PhoneLoginIn,
     PhoneLoginOut,
     QuestionOut,
@@ -30,6 +33,7 @@ from src.schemas import (
 from src.security import authenticate_admin, clear_admin_cookie, create_admin_session, require_admin, set_admin_cookie
 from src.seed import seed_questions
 from src.services.rag import build_user_context
+from src.services.otp import OtpError, OtpRateLimitError, request_otp, verify_otp
 from src.services.training import answer_training_question, generate_lesson, looks_like_question
 from src.services.validation import evaluate_training_answer, validate_initial_answer, validate_training_question
 
@@ -94,6 +98,17 @@ def _apply_profile_field(user: User, question: Question, answer_text: str) -> No
         user.profession = answer_text.strip()
 
 
+def _get_or_create_phone_user(db: Session, phone: str) -> User:
+    user = db.scalars(select(User).where(User.username == phone).order_by(User.id.desc()).limit(1)).first()
+    if user:
+        return user
+    user = User(username=phone)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 @router.get("/health")
 def health(db: Session = Depends(get_db)) -> dict:
     db.execute(text("SELECT 1"))
@@ -123,12 +138,40 @@ def admin_me() -> dict:
 @router.post("/api/auth/phone", response_model=PhoneLoginOut)
 def login_with_phone(payload: PhoneLoginIn, db: Session = Depends(get_db)) -> PhoneLoginOut:
     phone = _normalize_phone(payload.phone)
-    user = db.scalars(select(User).where(User.username == phone).order_by(User.id.desc()).limit(1)).first()
-    if not user:
-        user = User(username=phone)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    user = _get_or_create_phone_user(db, phone)
+    return PhoneLoginOut(user_id=user.id, username=phone, redirect_url="/app/")
+
+
+@router.post("/api/auth/otp/request", response_model=OtpRequestOut)
+async def request_phone_otp(payload: OtpRequestIn, db: Session = Depends(get_db)) -> OtpRequestOut:
+    phone = _normalize_phone(payload.phone)
+    try:
+        result = await request_otp(db, phone)
+    except OtpRateLimitError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": str(exc),
+                "retry_after_seconds": exc.retry_after_seconds,
+            },
+        ) from exc
+    except OtpError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return OtpRequestOut(
+        phone=result.phone,
+        expires_in_seconds=result.expires_in_seconds,
+        resend_after_seconds=result.resend_after_seconds,
+        provider=result.provider,
+        mock_code=result.mock_code,
+    )
+
+
+@router.post("/api/auth/otp/verify", response_model=PhoneLoginOut)
+def verify_phone_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> PhoneLoginOut:
+    phone = _normalize_phone(payload.phone)
+    if not verify_otp(db, phone, payload.code):
+        raise HTTPException(status_code=401, detail="کد تایید اشتباه است یا منقضی شده.")
+    user = _get_or_create_phone_user(db, phone)
     return PhoneLoginOut(user_id=user.id, username=phone, redirect_url="/app/")
 
 

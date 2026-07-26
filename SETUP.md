@@ -9,6 +9,8 @@ $env:DATABASE_URL="sqlite:///./local_test.db"
 $env:ARVAN_MOCK_AI="true"
 $env:ADMIN_USERNAME="zito_admin"
 $env:ADMIN_PASSWORD="local-dev-only-password"
+$env:ADMIN_SESSION_SECRET="local-test-session-secret-that-is-long-enough"
+$env:OTP_MOCK="true"
 .\.venv\Scripts\python.exe -m uvicorn src.main:app --reload
 ```
 
@@ -16,6 +18,11 @@ Open in browser:
 - User chat: `http://127.0.0.1:8000/chat`
 - Admin panel: `http://127.0.0.1:8000/admin`
 - API docs: `http://127.0.0.1:8000/docs`
+
+OTP mock API test:
+- Request code: `POST /api/auth/otp/request`
+- Verify code: `POST /api/auth/otp/verify`
+- When `OTP_MOCK=true`, the request response includes `mock_code` for local testing.
 
 Admin login for local test:
 - username: `zito_admin`
@@ -44,10 +51,25 @@ ARVAN_MODEL=GPT-5.4-Mini
 ADMIN_USERNAME=zito_admin
 ADMIN_PASSWORD=choose_a_strong_password
 ADMIN_SESSION_SECRET=choose_a_long_random_session_secret
+OTP_MOCK=true
 ```
 
 Important: do not commit `.env`. If an API key was shared in chat, rotate it in Arvan and use a new one.
 SSH/server passwords do not belong in `.env`; keep them in your password manager or replace password login with SSH keys.
+
+## Real sms.ir OTP Mode
+Keep local development on `OTP_MOCK=true`. To enable real SMS, get these values from the sms.ir panel and set them only in private `.env` files:
+
+```env
+OTP_MOCK=false
+SMSIR_API_URL=https://api.sms.ir/v1
+SMSIR_API_KEY=your_smsir_api_key
+SMSIR_TEMPLATE_ID=your_smsir_template_id
+SMSIR_CODE_PARAMETER=Code
+SMSIR_TIMEOUT_SECONDS=10
+```
+
+The SMS template should contain the same parameter name, for example `Code`.
 
 ## PostgreSQL Production Setup
 PostgreSQL is not required for quick local testing. For production or a serious dev database:

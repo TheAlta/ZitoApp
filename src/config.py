@@ -23,6 +23,18 @@ class Settings(BaseSettings):
     admin_session_secret: str = Field("change-me-admin-session-secret", alias="ADMIN_SESSION_SECRET")
     admin_session_days: int = Field(3650, alias="ADMIN_SESSION_DAYS")
 
+    otp_mock: bool = Field(True, alias="OTP_MOCK")
+    otp_code_digits: int = Field(6, alias="OTP_CODE_DIGITS")
+    otp_expire_minutes: int = Field(2, alias="OTP_EXPIRE_MINUTES")
+    otp_max_attempts: int = Field(5, alias="OTP_MAX_ATTEMPTS")
+    otp_resend_seconds: int = Field(60, alias="OTP_RESEND_SECONDS")
+
+    smsir_api_url: str = Field("https://api.sms.ir/v1", alias="SMSIR_API_URL")
+    smsir_api_key: str = Field("", alias="SMSIR_API_KEY")
+    smsir_template_id: str = Field("", alias="SMSIR_TEMPLATE_ID")
+    smsir_code_parameter: str = Field("Code", alias="SMSIR_CODE_PARAMETER")
+    smsir_timeout_seconds: int = Field(10, alias="SMSIR_TIMEOUT_SECONDS")
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @model_validator(mode="after")
@@ -35,6 +47,8 @@ class Settings(BaseSettings):
             missing.append("ADMIN_SESSION_SECRET")
         if not self.arvan_mock_ai and (not self.arvan_api_base_url or not self.arvan_api_key):
             missing.append("ARVAN_API_BASE_URL/ARVAN_API_KEY")
+        if not self.otp_mock and (not self.smsir_api_key or not self.smsir_template_id):
+            missing.append("SMSIR_API_KEY/SMSIR_TEMPLATE_ID")
 
         if missing:
             joined = ", ".join(missing)

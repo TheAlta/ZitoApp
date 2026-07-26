@@ -81,7 +81,7 @@ async def _send_smsir_code(phone: str, code: str) -> None:
         ],
     }
     headers = {
-        "Accept": "application/json",
+        "Accept": "text/plain",
         "Content-Type": "application/json",
         "X-API-KEY": settings.smsir_api_key,
     }
@@ -94,6 +94,15 @@ async def _send_smsir_code(phone: str, code: str) -> None:
 
     if response.status_code >= 400:
         raise OtpError(f"sms.ir rejected OTP request with status {response.status_code}.")
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise OtpError("sms.ir returned an invalid response body.") from exc
+
+    if int(data.get("status", 0)) != 1:
+        message = data.get("message") or "sms.ir did not accept OTP request."
+        raise OtpError(f"sms.ir OTP failed: {message}")
 
 
 async def request_otp(db: Session, phone: str) -> OtpRequestResult:

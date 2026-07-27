@@ -723,6 +723,7 @@
     let profileBuilder = null;
     let stage = "onboarding";
     let selectedTrack = localStorage.getItem("zito_track") || "accounting";
+    const savedFullName = localStorage.getItem("zito_full_name") || "";
     const urlUserId = new URLSearchParams(window.location.search).get("user_id");
     const savedUserId = localStorage.getItem("zito_user_id");
     let sessionUserId = urlUserId || savedUserId;
@@ -796,6 +797,7 @@
       localStorage.removeItem("zito_user_id");
       localStorage.removeItem("zito_username");
       localStorage.removeItem("zito_track");
+      localStorage.removeItem("zito_full_name");
       sessionUserId = null;
       userId = null;
       currentQuestion = null;
@@ -922,20 +924,25 @@
     }
     function startProfileChat(profile = {}) {
       stage = "profile";
+      const initialFullName = profile.full_name || savedFullName;
       profileBuilder = {
         data: {
-          full_name: profile.full_name || "",
+          full_name: initialFullName || "",
           work_domain: profile.work_domain || "",
           referral_source: profile.referral_source || "",
           daily_study_minutes: profile.daily_study_minutes || "",
         },
-        stepIndex: nextProfileStepIndex(profile),
+        stepIndex: nextProfileStepIndex({ ...profile, full_name: initialFullName }),
       };
       if (profileBuilder.stepIndex < 0) {
         submitProfileBuilder();
         return;
       }
-      addMessage("برای شروع مسیر جدید زیتو، چند سوال کوتاه می‌پرسم. این بخش با AI بررسی نمی‌شود و فقط برای ساخت مسیر یادگیری ذخیره می‌شود.");
+      if (initialFullName) {
+        addMessage(`سلام ${firstNameOf(initialFullName)} 👋\nخوش اومدی به زیتو. چند سوال کوتاه می‌پرسم تا مسیر یادگیریت دقیق‌تر ساخته شود.`);
+      } else {
+        addMessage("برای شروع مسیر جدید زیتو، چند سوال کوتاه می‌پرسم. این بخش با AI بررسی نمی‌شود و فقط برای ساخت مسیر یادگیری ذخیره می‌شود.");
+      }
       askCurrentProfileStep();
     }
     function askCurrentProfileStep() {
@@ -964,6 +971,7 @@
       await enrollDefaultCourse();
       const firstName = firstNameOf(profileBuilder.data.full_name);
       addMessage(`${firstName} عزیز، پروفایلت ذخیره شد و مسیر یادگیری اختصاصی‌ات آماده است. حالا سیاره آموزشی تو ظاهر می‌شود.`);
+      localStorage.removeItem("zito_full_name");
       profileBuilder = null;
       setTimeout(showPlanet, 650);
     }

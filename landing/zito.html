@@ -902,8 +902,9 @@
   <div class="phone-modal" id="phoneModal" aria-hidden="true">
     <div class="phone-card">
       <div class="phone-title">ورود به زیتو</div>
-      <div class="phone-copy" id="phoneCopy">شماره موبایلت را وارد کن تا مسیر یادگیریت با همین نام کاربری ذخیره شود.</div>
+      <div class="phone-copy" id="phoneCopy">نام و شماره موبایلت را وارد کن تا مسیر یادگیریت شخصی‌سازی شود.</div>
       <form class="phone-form" id="phoneForm">
+        <input class="phone-input" id="fullNameInput" autocomplete="name" placeholder="نام و نام خانوادگی" maxlength="80">
         <input class="phone-input" id="phoneInput" inputmode="numeric" autocomplete="tel" placeholder="09123456789" maxlength="20">
         <button class="phone-submit" id="phoneSubmit" type="submit">ارسال کد</button>
       </form>
@@ -951,6 +952,7 @@
     const phoneModal = document.getElementById('phoneModal');
     const phoneForm = document.getElementById('phoneForm');
     const otpForm = document.getElementById('otpForm');
+    const fullNameInput = document.getElementById('fullNameInput');
     const phoneInput = document.getElementById('phoneInput');
     const otpInput = document.getElementById('otpInput');
     const phoneSubmit = document.getElementById('phoneSubmit');
@@ -960,6 +962,7 @@
     const phoneError = document.getElementById('phoneError');
     const changePhone = document.getElementById('changePhone');
     let pendingPhone = '';
+    let pendingFullName = '';
     const fullText = 'سلام من زیتو هستم و قراره به تمام سوالاتی که تو حوزه کاریت داری جواب بدم. اگه آماده ای شروع کنیم؟';
 
     function typeWriter(text, el, speed) {
@@ -1009,7 +1012,7 @@
       }
       phoneModal.classList.add('show');
       phoneModal.setAttribute('aria-hidden', 'false');
-      phoneInput.focus();
+      fullNameInput.focus();
     }, true);
 
     phoneModal.addEventListener('click', (event) => {
@@ -1052,13 +1055,14 @@
 
     function showPhoneStep() {
       pendingPhone = '';
+      pendingFullName = '';
       otpForm.classList.add('is-hidden');
       phoneForm.classList.remove('is-hidden');
       changePhone.classList.add('is-hidden');
-      phoneCopy.textContent = 'شماره موبایلت را وارد کن تا مسیر یادگیریت با همین نام کاربری ذخیره شود.';
+      phoneCopy.textContent = 'نام و شماره موبایلت را وارد کن تا مسیر یادگیریت شخصی‌سازی شود.';
       phoneHelper.textContent = '';
       phoneError.textContent = '';
-      phoneInput.focus();
+      fullNameInput.focus();
     }
 
     changePhone.addEventListener('click', showPhoneStep);
@@ -1069,7 +1073,10 @@
       phoneHelper.textContent = '';
       phoneSubmit.disabled = true;
       try {
+        const fullName = fullNameInput.value.trim();
+        if (fullName.length < 2) throw new Error('لطفا اول نام و نام خانوادگی‌ات را وارد کن.');
         const phone = phoneInput.value.trim();
+        pendingFullName = fullName;
         const response = await fetch('/api/auth/otp/request', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1099,6 +1106,7 @@
         if (!response.ok) throw new Error(getErrorMessage(data, 'کد تایید درست نیست یا منقضی شده.'));
         localStorage.setItem('zito_user_id', String(data.user_id));
         localStorage.setItem('zito_username', data.username);
+        localStorage.setItem('zito_full_name', pendingFullName);
         window.location.href = data.redirect_url;
       } catch (error) {
         phoneError.textContent = error.message;

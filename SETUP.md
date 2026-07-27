@@ -33,7 +33,7 @@ Admin login for local test:
 ## What To Test In The Browser
 1. Open `/`.
 2. Click `شروع کنید`.
-3. Enter your full name and phone number.
+3. Enter any preferred name and a phone number.
 4. If `OTP_MOCK=true`, the modal shows the local test code. If `OTP_MOCK=false`, read the SMS code.
 5. Enter the OTP code and submit.
 6. `/app/` opens, greets you by first name, and asks the profile questions in chat.

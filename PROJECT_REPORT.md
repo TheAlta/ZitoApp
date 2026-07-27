@@ -14,7 +14,7 @@
 
 ### پروژه چیست؟
 
-Zito یک سرویس onboarding و آموزش هوش مصنوعی است. در جریان فعلی فاز ۲، کاربر نام کامل و شماره موبایل را در لندینگ وارد می‌کند، با OTP پیامکی احراز هویت می‌شود و سپس سوال‌های اولیه پروفایل در خود چت از او پرسیده می‌شوند. شماره در `users.phone` هویت یکتای ورود است؛ نام کامل در `users.full_name` و نام نمایشی در `users.username` ذخیره می‌شود. پاسخ‌های پروفایل فاز ۲ AI validation ندارند و بعد از تکمیل در PostgreSQL ذخیره می‌شوند.
+Zito یک سرویس onboarding و آموزش هوش مصنوعی است. در جریان فعلی فاز ۲، کاربر نام دلخواه و شماره موبایل را در لندینگ وارد می‌کند و با OTP پیامکی احراز هویت می‌شود. بلافاصله بعد از تایید کد، رکورد `users` با شماره و نام ثبت می‌شود؛ سپس سوال‌های اولیه پروفایل در خود چت از او پرسیده می‌شوند و همان رکورد کاربر را تکمیل می‌کنند. شماره در `users.phone` هویت یکتای ورود است و نام واردشده بدون AI validation در `users.full_name` و `users.username` ذخیره می‌شود.
 
 مسیر آموزشی فعلی روی سه حوزه متمرکز است:
 
@@ -49,7 +49,7 @@ Zito یک سرویس onboarding و آموزش هوش مصنوعی است. در �
 
 به‌روزرسانی اسپرینت ۰ فاز ۲ در تاریخ 2026-07-23: قرارداد دیتابیسی واقعی فاز ۲ به پروژه اضافه شد. migration جدید با شناسه `20260723_0003_phase2_schema` جدول‌های دوره، نسخه دوره، محتوای ۲۰ مرحله، KB اختصاصی دوره، پروفایل فاز ۲، ثبت‌نام دوره، پیشرفت مرحله‌ای، آزمون، تلاش آزمون و مدرک را اضافه می‌کند. همچنین Fake CMS Seed در `src/seed.py` یک دوره نمونه published با slug `personal-development-ai`، نسخه published شماره ۱، ۲۰ stage تاییدشده، ۳ سند KB و یک آزمون نهایی نمونه می‌سازد. این کار باعث می‌شود Core فاز ۲ از همین ابتدا از جدول‌های واقعی CMS بخواند و بعداً CMS واقعی فقط producer همین contract شود.
 
-به‌روزرسانی اسپرینت ۱ فاز ۲ در تاریخ 2026-07-27: زیرساخت ورود OTP پیاده‌سازی و نهایی شد. جدول `phone_otp_codes` با migration `20260726_0004_phone_otp_codes` اضافه شد و سرویس `src/services/otp.py` کد تایید را تولید، hash و verify می‌کند. ارسال واقعی با sms.ir از مسیر `https://api.sms.ir/v1/send/verify` تست شد. migration `20260727_0005_user_phone_identity` شماره را به ستون مستقل و unique در `users.phone` منتقل می‌کند تا ورود مجدد همیشه همان رکورد را پیدا کند. مسیر قدیمی `/api/auth/phone` که OTP را دور می‌زد حذف شده است. لندینگ نام کامل و شماره را می‌گیرد، پس از OTP کاربر در `/app/` با نام کوچک خطاب می‌شود و سوال‌های حوزه کاری، منبع آشنایی و زمان مطالعه را داخل چت پاسخ می‌دهد. اطلاعات در `users`، `user_profiles_v2` و `profile_builder_answers` ذخیره می‌شوند و سپس ثبت‌نام دوره Fake CMS در `user_course_enrollments` انجام می‌شود.
+به‌روزرسانی اسپرینت ۱ فاز ۲ در تاریخ 2026-07-27: زیرساخت ورود OTP پیاده‌سازی و نهایی شد. جدول `phone_otp_codes` با migration `20260726_0004_phone_otp_codes` اضافه شد و سرویس `src/services/otp.py` کد تایید را تولید، hash و verify می‌کند. ارسال واقعی با sms.ir از مسیر `https://api.sms.ir/v1/send/verify` تست شد. migration `20260727_0005_user_phone_identity` شماره را به ستون مستقل و unique در `users.phone` منتقل می‌کند تا ورود مجدد همیشه همان رکورد را پیدا کند. مسیر قدیمی `/api/auth/phone` که OTP را دور می‌زد حذف شده است. لندینگ نام دلخواه و شماره را می‌گیرد؛ بلافاصله بعد از OTP رکورد `users` ذخیره می‌شود، سپس کاربر در `/app/` با نام واردشده خطاب می‌شود و سوال‌های حوزه کاری، منبع آشنایی و زمان مطالعه را داخل چت پاسخ می‌دهد. اطلاعات تکمیلی در `user_profiles_v2` و `profile_builder_answers` ذخیره می‌شوند و سپس ثبت‌نام دوره Fake CMS در `user_course_enrollments` انجام می‌شود.
 
 ---
 
@@ -125,7 +125,7 @@ UI هر قالب آموزشی را با تجربه بصری اختصاصی نم�
 
 در فاز ۲ کاربر دیگر پاسخ‌های اولیه را با AI validation نمی‌فرستد. ورود با شماره موبایل و OTP انجام می‌شود، سپس اطلاعات کاربر به‌صورت سوال‌وپاسخ داخل چت و بدون AI check ذخیره می‌شود:
 
-- نام و نام خانوادگی
+- نام دلخواه کاربر
 - حوزه کاری
 - منبع آشنایی با Zito
 - زمان روزانه مطالعه
@@ -439,8 +439,8 @@ ZitoApp/
 |---|---|---:|---|
 | `id` | integer | no | primary key |
 | `phone` | varchar(20) | yes | شماره ورود normalize‌شده؛ unique index با نام `ix_users_phone` |
-| `full_name` | varchar(255) | yes | نام و نام خانوادگی ثبت‌شده |
-| `username` | varchar(100) | yes | نام نمایشی فعلی؛ در فاز ۲ برابر نام کامل کاربر |
+| `full_name` | varchar(255) | yes | نام دلخواه ثبت‌شده کاربر |
+| `username` | varchar(100) | yes | نام نمایشی فعلی؛ در فاز ۲ برابر نام واردشده کاربر |
 | `profession` | varchar(255) | yes | مسیر/حوزه آموزشی کاربر |
 | `created_at` | timestamptz | no | زمان ساخت |
 | `updated_at` | timestamptz | no | زمان آخرین تغییر |
@@ -849,7 +849,7 @@ Arvancloud AIaaS GPT-5.4-Mini /chat/completions
 | متد | مسیر | ورودی | خروجی | کار |
 |---|---|---|---|---|
 | POST | `/api/auth/otp/request` | `OtpRequestIn { phone }` | `OtpRequestOut` | OTP را در حالت mock یا sms.ir ارسال و فقط hash آن را ذخیره می‌کند. |
-| POST | `/api/auth/otp/verify` | `OtpVerifyIn { phone, code }` | `PhoneLoginOut { user_id, phone, username, redirect_url }` | OTP را تایید می‌کند و کاربر را با `users.phone` پیدا یا ایجاد می‌کند. |
+| POST | `/api/auth/otp/verify` | `OtpVerifyIn { phone, code, full_name }` | `PhoneLoginOut { user_id, phone, username, redirect_url }` | OTP را تایید می‌کند و همان لحظه کاربر را با شماره و نام دلخواه در `users` پیدا یا ایجاد و ذخیره می‌کند. |
 | GET | `/api/profile/{user_id}` | path `user_id` | `ProfileV2Out` | وضعیت پروفایل فاز ۲ را می‌خواند. |
 | POST | `/api/profile/{user_id}` | `ProfileV2In` | `ProfileV2Out` | نام، حوزه کاری، منبع آشنایی و زمان مطالعه را در جداول پروفایل و user ذخیره می‌کند. |
 | GET | `/api/courses` | ندارد | `list[CourseOut]` | دوره‌های published از قرارداد Fake CMS/CMS را می‌خواند. |

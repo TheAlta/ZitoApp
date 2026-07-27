@@ -71,7 +71,7 @@ class ProfileAndCourseTests(unittest.TestCase):
         self.assertEqual(user.profession, "توسعه فردی")
         self.assertEqual(len(answers), 7)
 
-    def test_profile_rejects_single_part_name(self) -> None:
+    def test_profile_accepts_single_part_name(self) -> None:
         user_id = self._create_user()
         payload = {
             "full_name": "شایان",
@@ -83,7 +83,8 @@ class ProfileAndCourseTests(unittest.TestCase):
         with TestClient(app) as client:
             response = client.post(f"/api/profile/{user_id}", json=payload)
 
-        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["full_name"], "شایان")
 
     def test_courses_and_enrollment_use_fake_cms_seed(self) -> None:
         user_id = self._create_user()

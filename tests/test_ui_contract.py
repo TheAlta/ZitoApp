@@ -20,6 +20,8 @@ class UiContractTests(unittest.TestCase):
         self.assertIn(".phone-input:-webkit-autofill", html)
         self.assertIn('label for="fullNameInput"', html)
         self.assertIn('label for="phoneInput"', html)
+        self.assertIn("full_name: pendingFullName", html)
+        self.assertNotIn("fullName.split(/\\s+/)", html)
         self.assertLess(html.index('id="fullNameInput"'), html.index('id="phoneInput"'))
 
     def test_chat_personalizes_avatar_welcome_without_second_greeting(self) -> None:

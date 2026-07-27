@@ -979,8 +979,8 @@
       <div class="phone-copy" id="phoneCopy">نام و شماره موبایلت را وارد کن تا مسیر یادگیریت شخصی‌سازی شود.</div>
       <form class="phone-form" id="phoneForm">
         <div class="phone-field">
-          <label for="fullNameInput">نام و نام خانوادگی</label>
-          <input class="phone-input" id="fullNameInput" autocomplete="name" placeholder="مثلا علی رضایی" maxlength="80">
+          <label for="fullNameInput">نام</label>
+          <input class="phone-input" id="fullNameInput" autocomplete="name" placeholder="اسمی که دوست داری صدات کنیم" maxlength="80">
         </div>
         <div class="phone-field">
           <label for="phoneInput">شماره موبایل</label>
@@ -1157,9 +1157,7 @@
       phoneSubmit.disabled = true;
       try {
         const fullName = fullNameInput.value.trim();
-        if (fullName.length < 3 || fullName.split(/\s+/).length < 2) {
-          throw new Error('لطفا نام و نام خانوادگی‌ات را کامل وارد کن؛ مثلا علی رضایی.');
-        }
+        if (!fullName) throw new Error('یک نام وارد کن.');
         const phone = phoneInput.value.trim();
         pendingFullName = fullName;
         const response = await fetch('/api/auth/otp/request', {
@@ -1185,7 +1183,11 @@
         const response = await fetch('/api/auth/otp/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: pendingPhone, code: otpInput.value.trim() })
+          body: JSON.stringify({
+            phone: pendingPhone,
+            code: otpInput.value.trim(),
+            full_name: pendingFullName
+          })
         });
         const data = await readApiResponse(response);
         if (!response.ok) throw new Error(getErrorMessage(data, 'کد تایید درست نیست یا منقضی شده.'));

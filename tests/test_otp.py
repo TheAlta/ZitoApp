@@ -41,30 +41,39 @@ class OtpFlowTests(unittest.TestCase):
             with SessionLocal() as db:
                 otp = db.scalars(select(PhoneOtpCode).where(PhoneOtpCode.phone == "09123456789")).one()
                 self.assertNotEqual(otp.code_hash, request_data["mock_code"])
+                user_before_verify = db.scalars(select(User).where(User.phone == "09123456789")).first()
+                self.assertIsNone(user_before_verify)
 
             verify_response = client.post(
                 "/api/auth/otp/verify",
-                json={"phone": "09123456789", "code": request_data["mock_code"]},
+                json={"phone": "09123456789", "code": request_data["mock_code"], "full_name": "درخت"},
             )
+            profile_response = client.get(f"/api/profile/{verify_response.json()['user_id']}")
 
         self.assertEqual(verify_response.status_code, 200)
         verify_data = verify_response.json()
         self.assertEqual(verify_data["phone"], "09123456789")
-        self.assertIsNone(verify_data["username"])
+        self.assertEqual(verify_data["username"], "درخت")
         self.assertEqual(verify_data["redirect_url"], "/app/")
+        self.assertEqual(profile_response.status_code, 200)
+        self.assertFalse(profile_response.json()["completed"])
+        self.assertEqual(profile_response.json()["full_name"], "درخت")
 
         with SessionLocal() as db:
             user = db.scalars(select(User).where(User.phone == "09123456789")).one()
             otp = db.scalars(select(PhoneOtpCode).where(PhoneOtpCode.phone == "09123456789")).one()
+            phase2_profile = db.scalars(select(UserProfileV2).where(UserProfileV2.user_id == user.id)).first()
             self.assertEqual(user.id, verify_data["user_id"])
-            self.assertIsNone(user.username)
+            self.assertEqual(user.full_name, "درخت")
+            self.assertEqual(user.username, "درخت")
+            self.assertIsNone(phase2_profile)
             self.assertIsNotNone(otp.consumed_at)
 
         with TestClient(app) as client:
             next_request = client.post("/api/auth/otp/request", json={"phone": "09123456789"})
             next_verify = client.post(
                 "/api/auth/otp/verify",
-                json={"phone": "09123456789", "code": next_request.json()["mock_code"]},
+                json={"phone": "09123456789", "code": next_request.json()["mock_code"], "full_name": "درخت"},
             )
 
         self.assertEqual(next_verify.status_code, 200)
@@ -93,7 +102,7 @@ class OtpFlowTests(unittest.TestCase):
             first_request = client.post("/api/auth/otp/request", json={"phone": phone}).json()
             first_login = client.post(
                 "/api/auth/otp/verify",
-                json={"phone": phone, "code": first_request["mock_code"]},
+                json={"phone": phone, "code": first_request["mock_code"], "full_name": profile_payload["full_name"]},
             )
             user_id = first_login.json()["user_id"]
             profile_response = client.post(f"/api/profile/{user_id}", json=profile_payload)
@@ -101,7 +110,7 @@ class OtpFlowTests(unittest.TestCase):
             second_request = client.post("/api/auth/otp/request", json={"phone": phone}).json()
             second_login = client.post(
                 "/api/auth/otp/verify",
-                json={"phone": phone, "code": second_request["mock_code"]},
+                json={"phone": phone, "code": second_request["mock_code"], "full_name": profile_payload["full_name"]},
             )
 
         self.assertEqual(first_login.status_code, 200)
@@ -127,19 +136,19 @@ class OtpFlowTests(unittest.TestCase):
 
             wrong_response = client.post(
                 "/api/auth/otp/verify",
-                json={"phone": "09122223333", "code": "000000"},
+                json={"phone": "09122223333", "code": "000000", "full_name": "کاربر"},
             )
             self.assertEqual(wrong_response.status_code, 401)
 
             first_verify = client.post(
                 "/api/auth/otp/verify",
-                json={"phone": "09122223333", "code": code},
+                json={"phone": "09122223333", "code": code, "full_name": "کاربر"},
             )
             self.assertEqual(first_verify.status_code, 200)
 
             reused_response = client.post(
                 "/api/auth/otp/verify",
-                json={"phone": "09122223333", "code": code},
+                json={"phone": "09122223333", "code": code, "full_name": "کاربر"},
             )
             self.assertEqual(reused_response.status_code, 401)
 

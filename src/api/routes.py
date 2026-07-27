@@ -126,14 +126,15 @@ def _get_or_create_phone_user(db: Session, phone: str) -> User:
     return user
 
 
-def _profile_out(user_id: int, profile: UserProfileV2 | None) -> ProfileV2Out:
+def _profile_out(user: User, profile: UserProfileV2 | None) -> ProfileV2Out:
     if not profile:
-        return ProfileV2Out(user_id=user_id, completed=False)
-    completed = bool(profile.full_name and profile.work_domain and profile.daily_study_minutes)
+        return ProfileV2Out(user_id=user.id, completed=False, full_name=user.full_name)
+    full_name = profile.full_name or user.full_name
+    completed = bool(full_name and profile.work_domain and profile.daily_study_minutes)
     return ProfileV2Out(
-        user_id=user_id,
+        user_id=user.id,
         completed=completed,
-        full_name=profile.full_name,
+        full_name=full_name,
         work_domain=profile.work_domain,
         referral_source=profile.referral_source,
         daily_study_minutes=profile.daily_study_minutes,
@@ -216,9 +217,16 @@ async def request_phone_otp(payload: OtpRequestIn, db: Session = Depends(get_db)
 @router.post("/api/auth/otp/verify", response_model=PhoneLoginOut)
 def verify_phone_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> PhoneLoginOut:
     phone = _normalize_phone(payload.phone)
+    full_name = payload.full_name.strip()
+    if not full_name:
+        raise HTTPException(status_code=422, detail="یک نام وارد کن.")
     if not verify_otp(db, phone, payload.code):
         raise HTTPException(status_code=401, detail="کد تایید اشتباه است یا منقضی شده.")
     user = _get_or_create_phone_user(db, phone)
+    user.full_name = full_name
+    user.username = full_name
+    db.commit()
+    db.refresh(user)
     return PhoneLoginOut(user_id=user.id, phone=phone, username=user.username, redirect_url="/app/")
 
 
@@ -228,7 +236,7 @@ def get_profile_v2(user_id: int, db: Session = Depends(get_db)) -> ProfileV2Out:
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
     profile = db.scalars(select(UserProfileV2).where(UserProfileV2.user_id == user.id)).first()
-    return _profile_out(user.id, profile)
+    return _profile_out(user, profile)
 
 
 @router.post("/api/profile/{user_id}", response_model=ProfileV2Out)
@@ -280,7 +288,7 @@ def submit_profile_v2(user_id: int, payload: ProfileV2In, db: Session = Depends(
 
     db.commit()
     db.refresh(profile)
-    return _profile_out(user.id, profile)
+    return _profile_out(user, profile)
 
 
 @router.get("/api/courses", response_model=list[CourseOut])

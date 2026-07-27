@@ -893,10 +893,10 @@
     const PROFILE_STEPS = [
       {
         key: "full_name",
-        question: "اول نام و نام خانوادگی‌ات را بنویس.",
-        retry: "برای اینکه درست صدات کنم، لطفا نام و نام خانوادگی را واضح بنویس؛ مثلا: امیر مسعود زاده.",
+        question: "دوست داری با چه اسمی صدات کنم؟",
+        retry: "یک نام وارد کن تا بتونم صدات کنم.",
         parse: (value) => value.trim(),
-        isValid: (value) => value.trim().length >= 3 && value.trim().split(/\s+/).length >= 2,
+        isValid: (value) => value.trim().length >= 1,
       },
       {
         key: "work_domain",

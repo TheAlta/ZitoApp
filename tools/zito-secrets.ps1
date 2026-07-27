@@ -111,7 +111,9 @@ function Write-Inventory {
             "env.ARVAN_API_BASE_URL",
             "env.ARVAN_API_KEY",
             "env.ADMIN_PASSWORD",
-            "env.ADMIN_SESSION_SECRET"
+            "env.ADMIN_SESSION_SECRET",
+            "env.SMSIR_API_KEY",
+            "env.SMSIR_TEMPLATE_ID"
         )
     }
     $inventory | ConvertTo-Json -Depth 6 | Set-Content -Path $InventoryPath -Encoding UTF8

@@ -256,7 +256,7 @@
       box-shadow: 0 0 18px rgba(60, 130, 255, .55);
     }
     .welcome-title { font-size: 22px; font-weight: 900; margin: 0 0 6px; }
-    .welcome-sub { color: var(--soft); font-size: 13px; line-height: 1.9; margin: 0; }
+    .welcome-sub { color: var(--soft); font-size: 13px; line-height: 1.95; margin: 0; white-space: pre-line; }
     .msg {
       width: fit-content;
       max-width: 84%;
@@ -617,8 +617,8 @@
           <div class="zito-orb" aria-hidden="true">
             <img src="/landing-static/zito-avatar-transparent.png" alt="">
           </div>
-          <h2 class="welcome-title">سلام، من زیتو هستم 👋</h2>
-          <p class="welcome-sub">برای ساختن مسیر آموزشی هوشمند، چند سوال کوتاه ازت می‌پرسم.</p>
+          <h2 id="welcomeTitle" class="welcome-title">سلام، من زیتو هستم</h2>
+          <p id="welcomeSub" class="welcome-sub">برای ساختن مسیر آموزشی هوشمند، چند سوال کوتاه ازت می‌پرسم.</p>
         </div>
         <div id="typing" class="typing"><span></span><span></span><span></span></div>
       </div>
@@ -733,6 +733,8 @@
     }
 
     const appShell = document.querySelector("#appShell");
+    const welcomeTitle = document.querySelector("#welcomeTitle");
+    const welcomeSub = document.querySelector("#welcomeSub");
     const chat = document.querySelector("#chat");
     const form = document.querySelector("#form");
     const input = document.querySelector("#answer");
@@ -834,6 +836,11 @@
     function firstNameOf(fullName) {
       return String(fullName || "").trim().split(/\s+/).filter(Boolean)[0] || "دوست خوبم";
     }
+    function personalizeWelcome(fullName) {
+      const firstName = firstNameOf(fullName);
+      welcomeTitle.textContent = `سلام ${firstName}، من زیتو هستم`;
+      welcomeSub.textContent = "خوشحالم که اینجایی\nخوش اومدی به زیتو. چند سوال کوتاه می‌پرسم تا مسیر یادگیریت دقیق‌تر ساخته شود.";
+    }
     function studyMinutesFrom(value) {
       const normalized = normalizeDigits(value).toLowerCase();
       const numeric = normalized.match(/\d+/);
@@ -893,7 +900,7 @@
       },
       {
         key: "work_domain",
-        question: (profile) => `${firstNameOf(profile.full_name)} سلام 👋\nحوزه کاری یا علاقه اصلی‌ات چیه؟`,
+        question: "حوزه کاری یا علاقه اصلی‌ات چیه؟",
         retry: "حوزه کاری را کوتاه و واضح بنویس؛ مثلا: حسابداری، روانشناسی، حقوق، توسعه فردی یا مدیریت.",
         parse: (value) => value.trim(),
         isValid: (value) => value.trim().length >= 2,
@@ -939,9 +946,7 @@
         return;
       }
       if (initialFullName) {
-        addMessage(`سلام ${firstNameOf(initialFullName)} 👋\nخوش اومدی به زیتو. چند سوال کوتاه می‌پرسم تا مسیر یادگیریت دقیق‌تر ساخته شود.`);
-      } else {
-        addMessage("برای شروع مسیر جدید زیتو، چند سوال کوتاه می‌پرسم. این بخش با AI بررسی نمی‌شود و فقط برای ساخت مسیر یادگیری ذخیره می‌شود.");
+        personalizeWelcome(initialFullName);
       }
       askCurrentProfileStep();
     }
@@ -982,6 +987,7 @@
         return;
       }
       profileBuilder.data[step.key] = step.parse(value);
+      if (step.key === "full_name") personalizeWelcome(profileBuilder.data.full_name);
       profileBuilder.stepIndex = nextProfileStepIndex(profileBuilder.data);
       if (profileBuilder.stepIndex < 0) {
         await submitProfileBuilder();

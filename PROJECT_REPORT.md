@@ -1,7 +1,7 @@
 # PROJECT_REPORT.md - مستندسازی فنی وضعیت فعلی Zito
 
 تاریخ تهیه: 2026-07-20  
-آخرین به‌روزرسانی: 2026-07-26
+آخرین به‌روزرسانی: 2026-07-27
 ریپازیتوری‌های GitHub:
 - `https://github.com/TheAlta/ZitoApp`
 - `https://github.com/elmsaz/elmsazZito`
@@ -14,7 +14,7 @@
 
 ### پروژه چیست؟
 
-Zito یک سرویس onboarding و آموزش هوش مصنوعی است که کاربر ابتدا از طریق یک رابط چت/لندینگ وارد می‌شود، با شماره موبایل به عنوان username شناسایی می‌شود، سپس به چند سوال اولیه پاسخ می‌دهد. پاسخ‌های اولیه با Arvancloud AIaaS بررسی می‌شوند تا مشخص شود مرتبط، معنادار و مطابق سوال هستند یا نه. اگر پاسخ تایید شود در دیتابیس ذخیره می‌شود و کاربر وارد مسیر آموزش می‌شود.
+Zito یک سرویس onboarding و آموزش هوش مصنوعی است. در جریان فعلی فاز ۲، کاربر نام کامل و شماره موبایل را در لندینگ وارد می‌کند، با OTP پیامکی احراز هویت می‌شود و سپس سوال‌های اولیه پروفایل در خود چت از او پرسیده می‌شوند. شماره در `users.phone` هویت یکتای ورود است؛ نام کامل در `users.full_name` و نام نمایشی در `users.username` ذخیره می‌شود. پاسخ‌های پروفایل فاز ۲ AI validation ندارند و بعد از تکمیل در PostgreSQL ذخیره می‌شوند.
 
 مسیر آموزشی فعلی روی سه حوزه متمرکز است:
 
@@ -45,11 +45,11 @@ Zito یک سرویس onboarding و آموزش هوش مصنوعی است که ک
 
 درصد تخمینی تکمیل کل پروژه فعلی: حدود 65 تا 70 درصد. پروژه قابل اجرا و deploy شده است، اما این وضعیت مربوط به MVP/فاز ۱ است.
 
-وضعیت فاز ۲: هنوز پیاده‌سازی نشده و در مرحله طراحی معماری و زمان‌بندی است. تصمیم فعلی این است که فاز ۲ با سه بخش `CMS`، `Core` و `UI` جلو برود. CMS واقعی در اسپرینت‌های پایانی ساخته می‌شود، اما از ابتدا یک Fake CMS/Seed CMS روی schema واقعی ساخته می‌شود تا Core از همان قرارداد دیتابیسی آینده بخواند و بعداً اتصال CMS واقعی باعث بازنویسی Core نشود.
+وضعیت فاز ۲: اسپرینت ۰ مدل داده و Fake CMS کامل شده و اسپرینت ۱ Core ورود، OTP، پروفایل چتی و ثبت‌نام دوره پیاده‌سازی شده است. فاز ۲ با سه بخش `CMS`، `Core` و `UI` جلو می‌رود. CMS واقعی در اسپرینت‌های پایانی ساخته می‌شود، اما Core از همین حالا از schema و داده published همان قرارداد استفاده می‌کند تا اتصال CMS واقعی باعث بازنویسی Core نشود.
 
 به‌روزرسانی اسپرینت ۰ فاز ۲ در تاریخ 2026-07-23: قرارداد دیتابیسی واقعی فاز ۲ به پروژه اضافه شد. migration جدید با شناسه `20260723_0003_phase2_schema` جدول‌های دوره، نسخه دوره، محتوای ۲۰ مرحله، KB اختصاصی دوره، پروفایل فاز ۲، ثبت‌نام دوره، پیشرفت مرحله‌ای، آزمون، تلاش آزمون و مدرک را اضافه می‌کند. همچنین Fake CMS Seed در `src/seed.py` یک دوره نمونه published با slug `personal-development-ai`، نسخه published شماره ۱، ۲۰ stage تاییدشده، ۳ سند KB و یک آزمون نهایی نمونه می‌سازد. این کار باعث می‌شود Core فاز ۲ از همین ابتدا از جدول‌های واقعی CMS بخواند و بعداً CMS واقعی فقط producer همین contract شود.
 
-به‌روزرسانی اسپرینت ۱ فاز ۲ در تاریخ 2026-07-26: زیرساخت ورود OTP پیاده‌سازی شد. جدول `phone_otp_codes` با migration `20260726_0004_phone_otp_codes` اضافه شد و سرویس `src/services/otp.py` کد تایید را تولید، hash و verify می‌کند. ارسال واقعی با sms.ir از مسیر `https://api.sms.ir/v1/send/verify` تست شد و برای سازگاری TLS در محیط ویندوز از `http.client.HTTPSConnection` استفاده می‌شود. لندینگ از ورود مستقیم با شماره به flow دو مرحله‌ای شماره موبایل و کد تایید تغییر کرد. بعد از ورود، `/app/` فرم پروفایل فاز ۲ را بدون AI validation نشان می‌دهد، اطلاعات را در `user_profiles_v2` و `profile_builder_answers` ذخیره می‌کند، سپس کاربر را در دوره published فعلی از Fake CMS ثبت‌نام می‌کند و رکورد `user_course_enrollments` می‌سازد.
+به‌روزرسانی اسپرینت ۱ فاز ۲ در تاریخ 2026-07-27: زیرساخت ورود OTP پیاده‌سازی و نهایی شد. جدول `phone_otp_codes` با migration `20260726_0004_phone_otp_codes` اضافه شد و سرویس `src/services/otp.py` کد تایید را تولید، hash و verify می‌کند. ارسال واقعی با sms.ir از مسیر `https://api.sms.ir/v1/send/verify` تست شد. migration `20260727_0005_user_phone_identity` شماره را به ستون مستقل و unique در `users.phone` منتقل می‌کند تا ورود مجدد همیشه همان رکورد را پیدا کند. مسیر قدیمی `/api/auth/phone` که OTP را دور می‌زد حذف شده است. لندینگ نام کامل و شماره را می‌گیرد، پس از OTP کاربر در `/app/` با نام کوچک خطاب می‌شود و سوال‌های حوزه کاری، منبع آشنایی و زمان مطالعه را داخل چت پاسخ می‌دهد. اطلاعات در `users`، `user_profiles_v2` و `profile_builder_answers` ذخیره می‌شوند و سپس ثبت‌نام دوره Fake CMS در `user_course_enrollments` انجام می‌شود.
 
 ---
 
@@ -63,14 +63,14 @@ Zito یک سرویس onboarding و آموزش هوش مصنوعی است که ک
                   |   landing/zito.html  |
                   +----------+-----------+
                              |
-                             | POST /api/auth/phone
+                             | POST /api/auth/otp/request + /verify
                              v
 +----------------------------+----------------------------+
 |                         FastAPI                         |
 | src/main.py + src/api/routes.py                         |
 |                                                            |
 |  UI Routes: /, /app/, /admin/login, /admin                |
-|  API Routes: onboarding, training, admin                  |
+|  API Routes: auth OTP, profile, courses, training, admin |
 +-------------+-------------------+------------------------+
               |                   |
               | SQLAlchemy ORM    | HTTPX/OpenAI-compatible call
@@ -123,7 +123,7 @@ Core فقط محتوای approved/published را مصرف می‌کند.
 UI هر قالب آموزشی را با تجربه بصری اختصاصی نمایش می‌دهد.
 ```
 
-در فاز ۲ کاربر دیگر پاسخ‌های فرم اولیه را با AI validation نمی‌فرستد. ورود با شماره موبایل و OTP انجام می‌شود، سپس فرم اطلاعات کاربر بدون AI check ذخیره می‌شود:
+در فاز ۲ کاربر دیگر پاسخ‌های اولیه را با AI validation نمی‌فرستد. ورود با شماره موبایل و OTP انجام می‌شود، سپس اطلاعات کاربر به‌صورت سوال‌وپاسخ داخل چت و بدون AI check ذخیره می‌شود:
 
 - نام و نام خانوادگی
 - حوزه کاری
@@ -395,8 +395,11 @@ ZitoApp/
 - `migrations/env.py`: اتصال Alembic به `DATABASE_URL` از `src.config`.
 - `migrations/versions/20260707_0001_initial.py`: migration اولیه برای users/questions/answers/progress/knowledge.
 - `migrations/versions/20260714_0002_admins.py`: migration جدول admins.
+- `migrations/versions/20260723_0003_phase2_schema.py`: قرارداد دیتابیس Core، Fake CMS، مسیر ۲۰ مرحله، آزمون و مدرک.
+- `migrations/versions/20260726_0004_phone_otp_codes.py`: ذخیره امن چرخه OTP پیامکی.
+- `migrations/versions/20260727_0005_user_phone_identity.py`: جداسازی شماره ورود از نام نمایشی کاربر.
 - `src/main.py`: ساخت FastAPI app، mount assets، UI routes و startup seed.
-- `src/api/routes.py`: تمام APIهای داخلی برای admin، onboarding، auth phone و training.
+- `src/api/routes.py`: APIهای داخلی برای OTP، پروفایل، دوره‌ها، admin، onboarding قدیمی و training.
 - `src/config.py`: بارگذاری env با Pydantic Settings و guardهای production.
 - `src/db.py`: ساخت engine و session SQLAlchemy.
 - `src/models.py`: مدل‌های ORM و relationهای دیتابیس.
@@ -425,6 +428,8 @@ ZitoApp/
   - `migrations/versions/20260707_0001_initial.py`
   - `migrations/versions/20260714_0002_admins.py`
   - `migrations/versions/20260723_0003_phase2_schema.py`
+  - `migrations/versions/20260726_0004_phone_otp_codes.py`
+  - `migrations/versions/20260727_0005_user_phone_identity.py`
 
 ### جدول `users`
 
@@ -433,8 +438,9 @@ ZitoApp/
 | فیلد | نوع | nullable | توضیح |
 |---|---|---:|---|
 | `id` | integer | no | primary key |
-| `full_name` | varchar(255) | yes | نام و نام خانوادگی تاییدشده |
-| `username` | varchar(100) | yes | در v2 معمولاً شماره موبایل کاربر |
+| `phone` | varchar(20) | yes | شماره ورود normalize‌شده؛ unique index با نام `ix_users_phone` |
+| `full_name` | varchar(255) | yes | نام و نام خانوادگی ثبت‌شده |
+| `username` | varchar(100) | yes | نام نمایشی فعلی؛ در فاز ۲ برابر نام کامل کاربر |
 | `profession` | varchar(255) | yes | مسیر/حوزه آموزشی کاربر |
 | `created_at` | timestamptz | no | زمان ساخت |
 | `updated_at` | timestamptz | no | زمان آخرین تغییر |
@@ -514,7 +520,7 @@ ZitoApp/
 
 Migration مرجع: `migrations/versions/20260723_0003_phase2_schema.py`
 
-این جدول‌ها فعلاً برای Sprint 0 اضافه شده‌اند و توسط `seed_phase2_fake_course` در `src/seed.py` با داده نمونه پر می‌شوند. هنوز APIهای Core فاز ۲ و CMS واقعی روی آن‌ها کامل نشده‌اند.
+این جدول‌ها در Sprint 0 اضافه شده‌اند و توسط `seed_phase2_fake_course` در `src/seed.py` با داده نمونه پر می‌شوند. APIهای پروفایل، خواندن دوره published و ثبت‌نام Core فعال‌اند؛ موتور ۲۰ مرحله و CMS واقعی در اسپرینت‌های بعد تکمیل می‌شوند.
 
 | جدول | نقش | وضعیت فعلی |
 |---|---|---|
@@ -522,9 +528,9 @@ Migration مرجع: `migrations/versions/20260723_0003_phase2_schema.py`
 | `course_versions` | نسخه‌بندی محتوای دوره برای جلوگیری از تغییر ناگهانی مسیر کاربر | نسخه `1` دوره sample با status `published` seed می‌شود |
 | `course_stage_contents` | محتوای ۲۰ قالب آموزشی هر نسخه دوره در `content_json` | ۲۰ stage تاییدشده با `review_status=approved` seed می‌شود |
 | `course_kb_documents` | KB اختصاصی هر دوره برای RAG آواتار و کنترل مسیر | ۳ سند sample برای دوره فاز ۲ seed می‌شود |
-| `user_profiles_v2` | پروفایل جدید فاز ۲ بعد از OTP؛ فرم بدون AI validation | schema آماده، هنوز Core API فاز ۲ روی آن کامل نشده |
-| `profile_builder_answers` | پاسخ خام/ساختاریافته هر قدم فرم پروفایل | schema آماده |
-| `user_course_enrollments` | ثبت‌نام کاربر در یک course version مشخص | schema آماده |
+| `user_profiles_v2` | پروفایل جدید فاز ۲ بعد از OTP؛ سوال‌های چتی بدون AI validation | API خواندن/ذخیره فعال است |
+| `profile_builder_answers` | پاسخ خام/ساختاریافته هر قدم پروفایل | هنگام تکمیل پروفایل ذخیره می‌شود |
+| `user_course_enrollments` | ثبت‌نام کاربر در یک course version مشخص | endpoint ثبت‌نام idempotent فعال است |
 | `user_stage_progress` | پیشرفت کاربر در هر stage از مسیر ۲۰ مرحله‌ای | schema آماده |
 | `exams` | آزمون نهایی هر نسخه دوره، سوال‌ها در `questions_json` | یک آزمون sample با `passing_score=70` seed می‌شود |
 | `exam_attempts` | پاسخ‌ها، نمره و feedback آزمون کاربر | schema آماده |
@@ -842,7 +848,12 @@ Arvancloud AIaaS GPT-5.4-Mini /chat/completions
 
 | متد | مسیر | ورودی | خروجی | کار |
 |---|---|---|---|---|
-| POST | `/api/auth/phone` | `PhoneLoginIn { phone: str }` | `PhoneLoginOut { user_id, username, redirect_url }` | شماره موبایل را normalize می‌کند، اگر user نبود می‌سازد، `redirect_url="/app/"` برمی‌گرداند. |
+| POST | `/api/auth/otp/request` | `OtpRequestIn { phone }` | `OtpRequestOut` | OTP را در حالت mock یا sms.ir ارسال و فقط hash آن را ذخیره می‌کند. |
+| POST | `/api/auth/otp/verify` | `OtpVerifyIn { phone, code }` | `PhoneLoginOut { user_id, phone, username, redirect_url }` | OTP را تایید می‌کند و کاربر را با `users.phone` پیدا یا ایجاد می‌کند. |
+| GET | `/api/profile/{user_id}` | path `user_id` | `ProfileV2Out` | وضعیت پروفایل فاز ۲ را می‌خواند. |
+| POST | `/api/profile/{user_id}` | `ProfileV2In` | `ProfileV2Out` | نام، حوزه کاری، منبع آشنایی و زمان مطالعه را در جداول پروفایل و user ذخیره می‌کند. |
+| GET | `/api/courses` | ندارد | `list[CourseOut]` | دوره‌های published از قرارداد Fake CMS/CMS را می‌خواند. |
+| POST | `/api/courses/{course_id}/enroll` | query `user_id` | `EnrollmentOut` | کاربر را فقط یک بار در نسخه published دوره ثبت‌نام می‌کند. |
 
 قانون شماره موبایل در `src/api/routes.py:39`: فقط فرمت `09xxxxxxxxx` معتبر است. `0098` و `98` به `0` تبدیل می‌شوند.
 
@@ -1209,19 +1220,19 @@ SQLite برای تست سریع local بدون نصب DB مناسب است. Post
 - مسیرهای آموزشی فقط سه حوزه دارند و ساختار course/chapter رسمی ندارند.
 - `last_lesson` در `user_progress` فعلاً string ذخیره می‌شود؛ بهتر است JSONB یا جدول lesson/session مستقل شود.
 - progress فعلی هر pass را 25 درصد افزایش می‌دهد؛ ساختار pedagogical دقیق‌تر لازم است.
-- فاز ۲ هنوز پیاده‌سازی نشده و باید با schema واقعی CMS و Fake CMS/Seed CMS شروع شود.
+- فاز ۲ تا پایان اسپرینت ۱ شامل schema واقعی، Fake CMS، OTP، پروفایل چتی و enrollment پیاده‌سازی شده است؛ موتور ۲۰ مرحله از اسپرینت ۲ ادامه پیدا می‌کند.
 - در فاز ۲ باید قرارداد JSON هرکدام از ۲۰ قالب آموزشی مشخص شود تا Core و UI از ابتدا با CMS واقعی سازگار باشند.
 - مرحله ۲۰ باید به صورت رسمی تایید شود. پیشنهاد فعلی: «پروژه نهایی / جمع‌بندی شخصی‌سازی‌شده».
 
 ### Backend/API
 
-- test suite خودکار وجود ندارد.
+- test suite خودکار شامل validation، Arvan mock، health، OTP، sms.ir adapter، پروفایل، Fake CMS و enrollment وجود دارد و در GitHub Actions اجرا می‌شود.
 - rate limiting برای APIهای auth/AI وجود ندارد.
 - request logging/structured logging کامل نیست.
 - error monitoring مثل Sentry یا logging مرکزی وجود ندارد.
 - OpenAPI docs وجود دارد، اما مستند رسمی request/response با مثال هنوز کامل نشده است.
 - endpointهای admin برای ساخت/ویرایش admin users هنوز کامل نیستند.
-- APIهای فاز ۲ هنوز ساخته نشده‌اند: OTP، profile v2، enroll، stage engine، avatar chat v2، exam و certificate.
+- APIهای OTP، profile v2، فهرست دوره و enroll ساخته شده‌اند. موارد باقی‌مانده فاز ۲: stage engine کامل، avatar/RAG ناظر دوره، اجرای آزمون و صدور certificate.
 - CMS واقعی فاز ۲ هنوز ساخته نشده است: CRUD دوره، upload KB، AI generation async، review/approve/publish.
 
 ### امنیت
@@ -1234,11 +1245,11 @@ SQLite برای تست سریع local بدون نصب DB مناسب است. Post
 
 ### Deploy/DevOps
 
-- CI/CD وجود ندارد؛ deploy دستی با `git pull` و `systemctl restart` انجام می‌شود.
-- دو ریپوی GitHub همزمان نگهداری می‌شوند: `TheAlta/ZitoApp` و `elmsaz/elmsazZito`. در زمان به‌روزرسانی هر دو روی `5c0ab1c` هستند.
-- production در آخرین SSH check روی `660ab15` بود. اختلاف با GitHub فعلاً runtime-critical نیست، اما برای نظم تیمی بهتر است در deploy بعدی سرور هم pull شود.
+- CI تست با GitHub Actions وجود دارد؛ CD خودکار هنوز وجود ندارد و deploy با `git pull`، اجرای migration و `systemctl restart` انجام می‌شود.
+- دو ریپوی GitHub همزمان نگهداری می‌شوند: `TheAlta/ZitoApp` و `elmsaz/elmsazZito` و هر تغییر تاییدشده باید به هر دو push شود.
+- production خودکار با GitHub همگام نمی‌شود؛ هر انتشار باید آگاهانه روی سرور pull، migrate، restart و health-check شود.
 - backup برنامه‌ریزی‌شده PostgreSQL مستند/فعال نشده است.
-- migration discipline باید جدی‌تر شود؛ `AUTO_CREATE_TABLES=true` برای production بلندمدت مناسب نیست.
+- مدیریت schema به Alembic واگذار شده و `AUTO_CREATE_TABLES=false` مقدار استاندارد local/production و `.env.example` است.
 - health check فقط دیتابیس را تست می‌کند؛ وضعیت Arvan AIaaS را جداگانه چک نمی‌کند.
 
 ### Frontend

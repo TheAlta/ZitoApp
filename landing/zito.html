@@ -1074,7 +1074,9 @@
       phoneSubmit.disabled = true;
       try {
         const fullName = fullNameInput.value.trim();
-        if (fullName.length < 2) throw new Error('لطفا اول نام و نام خانوادگی‌ات را وارد کن.');
+        if (fullName.length < 3 || fullName.split(/\s+/).length < 2) {
+          throw new Error('لطفا نام و نام خانوادگی‌ات را کامل وارد کن؛ مثلا علی رضایی.');
+        }
         const phone = phoneInput.value.trim();
         pendingFullName = fullName;
         const response = await fetch('/api/auth/otp/request', {
@@ -1105,7 +1107,7 @@
         const data = await readApiResponse(response);
         if (!response.ok) throw new Error(getErrorMessage(data, 'کد تایید درست نیست یا منقضی شده.'));
         localStorage.setItem('zito_user_id', String(data.user_id));
-        localStorage.setItem('zito_username', data.username);
+        localStorage.setItem('zito_username', data.username || pendingFullName);
         localStorage.setItem('zito_full_name', pendingFullName);
         window.location.href = data.redirect_url;
       } catch (error) {

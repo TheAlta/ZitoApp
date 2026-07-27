@@ -10,6 +10,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=True, index=True)
     full_name: Mapped[str] = mapped_column(String(255), nullable=True)
     username: Mapped[str] = mapped_column(String(100), nullable=True)
     profession: Mapped[str] = mapped_column(String(255), nullable=True)

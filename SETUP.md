@@ -6,11 +6,13 @@ Use this path first. It runs the app with a local SQLite file and mock AI.
 ```powershell
 cd C:\Users\ASUS\Desktop\ZitoApp
 $env:DATABASE_URL="sqlite:///./local_test.db"
+$env:AUTO_CREATE_TABLES="false"
 $env:ARVAN_MOCK_AI="true"
 $env:ADMIN_USERNAME="zito_admin"
 $env:ADMIN_PASSWORD="local-dev-only-password"
 $env:ADMIN_SESSION_SECRET="local-test-session-secret-that-is-long-enough"
 $env:OTP_MOCK="true"
+.\.venv\Scripts\python.exe -m alembic upgrade head
 .\.venv\Scripts\python.exe -m uvicorn src.main:app --reload
 ```
 
@@ -31,12 +33,12 @@ Admin login for local test:
 ## What To Test In The Browser
 1. Open `/`.
 2. Click `شروع کنید`.
-3. Enter a phone number.
+3. Enter your full name and phone number.
 4. If `OTP_MOCK=true`, the modal shows the local test code. If `OTP_MOCK=false`, read the SMS code.
 5. Enter the OTP code and submit.
-6. `/app/` opens and shows the Phase 2 profile form.
-7. Fill the profile form. This form is saved without AI validation.
-8. After submit, Zito enrolls the user in the current published Fake CMS course and shows the learning planet.
+6. `/app/` opens, greets you by first name, and asks the profile questions in chat.
+7. Answer work domain, referral source, and daily study time. These answers are saved without AI validation.
+8. After the last answer, Zito enrolls the user in the current published Fake CMS course and shows the learning planet.
 9. Open `/admin/login`; after login, you should see saved users.
 
 ## Real Arvan Mode
@@ -44,6 +46,7 @@ Create `.env` from `.env.example` and set:
 
 ```env
 DATABASE_URL=sqlite:///./local_test.db
+AUTO_CREATE_TABLES=false
 ARVAN_MOCK_AI=false
 ARVAN_API_BASE_URL=https://arvancloudai.ir/gateway/models/GPT-5.4-Mini/YOUR_ENDPOINT_TOKEN/v1
 ARVAN_API_KEY=your_real_key
@@ -88,6 +91,7 @@ Then set:
 
 ```env
 DATABASE_URL=postgresql+psycopg://zito_app:CHANGE_ME_STRONG_PASSWORD@localhost:5432/zito_app
+AUTO_CREATE_TABLES=false
 ```
 
 Run migrations:

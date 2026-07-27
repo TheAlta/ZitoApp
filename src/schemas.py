@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class QuestionOut(BaseModel):
@@ -17,13 +17,10 @@ class OnboardingStartOut(BaseModel):
     question: QuestionOut
 
 
-class PhoneLoginIn(BaseModel):
-    phone: str = Field(min_length=8, max_length=20)
-
-
 class PhoneLoginOut(BaseModel):
     user_id: int
-    username: str
+    phone: str
+    username: str | None = None
     redirect_url: str
 
 
@@ -46,13 +43,21 @@ class OtpVerifyIn(BaseModel):
 
 
 class ProfileV2In(BaseModel):
-    full_name: str = Field(min_length=2, max_length=255)
+    full_name: str = Field(min_length=3, max_length=100)
     work_domain: str = Field(min_length=2, max_length=255)
     referral_source: str | None = Field(default=None, max_length=120)
     daily_study_minutes: int = Field(ge=5, le=600)
     learning_goal: str | None = Field(default=None, max_length=255)
     experience_level: str | None = Field(default=None, max_length=80)
     preferred_learning_style: str | None = Field(default=None, max_length=120)
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized.split(" ")) < 2:
+            raise ValueError("نام و نام خانوادگی را کامل وارد کن.")
+        return normalized
 
 
 class ProfileV2Out(BaseModel):
@@ -118,6 +123,7 @@ class AnswerOut(BaseModel):
 
 class UserOut(BaseModel):
     id: int
+    phone: str | None
     full_name: str | None
     username: str | None
     profession: str | None

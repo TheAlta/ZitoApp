@@ -12,7 +12,7 @@ setup_test_environment()
 from src.config import get_settings
 from src.db import Base, SessionLocal, engine
 from src.main import app
-from src.models import PhoneOtpCode, User
+from src.models import PhoneOtpCode, User, UserProfileV2
 from src.services.otp import OtpError, _send_smsir_code
 
 
@@ -49,14 +49,76 @@ class OtpFlowTests(unittest.TestCase):
 
         self.assertEqual(verify_response.status_code, 200)
         verify_data = verify_response.json()
-        self.assertEqual(verify_data["username"], "09123456789")
+        self.assertEqual(verify_data["phone"], "09123456789")
+        self.assertIsNone(verify_data["username"])
         self.assertEqual(verify_data["redirect_url"], "/app/")
 
         with SessionLocal() as db:
-            user = db.scalars(select(User).where(User.username == "09123456789")).one()
+            user = db.scalars(select(User).where(User.phone == "09123456789")).one()
             otp = db.scalars(select(PhoneOtpCode).where(PhoneOtpCode.phone == "09123456789")).one()
             self.assertEqual(user.id, verify_data["user_id"])
+            self.assertIsNone(user.username)
             self.assertIsNotNone(otp.consumed_at)
+
+        with TestClient(app) as client:
+            next_request = client.post("/api/auth/otp/request", json={"phone": "09123456789"})
+            next_verify = client.post(
+                "/api/auth/otp/verify",
+                json={"phone": "09123456789", "code": next_request.json()["mock_code"]},
+            )
+
+        self.assertEqual(next_verify.status_code, 200)
+        self.assertEqual(next_verify.json()["user_id"], verify_data["user_id"])
+
+        with SessionLocal() as db:
+            users = db.scalars(select(User).where(User.phone == "09123456789")).all()
+            self.assertEqual(len(users), 1)
+
+    def test_legacy_phone_login_without_otp_is_not_available(self) -> None:
+        with TestClient(app) as client:
+            response = client.post("/api/auth/phone", json={"phone": "09121112233"})
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_otp_profile_and_repeat_login_keep_one_user_identity(self) -> None:
+        phone = "09123334444"
+        profile_payload = {
+            "full_name": "شایان علیمی",
+            "work_domain": "روانشناسی و هوش مصنوعی",
+            "referral_source": "دوستان",
+            "daily_study_minutes": 30,
+        }
+
+        with TestClient(app) as client:
+            first_request = client.post("/api/auth/otp/request", json={"phone": phone}).json()
+            first_login = client.post(
+                "/api/auth/otp/verify",
+                json={"phone": phone, "code": first_request["mock_code"]},
+            )
+            user_id = first_login.json()["user_id"]
+            profile_response = client.post(f"/api/profile/{user_id}", json=profile_payload)
+
+            second_request = client.post("/api/auth/otp/request", json={"phone": phone}).json()
+            second_login = client.post(
+                "/api/auth/otp/verify",
+                json={"phone": phone, "code": second_request["mock_code"]},
+            )
+
+        self.assertEqual(first_login.status_code, 200)
+        self.assertEqual(profile_response.status_code, 200)
+        self.assertEqual(second_login.status_code, 200)
+        self.assertEqual(second_login.json()["user_id"], user_id)
+        self.assertEqual(second_login.json()["username"], "شایان علیمی")
+
+        with SessionLocal() as db:
+            users = db.scalars(select(User).where(User.phone == phone)).all()
+            profile = db.scalars(select(UserProfileV2).where(UserProfileV2.user_id == user_id)).one()
+
+        self.assertEqual(len(users), 1)
+        self.assertEqual(users[0].full_name, "شایان علیمی")
+        self.assertEqual(users[0].username, "شایان علیمی")
+        self.assertEqual(users[0].profession, "روانشناسی و هوش مصنوعی")
+        self.assertEqual(profile.daily_study_minutes, 30)
 
     def test_wrong_or_reused_otp_is_rejected(self) -> None:
         with TestClient(app) as client:

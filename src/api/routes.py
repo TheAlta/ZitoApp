@@ -35,7 +35,6 @@ from src.schemas import (
     OtpRequestIn,
     OtpRequestOut,
     OtpVerifyIn,
-    PhoneLoginIn,
     PhoneLoginOut,
     ProfileV2In,
     ProfileV2Out,
@@ -82,6 +81,7 @@ def _answer_out(answer: Answer) -> AnswerOut:
 def _user_out(user: User) -> UserOut:
     return UserOut(
         id=user.id,
+        phone=user.phone,
         full_name=user.full_name,
         username=user.username,
         profession=user.profession,
@@ -110,15 +110,16 @@ def _guidance_for(question: Question) -> str:
 def _apply_profile_field(user: User, question: Question, answer_text: str) -> None:
     if question.key == "identity":
         user.full_name = answer_text.strip()
+        user.username = user.full_name
     elif question.key == "profession":
         user.profession = answer_text.strip()
 
 
 def _get_or_create_phone_user(db: Session, phone: str) -> User:
-    user = db.scalars(select(User).where(User.username == phone).order_by(User.id.desc()).limit(1)).first()
+    user = db.scalars(select(User).where(User.phone == phone).limit(1)).first()
     if user:
         return user
-    user = User(username=phone)
+    user = User(phone=phone)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -188,13 +189,6 @@ def admin_me() -> dict:
     return {"ok": True}
 
 
-@router.post("/api/auth/phone", response_model=PhoneLoginOut)
-def login_with_phone(payload: PhoneLoginIn, db: Session = Depends(get_db)) -> PhoneLoginOut:
-    phone = _normalize_phone(payload.phone)
-    user = _get_or_create_phone_user(db, phone)
-    return PhoneLoginOut(user_id=user.id, username=phone, redirect_url="/app/")
-
-
 @router.post("/api/auth/otp/request", response_model=OtpRequestOut)
 async def request_phone_otp(payload: OtpRequestIn, db: Session = Depends(get_db)) -> OtpRequestOut:
     phone = _normalize_phone(payload.phone)
@@ -225,7 +219,7 @@ def verify_phone_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> Pho
     if not verify_otp(db, phone, payload.code):
         raise HTTPException(status_code=401, detail="کد تایید اشتباه است یا منقضی شده.")
     user = _get_or_create_phone_user(db, phone)
-    return PhoneLoginOut(user_id=user.id, username=phone, redirect_url="/app/")
+    return PhoneLoginOut(user_id=user.id, phone=phone, username=user.username, redirect_url="/app/")
 
 
 @router.get("/api/profile/{user_id}", response_model=ProfileV2Out)
@@ -259,6 +253,7 @@ def submit_profile_v2(user_id: int, payload: ProfileV2In, db: Session = Depends(
     )
 
     user.full_name = profile.full_name
+    user.username = profile.full_name
     user.profession = profile.work_domain
 
     answers = {

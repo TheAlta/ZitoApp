@@ -1,7 +1,7 @@
 import unittest
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from tests._env import setup_test_environment
 
@@ -31,7 +31,8 @@ class ProfileAndCourseTests(unittest.TestCase):
 
     def _create_user(self) -> int:
         with SessionLocal() as db:
-            user = User(username="09120000000")
+            user_count = db.scalar(select(func.count(User.id))) or 0
+            user = User(phone=f"0912{user_count:07d}")
             db.add(user)
             db.commit()
             db.refresh(user)
@@ -65,8 +66,24 @@ class ProfileAndCourseTests(unittest.TestCase):
 
         self.assertEqual(profile.work_domain, "توسعه فردی")
         self.assertEqual(user.full_name, "امیر مسعود")
+        self.assertEqual(user.username, "امیر مسعود")
+        self.assertRegex(user.phone, r"^0912\d{7}$")
         self.assertEqual(user.profession, "توسعه فردی")
         self.assertEqual(len(answers), 7)
+
+    def test_profile_rejects_single_part_name(self) -> None:
+        user_id = self._create_user()
+        payload = {
+            "full_name": "شایان",
+            "work_domain": "روانشناسی",
+            "referral_source": "دوستان",
+            "daily_study_minutes": 30,
+        }
+
+        with TestClient(app) as client:
+            response = client.post(f"/api/profile/{user_id}", json=payload)
+
+        self.assertEqual(response.status_code, 422)
 
     def test_courses_and_enrollment_use_fake_cms_seed(self) -> None:
         user_id = self._create_user()

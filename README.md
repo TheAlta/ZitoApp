@@ -18,7 +18,8 @@ After setup:
 - Health: `http://127.0.0.1:8000/health`
 
 ## Important files
-- `PROJECT_CONTEXT.md`: product and architecture rules for future agent sessions.
+- `DATABASE_V2_DESIGN.md`: canonical database and learning architecture proposed for the next migration.
+- `PROJECT_RAW_AUDIT.md`: code-derived snapshot of the project before the database V2 migration.
 - `SETUP.md`: PostgreSQL, environment, migration and Git setup.
 - `src/lib/arvan_client.py`: the only place that calls Arvancloud AIaaS.
 - `src/prompts/`: editable system prompts.

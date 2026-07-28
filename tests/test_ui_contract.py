@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -41,6 +42,14 @@ class UiContractTests(unittest.TestCase):
         self.assertIn('key: "preferred_career_path"', html)
         self.assertIn('api("/api/me/profile"', html)
         self.assertNotIn("${firstNameOf(profile.full_name)} سلام", html)
+        self.assertNotIn("/api/onboarding/${userId}/answer", html)
+
+    def test_admin_renders_canonical_profile_without_legacy_answers(self) -> None:
+        admin_template = Path("src/templates/admin.html").read_text(encoding="utf-8")
+        self.assertIn("user.education_level", admin_template)
+        self.assertIn("user.learning_goal_interests", admin_template)
+        self.assertNotIn("user.answers", admin_template)
+        self.assertNotIn("/api/admin/answers/", admin_template)
 
 
 if __name__ == "__main__":

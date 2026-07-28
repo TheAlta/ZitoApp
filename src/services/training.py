@@ -4,7 +4,7 @@ import re
 from sqlalchemy.orm import Session
 
 from src.lib.arvan_client import ask_ai
-from src.models import User
+from src.models import User, UserCourseEnrollment
 from src.prompts import load_prompt
 from src.services.json_utils import parse_json_object
 from src.services.rag import build_user_context, retrieve_context
@@ -82,8 +82,7 @@ FALLBACK_LESSONS = {
 
 def _track_key(user: User) -> str:
     work_field = user.profile.work_or_study_field if user.profile else ""
-    profile = f"{work_field or ''} " + " ".join(answer.answer_text for answer in user.answers)
-    normalized = profile.lower().replace("\u200c", " ")
+    normalized = (work_field or "").lower().replace("\u200c", " ")
     if "روان" in normalized or "psych" in normalized:
         return "psychology"
     if "حقوق" in normalized or "law" in normalized:
@@ -91,10 +90,10 @@ def _track_key(user: User) -> str:
     return "accounting"
 
 
-def fallback_lesson(user: User) -> dict:
+def fallback_lesson(user: User, enrollment: UserCourseEnrollment) -> dict:
     track = _track_key(user)
     lessons = FALLBACK_LESSONS[track]
-    step = user.progress.current_step if user.progress else 1
+    step = enrollment.current_stage_number
     lesson = dict(lessons[(max(step, 1) - 1) % len(lessons)])
     lesson["check_question"] = lesson["exercise"]
     return lesson
@@ -132,18 +131,26 @@ def looks_like_question(message: str) -> bool:
     )
 
 
-async def generate_lesson(db: Session, user: User) -> dict:
+async def generate_lesson(
+    db: Session,
+    user: User,
+    enrollment: UserCourseEnrollment,
+) -> dict:
     prompt = load_prompt("training_lesson_generation.md")
     user_context = build_user_context(user)
     work_field = user.profile.work_or_study_field if user.profile else ""
-    rag_context = retrieve_context(db, f"{work_field or ''} هوش مصنوعی AI {user_context}")
+    rag_context = retrieve_context(
+        db,
+        enrollment.course_id,
+        f"{work_field or ''} هوش مصنوعی AI {user_context}",
+    )
     user_message = json.dumps(
         {
             "user_context": user_context,
             "rag_context": rag_context,
             "current_progress": {
-                "step": user.progress.current_step if user.progress else 1,
-                "percentage": user.progress.percentage if user.progress else 0,
+                "step": enrollment.current_stage_number,
+                "percentage": enrollment.progress_percentage,
             },
             "allowed_tracks": ["حسابداری و هوش مصنوعی", "روانشناسی و هوش مصنوعی", "حقوق و هوش مصنوعی"],
         },
@@ -153,20 +160,29 @@ async def generate_lesson(db: Session, user: User) -> dict:
         raw = await ask_ai(prompt, user_message, temperature=0.3, response_format={"type": "json_object"})
         lesson = parse_json_object(raw)
     except Exception:
-        return fallback_lesson(user)
+        return fallback_lesson(user, enrollment)
 
     required_fields = ("title", "lesson", "exercise", "check_question")
     if not all(str(lesson.get(field) or "").strip() for field in required_fields):
-        return fallback_lesson(user)
+        return fallback_lesson(user, enrollment)
     if not isinstance(lesson.get("key_points"), list) or not lesson["key_points"]:
-        lesson["key_points"] = fallback_lesson(user)["key_points"]
+        lesson["key_points"] = fallback_lesson(user, enrollment)["key_points"]
     return lesson
 
 
-async def answer_training_question(db: Session, user: User, question: str) -> str:
+async def answer_training_question(
+    db: Session,
+    user: User,
+    enrollment: UserCourseEnrollment,
+    question: str,
+) -> str:
     user_context = build_user_context(user)
     work_field = user.profile.work_or_study_field if user.profile else ""
-    rag_context = retrieve_context(db, f"{work_field or ''} هوش مصنوعی AI {question}")
+    rag_context = retrieve_context(
+        db,
+        enrollment.course_id,
+        f"{work_field or ''} هوش مصنوعی AI {question}",
+    )
     system_prompt = (
         "تو مربی آموزشی زیتو هستی. فقط در سه مسیر حسابداری، روانشناسی و حقوق با محور هوش مصنوعی آموزش می دهی. "
         "با تکیه بر context بازیابی شده و پروفایل کاربر پاسخ بده. "

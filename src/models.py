@@ -22,29 +22,23 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=True, index=True)
+    phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
     display_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     phone_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
-    # Kept mapped until the separate legacy cleanup migration.
-    legacy_full_name: Mapped[str] = mapped_column("full_name", String(255), nullable=True)
-    legacy_username: Mapped[str] = mapped_column("username", String(100), nullable=True)
-    legacy_profession: Mapped[str] = mapped_column("profession", String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    answers: Mapped[list["Answer"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     profile: Mapped["UserProfile"] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
         uselist=False,
     )
     sessions: Mapped[list["UserSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    progress: Mapped["UserProgress"] = relationship(
+    enrollments: Mapped[list["UserCourseEnrollment"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
-        uselist=False,
     )
 
 
@@ -109,57 +103,6 @@ class Admin(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-
-class Question(Base):
-    __tablename__ = "questions"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    key: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
-    text: Mapped[str] = mapped_column(Text, nullable=False)
-    sort_order: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    answers: Mapped[list["Answer"]] = relationship(back_populates="question")
-
-
-class Answer(Base):
-    __tablename__ = "answers"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"), nullable=False)
-    answer_text: Mapped[str] = mapped_column(Text, nullable=False)
-    is_valid: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    validation_reason: Mapped[str] = mapped_column(Text, nullable=True)
-    validated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    user: Mapped[User] = relationship(back_populates="answers")
-    question: Mapped[Question] = relationship(back_populates="answers")
-
-
-class UserProgress(Base):
-    __tablename__ = "user_progress"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
-    current_step: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    percentage: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    last_lesson: Mapped[str] = mapped_column(Text, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-    user: Mapped[User] = relationship(back_populates="progress")
-
-
-class KnowledgeDocument(Base):
-    __tablename__ = "knowledge_documents"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    tags: Mapped[str] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Course(Base):
@@ -232,44 +175,6 @@ class CourseKbDocument(Base):
     course: Mapped[Course] = relationship(back_populates="kb_documents")
 
 
-class LegacyUserProfileV2(Base):
-    __tablename__ = "user_profiles_v2"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
-    full_name: Mapped[str] = mapped_column(String(255), nullable=True)
-    age_range: Mapped[str] = mapped_column(String(80), nullable=True)
-    work_status: Mapped[str] = mapped_column(String(120), nullable=True)
-    work_domain: Mapped[str] = mapped_column(String(255), nullable=True)
-    referral_source: Mapped[str] = mapped_column(String(120), nullable=True)
-    daily_study_minutes: Mapped[int] = mapped_column(Integer, nullable=True)
-    learning_goal: Mapped[str] = mapped_column(String(255), nullable=True)
-    experience_level: Mapped[str] = mapped_column(String(80), nullable=True)
-    preferred_learning_style: Mapped[str] = mapped_column(String(120), nullable=True)
-    learning_blocker: Mapped[str] = mapped_column(String(255), nullable=True)
-    commitment_level: Mapped[str] = mapped_column(String(80), nullable=True)
-    target_skill: Mapped[str] = mapped_column(String(255), nullable=True)
-    interested_domains: Mapped[list] = mapped_column(JSON, nullable=True)
-    decision_factors: Mapped[list] = mapped_column(JSON, nullable=True)
-    notification_channel: Mapped[str] = mapped_column(String(80), nullable=True)
-    reminder_frequency: Mapped[str] = mapped_column(String(80), nullable=True)
-    recommended_course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="SET NULL"), nullable=True)
-    recommended_track_label: Mapped[str] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-
-class ProfileBuilderAnswer(Base):
-    __tablename__ = "profile_builder_answers"
-    __table_args__ = (UniqueConstraint("user_id", "step_key", name="uq_profile_builder_user_step"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    step_key: Mapped[str] = mapped_column(String(120), nullable=False)
-    answer_json: Mapped[dict] = mapped_column(JSON, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
 class UserCourseEnrollment(Base):
     __tablename__ = "user_course_enrollments"
     __table_args__ = (UniqueConstraint("user_id", "course_version_id", name="uq_user_course_version_enrollment"),)
@@ -285,6 +190,7 @@ class UserCourseEnrollment(Base):
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    user: Mapped[User] = relationship(back_populates="enrollments")
     stage_progress: Mapped[list["UserStageProgress"]] = relationship(back_populates="enrollment", cascade="all, delete-orphan")
 
 

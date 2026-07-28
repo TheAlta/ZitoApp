@@ -79,9 +79,15 @@ class ProfileAndCourseTests(unittest.TestCase):
 
         self.assertEqual(len(profiles), 1)
         self.assertEqual(profile.work_or_study_field, "Software engineering")
+        self.assertEqual(profile.education_level, "Bachelor")
+        self.assertEqual(profile.learning_goal_interests, "Practical AI")
+        self.assertEqual(profile.ai_familiarity_level, "Beginner")
+        self.assertEqual(profile.daily_learning_minutes, 30)
+        self.assertEqual(profile.preferred_career_path, "AI product engineer")
+        self.assertEqual(profile.referral_source, "Friend")
         self.assertIsNotNone(profile.completed_at)
         self.assertEqual(user.display_name, "Single name")
-        self.assertIsNone(user.legacy_profession)
+        self.assertEqual(user.phone, "09120000001")
 
     def test_profile_and_enrollment_require_authenticated_owner(self) -> None:
         with TestClient(app) as anonymous:
@@ -111,3 +117,47 @@ class ProfileAndCourseTests(unittest.TestCase):
             ).all()
         self.assertEqual(len(enrollments), 1)
         self.assertEqual(enrollments[0].current_stage_number, 1)
+
+    def test_temporary_training_uses_course_enrollment_progress(self) -> None:
+        with TestClient(app) as client:
+            user_id = login(client, "09120000003", "Training learner")
+            self.assertEqual(
+                client.patch("/api/me/profile", json=PROFILE_PAYLOAD).status_code,
+                200,
+            )
+            course = next(
+                item
+                for item in client.get("/api/courses").json()
+                if item["slug"] == "personal-development-ai"
+            )
+            self.assertEqual(
+                client.post(f"/api/courses/{course['id']}/enroll").status_code,
+                200,
+            )
+            lesson = client.post(f"/api/training/{user_id}/lesson")
+            self.assertEqual(lesson.status_code, 200)
+            evaluation = client.post(
+                f"/api/training/{user_id}/answer",
+                json={
+                    "lesson": lesson.json()["lesson"],
+                    "check_question": lesson.json()["check_question"],
+                    "answer_text": (
+                        "خروجی هوش مصنوعی را با منبع معتبر و بررسی انسانی کنترل می‌کنم "
+                        "تا خطاهای احتمالی وارد تصمیم نهایی نشوند."
+                    ),
+                },
+            )
+
+        self.assertEqual(evaluation.status_code, 200)
+        self.assertTrue(evaluation.json()["passed"])
+        self.assertEqual(evaluation.json()["percentage"], 5)
+        self.assertEqual(evaluation.json()["current_step"], 2)
+
+        with SessionLocal() as db:
+            enrollment = db.scalars(
+                select(UserCourseEnrollment).where(
+                    UserCourseEnrollment.user_id == user_id
+                )
+            ).one()
+        self.assertEqual(enrollment.progress_percentage, 5)
+        self.assertEqual(enrollment.current_stage_number, 2)

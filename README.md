@@ -8,9 +8,9 @@ Zito is a FastAPI-based authenticated learning platform with AI-assisted trainin
 - Keeps long-lived login state in an opaque HttpOnly session cookie.
 - Collects seven learner-profile fields incrementally in the chat UI without AI validation.
 - Enrolls the authenticated learner in a published Fake CMS course.
-- Shows users and answers in a separate protected admin UI.
+- Shows canonical user identity and profile fields in a separate protected admin UI.
 - Soft-deletes users and revokes their active sessions without removing learning history.
-- Generates training lessons with a simple RAG layer over default accounting, psychology, and law AI knowledge documents.
+- Generates temporary training lessons with course-scoped RAG over the enrolled course knowledge documents.
 
 ## Local URLs
 After setup:
@@ -20,12 +20,12 @@ After setup:
 - Health: `http://127.0.0.1:8000/health`
 
 ## Important files
-- `DATABASE_V2_DESIGN.md`: canonical database and learning architecture; identity/profile Sprint 1 is implemented by migration `20260728_0006`.
+- `DATABASE_V2_DESIGN.md`: canonical database and learning architecture; Sprint 1 schema is finalized by migrations `20260728_0006` and `20260728_0007`.
 - `PROJECT_RAW_AUDIT.md`: code-derived snapshot of the project before the database V2 migration.
 - `SETUP.md`: PostgreSQL, environment, migration and Git setup.
 - `src/lib/arvan_client.py`: the only place that calls Arvancloud AIaaS.
 - `src/prompts/`: editable system prompts.
-- `src/api/routes.py`: authentication, profile, course, admin, legacy onboarding and training routes.
+- `src/api/routes.py`: authentication, canonical profile, course, admin and temporary course-scoped training routes.
 
 ## Security
 Do not commit `.env` or real API keys. If an API key was shared in chat or logs, rotate it in the provider dashboard and put the new value only in `.env`.

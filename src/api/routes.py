@@ -3,43 +3,30 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session, selectinload
 
 from src.db import get_db
 from src.lib.arvan_client import ArvanAIError
 from src.models import (
-    Answer,
     Course,
     CourseStageContent,
     CourseVersion,
-    KnowledgeDocument,
-    Question,
     User,
     UserCourseEnrollment,
     UserProfile,
-    UserProgress,
 )
 from src.schemas import (
-    AdminAnswerUpdate,
     AdminLoginIn,
     AdminLoginOut,
-    AnswerIn,
-    AnswerOut,
     CourseOut,
     EnrollmentOut,
-    KnowledgeIn,
-    KnowledgeOut,
-    OnboardingAnswerOut,
-    OnboardingStartOut,
-    OnboardingStateOut,
     OtpRequestIn,
     OtpRequestOut,
     OtpVerifyIn,
     PhoneLoginOut,
     ProfileOut,
     ProfilePatchIn,
-    QuestionOut,
     TrainingAnswerIn,
     TrainingLessonOut,
     TrainingMessageIn,
@@ -60,11 +47,10 @@ from src.security import (
     set_admin_cookie,
     set_user_cookie,
 )
-from src.seed import seed_questions
 from src.services.rag import build_user_context
 from src.services.otp import OtpError, OtpRateLimitError, request_otp, verify_otp
 from src.services.training import answer_training_question, generate_lesson, looks_like_question
-from src.services.validation import evaluate_training_answer, validate_initial_answer, validate_training_question
+from src.services.validation import evaluate_training_answer, validate_training_question
 
 router = APIRouter()
 
@@ -80,55 +66,23 @@ def _normalize_phone(phone: str) -> str:
     return digits
 
 
-def _answer_out(answer: Answer) -> AnswerOut:
-    return AnswerOut(
-        id=answer.id,
-        question_id=answer.question_id,
-        question_text=answer.question.text,
-        answer_text=answer.answer_text,
-        is_valid=answer.is_valid,
-        validation_reason=answer.validation_reason,
-        validated_at=answer.validated_at,
-    )
-
-
 def _user_out(user: User) -> UserOut:
+    profile = user.profile
     return UserOut(
         id=user.id,
         phone=user.phone,
         display_name=user.display_name,
-        work_or_study_field=user.profile.work_or_study_field if user.profile else None,
         deleted_at=user.deleted_at,
         created_at=user.created_at,
-        answers=[_answer_out(answer) for answer in sorted(user.answers, key=lambda item: item.question.sort_order)],
+        work_or_study_field=profile.work_or_study_field if profile else None,
+        education_level=profile.education_level if profile else None,
+        learning_goal_interests=profile.learning_goal_interests if profile else None,
+        ai_familiarity_level=profile.ai_familiarity_level if profile else None,
+        daily_learning_minutes=profile.daily_learning_minutes if profile else None,
+        preferred_career_path=profile.preferred_career_path if profile else None,
+        referral_source=profile.referral_source if profile else None,
+        profile_completed=bool(profile and _profile_is_complete(profile)),
     )
-
-
-def _next_question(db: Session, user: User) -> Question | None:
-    answered_question_ids = {answer.question_id for answer in user.answers if answer.is_valid}
-    return db.scalars(
-        select(Question)
-        .where(Question.is_active.is_(True), Question.id.not_in(answered_question_ids))
-        .order_by(Question.sort_order)
-        .limit(1)
-    ).first()
-
-
-def _guidance_for(question: Question) -> str:
-    if question.key == "identity":
-        return "برای این سوال فقط نام و نام خانوادگی واقعی بنویس؛ مثلا: علی رضایی یا مریم احمدی."
-    if question.key == "profession":
-        return "یکی از مسیرهای آموزشی را واضح انتخاب کن: حسابداری و هوش مصنوعی، روانشناسی و هوش مصنوعی، یا حقوق و هوش مصنوعی."
-    return "لطفا یک جواب کوتاه، مرتبط و قابل فهم به همین سوال بنویس."
-
-def _apply_profile_field(db: Session, user: User, question: Question, answer_text: str) -> None:
-    if question.key == "identity":
-        user.display_name = answer_text.strip()
-    elif question.key == "profession":
-        profile = user.profile or UserProfile(user_id=user.id)
-        profile.work_or_study_field = answer_text.strip()
-        if user.profile is None:
-            db.add(profile)
 
 
 def _get_or_create_phone_user(db: Session, phone: str, display_name: str) -> User:
@@ -206,6 +160,37 @@ def _course_out(course: Course) -> CourseOut | None:
         version_number=version.version_number,
         stage_count=len([stage for stage in version.stages if stage.status == "approved"]),
     )
+
+
+def _active_enrollment(db: Session, user_id: int) -> UserCourseEnrollment:
+    enrollment = db.scalars(
+        select(UserCourseEnrollment)
+        .where(
+            UserCourseEnrollment.user_id == user_id,
+            UserCourseEnrollment.status.in_(("active", "completed")),
+        )
+        .order_by(UserCourseEnrollment.id.desc())
+        .limit(1)
+    ).first()
+    if not enrollment:
+        raise HTTPException(status_code=409, detail="Enroll in a published course before starting training.")
+    return enrollment
+
+
+def _advance_enrollment(db: Session, enrollment: UserCourseEnrollment) -> None:
+    stage_count = db.scalar(
+        select(func.count(CourseStageContent.id)).where(
+            CourseStageContent.course_version_id == enrollment.course_version_id,
+            CourseStageContent.status == "approved",
+        )
+    ) or 1
+    completed_stage = min(enrollment.current_stage_number, stage_count)
+    enrollment.progress_percentage = min(100, round(completed_stage * 100 / stage_count))
+    if completed_stage >= stage_count:
+        enrollment.status = "completed"
+        enrollment.completed_at = datetime.now(timezone.utc)
+    else:
+        enrollment.current_stage_number = completed_stage + 1
 
 
 @router.get("/health")
@@ -411,92 +396,14 @@ def enroll_course(
     )
 
 
-@router.post("/api/onboarding/start", response_model=OnboardingStartOut)
-def start_onboarding(db: Session = Depends(get_db)) -> OnboardingStartOut:
+@router.post("/api/onboarding/start", include_in_schema=False)
+def start_onboarding() -> None:
     raise HTTPException(status_code=410, detail="Use OTP login and /api/me/profile.")
-
-
-@router.get("/api/onboarding/{user_id}/state", response_model=OnboardingStateOut)
-def onboarding_state(
-    user_id: int,
-    current_user: User = Depends(require_user),
-    db: Session = Depends(get_db),
-) -> OnboardingStateOut:
-    if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="You cannot access another user.")
-    seed_questions(db)
-    user = db.get(User, user_id, options=[selectinload(User.answers).selectinload(Answer.question)])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    question = _next_question(db, user)
-    return OnboardingStateOut(
-        user_id=user.id,
-        completed=question is None,
-        question=QuestionOut.model_validate(question) if question else None,
-    )
-
-
-@router.post("/api/onboarding/{user_id}/answer", response_model=OnboardingAnswerOut)
-async def answer_onboarding(
-    user_id: int,
-    payload: AnswerIn,
-    current_user: User = Depends(require_user),
-    db: Session = Depends(get_db),
-) -> OnboardingAnswerOut:
-    if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="You cannot access another user.")
-    user = db.get(User, user_id, options=[selectinload(User.answers).selectinload(Answer.question)])
-    question = db.get(Question, payload.question_id)
-    if not user or not question:
-        raise HTTPException(status_code=404, detail="User or question not found.")
-
-    expected = _next_question(db, user)
-    if expected and expected.id != question.id:
-        raise HTTPException(status_code=409, detail=f"Expected answer for question_id={expected.id}.")
-
-    try:
-        validation = await validate_initial_answer(question.text, payload.answer_text, question.id)
-    except (ArvanAIError, ValueError) as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    if not validation["valid"]:
-        return OnboardingAnswerOut(
-            valid=False,
-            reason=validation["reason"],
-            guidance=_guidance_for(question),
-            completed=False,
-            next_question=QuestionOut.model_validate(question),
-        )
-
-    answer_text = validation.get("normalized_answer") or payload.answer_text.strip()
-    answer = Answer(
-        user_id=user.id,
-        question_id=question.id,
-        answer_text=answer_text,
-        is_valid=True,
-        validation_reason=validation["reason"],
-    )
-    db.add(answer)
-    _apply_profile_field(db, user, question, answer_text)
-    db.commit()
-
-    db.refresh(user)
-    user = db.get(User, user_id, options=[selectinload(User.answers).selectinload(Answer.question)])
-    next_question = _next_question(db, user)
-    return OnboardingAnswerOut(
-        valid=True,
-        reason=validation["reason"],
-        completed=next_question is None,
-        next_question=QuestionOut.model_validate(next_question) if next_question else None,
-    )
 
 
 @router.get("/api/admin/users", response_model=list[UserOut], dependencies=[Depends(require_admin)])
 def list_users(include_deleted: bool = False, db: Session = Depends(get_db)) -> list[UserOut]:
-    query = select(User).options(
-        selectinload(User.profile),
-        selectinload(User.answers).selectinload(Answer.question),
-    )
+    query = select(User).options(selectinload(User.profile))
     if not include_deleted:
         query = query.where(User.deleted_at.is_(None))
     users = db.scalars(query.order_by(User.id.desc())).all()
@@ -508,26 +415,11 @@ def get_user(user_id: int, db: Session = Depends(get_db)) -> UserOut:
     user = db.get(
         User,
         user_id,
-        options=[
-            selectinload(User.profile),
-            selectinload(User.answers).selectinload(Answer.question),
-        ],
+        options=[selectinload(User.profile)],
     )
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
     return _user_out(user)
-
-
-@router.put("/api/admin/answers/{answer_id}", response_model=AnswerOut, dependencies=[Depends(require_admin)])
-def update_answer(answer_id: int, payload: AdminAnswerUpdate, db: Session = Depends(get_db)) -> AnswerOut:
-    answer = db.get(Answer, answer_id, options=[selectinload(Answer.question), selectinload(Answer.user)])
-    if not answer:
-        raise HTTPException(status_code=404, detail="Answer not found.")
-    answer.answer_text = payload.answer_text.strip()
-    _apply_profile_field(db, answer.user, answer.question, answer.answer_text)
-    db.commit()
-    db.refresh(answer)
-    return _answer_out(answer)
 
 
 @router.delete("/api/admin/users/{user_id}", dependencies=[Depends(require_admin)])
@@ -552,15 +444,6 @@ def restore_user(user_id: int, db: Session = Depends(get_db)) -> dict:
     return {"restored": True}
 
 
-@router.post("/api/training/knowledge", response_model=KnowledgeOut, dependencies=[Depends(require_admin)])
-def create_knowledge(payload: KnowledgeIn, db: Session = Depends(get_db)) -> KnowledgeOut:
-    doc = KnowledgeDocument(title=payload.title, content=payload.content, tags=payload.tags)
-    db.add(doc)
-    db.commit()
-    db.refresh(doc)
-    return KnowledgeOut(id=doc.id, title=doc.title, content=doc.content, tags=doc.tags)
-
-
 @router.post("/api/training/{user_id}/lesson", response_model=TrainingLessonOut)
 async def create_lesson(
     user_id: int,
@@ -572,34 +455,24 @@ async def create_lesson(
     user = db.get(
         User,
         user_id,
-        options=[
-            selectinload(User.answers).selectinload(Answer.question),
-            selectinload(User.progress),
-        ],
+        options=[selectinload(User.profile)],
     )
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-
-    if not user.progress:
-        user.progress = UserProgress(user_id=user.id, current_step=1, percentage=0)
-        db.add(user.progress)
-        db.commit()
-        db.refresh(user)
+    enrollment = _active_enrollment(db, user.id)
 
     try:
-        lesson = await generate_lesson(db, user)
+        lesson = await generate_lesson(db, user, enrollment)
     except (ArvanAIError, ValueError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    user.progress.last_lesson = str(lesson)
-    db.commit()
     return TrainingLessonOut(
         title=str(lesson.get("title") or "درس Zito"),
         lesson=str(lesson.get("lesson") or ""),
         key_points=[str(item) for item in lesson.get("key_points", [])],
         exercise=str(lesson.get("exercise") or ""),
         check_question=str(lesson.get("check_question") or ""),
-        percentage=user.progress.percentage,
+        percentage=enrollment.progress_percentage,
     )
 
 
@@ -612,9 +485,10 @@ async def ask_training_question(
 ) -> dict:
     if current_user.id != user_id:
         raise HTTPException(status_code=403, detail="You cannot access another user.")
-    user = db.get(User, user_id, options=[selectinload(User.answers).selectinload(Answer.question)])
+    user = db.get(User, user_id, options=[selectinload(User.profile)])
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
+    enrollment = _active_enrollment(db, user.id)
 
     user_context = build_user_context(user)
     try:
@@ -630,7 +504,7 @@ async def ask_training_question(
         }
 
     try:
-        answer = await answer_training_question(db, user, payload.question)
+        answer = await answer_training_question(db, user, enrollment, payload.question)
     except ArvanAIError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {"valid": True, "answer": answer}
@@ -645,15 +519,10 @@ async def submit_training_answer(
 ) -> dict:
     if current_user.id != user_id:
         raise HTTPException(status_code=403, detail="You cannot access another user.")
-    user = db.get(User, user_id, options=[selectinload(User.progress)])
+    user = db.get(User, user_id, options=[selectinload(User.profile)])
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-
-    if not user.progress:
-        user.progress = UserProgress(user_id=user.id, current_step=1, percentage=0)
-        db.add(user.progress)
-        db.commit()
-        db.refresh(user)
+    enrollment = _active_enrollment(db, user.id)
 
     try:
         evaluation = await evaluate_training_answer(payload.lesson, payload.check_question, payload.answer_text)
@@ -661,16 +530,15 @@ async def submit_training_answer(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     if evaluation["passed"]:
-        user.progress.current_step += 1
-        user.progress.percentage = min(100, user.progress.percentage + 25)
+        _advance_enrollment(db, enrollment)
         db.commit()
 
     return {
         "passed": evaluation["passed"],
         "feedback": evaluation["feedback"],
         "score": evaluation["score"],
-        "percentage": user.progress.percentage,
-        "current_step": user.progress.current_step,
+        "percentage": enrollment.progress_percentage,
+        "current_step": enrollment.current_stage_number,
     }
 
 
@@ -686,19 +554,11 @@ async def submit_training_message(
     user = db.get(
         User,
         user_id,
-        options=[
-            selectinload(User.answers).selectinload(Answer.question),
-            selectinload(User.progress),
-        ],
+        options=[selectinload(User.profile)],
     )
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-
-    if not user.progress:
-        user.progress = UserProgress(user_id=user.id, current_step=1, percentage=0)
-        db.add(user.progress)
-        db.commit()
-        db.refresh(user)
+    enrollment = _active_enrollment(db, user.id)
 
     if looks_like_question(payload.message):
         user_context = build_user_context(user)
@@ -711,18 +571,18 @@ async def submit_training_message(
             return {
                 "kind": "retry",
                 "message": "سوالت را کمی روشن تر و مرتبط با حسابداری، روانشناسی یا حقوق در کاربرد هوش مصنوعی بپرس.",
-                "percentage": user.progress.percentage,
+                "percentage": enrollment.progress_percentage,
             }
 
         try:
-            answer = await answer_training_question(db, user, payload.message)
+            answer = await answer_training_question(db, user, enrollment, payload.message)
         except ArvanAIError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
 
         return {
             "kind": "answer",
             "message": f"{answer}\n\nهر وقت آماده بودی، جواب تمرین همین درس را بنویس.",
-            "percentage": user.progress.percentage,
+            "percentage": enrollment.progress_percentage,
         }
 
     try:
@@ -734,28 +594,25 @@ async def submit_training_message(
         return {
             "kind": "retry",
             "message": evaluation["feedback"] or "جوابت را با یک مثال کوتاه و اشاره به محدودیت های هوش مصنوعی کامل تر کن.",
-            "percentage": user.progress.percentage,
+            "percentage": enrollment.progress_percentage,
         }
 
-    user.progress.current_step += 1
-    user.progress.percentage = min(100, user.progress.percentage + 25)
+    _advance_enrollment(db, enrollment)
     db.commit()
-    db.refresh(user)
+    db.refresh(enrollment)
 
-    if user.progress.percentage >= 100:
+    if enrollment.progress_percentage >= 100:
         return {
             "kind": "complete",
             "message": "عالیه. این مسیر آموزشی کامل شد و می توانی برای مرور یا سوال های تکمیلی ادامه بدهی.",
-            "percentage": user.progress.percentage,
+            "percentage": enrollment.progress_percentage,
         }
 
     try:
-        next_lesson = await generate_lesson(db, user)
+        next_lesson = await generate_lesson(db, user, enrollment)
     except (ArvanAIError, ValueError) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
-    user.progress.last_lesson = str(next_lesson)
-    db.commit()
     return {
         "kind": "next_lesson",
         "message": "می رویم سراغ مرحله بعد.",
@@ -765,8 +622,8 @@ async def submit_training_message(
             "key_points": [str(item) for item in next_lesson.get("key_points", [])],
             "exercise": str(next_lesson.get("exercise") or ""),
             "check_question": str(next_lesson.get("check_question") or ""),
-            "percentage": user.progress.percentage,
+            "percentage": enrollment.progress_percentage,
         },
-        "percentage": user.progress.percentage,
+        "percentage": enrollment.progress_percentage,
     }
 

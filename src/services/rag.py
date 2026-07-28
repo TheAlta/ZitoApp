@@ -1,15 +1,11 @@
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from src.models import KnowledgeDocument, User
+from src.models import CourseKbDocument, User
 
 
 def build_user_context(user: User) -> str:
     profile = user.profile
-    answers = "\n".join(
-        f"- {answer.question.text}: {answer.answer_text}"
-        for answer in sorted(user.answers, key=lambda item: item.question.sort_order)
-    )
     return (
         f"User ID: {user.id}\n"
         f"Display name: {user.display_name}\n"
@@ -17,23 +13,32 @@ def build_user_context(user: User) -> str:
         f"Education level: {profile.education_level if profile else 'unknown'}\n"
         f"Learning goals: {profile.learning_goal_interests if profile else 'unknown'}\n"
         f"AI familiarity: {profile.ai_familiarity_level if profile else 'unknown'}\n"
-        f"Preferred career path: {profile.preferred_career_path if profile else 'unknown'}\n"
-        f"Onboarding answers:\n{answers or '- no answers'}"
+        f"Daily learning minutes: {profile.daily_learning_minutes if profile else 'unknown'}\n"
+        f"Preferred career path: {profile.preferred_career_path if profile else 'unknown'}"
     )
 
 
-def retrieve_context(db: Session, query: str, *, limit: int = 3) -> str:
+def retrieve_context(db: Session, course_id: int, query: str, *, limit: int = 3) -> str:
     terms = [term.strip() for term in query.replace(",", " ").split() if len(term.strip()) >= 3]
     if not terms:
-        docs = db.scalars(select(KnowledgeDocument).order_by(KnowledgeDocument.id.desc()).limit(limit)).all()
+        docs = db.scalars(
+            select(CourseKbDocument)
+            .where(CourseKbDocument.course_id == course_id)
+            .order_by(CourseKbDocument.id.desc())
+            .limit(limit)
+        ).all()
     else:
         filters = []
         for term in terms[:5]:
             pattern = f"%{term}%"
-            filters.append(KnowledgeDocument.title.ilike(pattern))
-            filters.append(KnowledgeDocument.content.ilike(pattern))
-            filters.append(KnowledgeDocument.tags.ilike(pattern))
-        docs = db.scalars(select(KnowledgeDocument).where(or_(*filters)).limit(limit)).all()
+            filters.append(CourseKbDocument.title.ilike(pattern))
+            filters.append(CourseKbDocument.content.ilike(pattern))
+            filters.append(CourseKbDocument.tags.ilike(pattern))
+        docs = db.scalars(
+            select(CourseKbDocument)
+            .where(CourseKbDocument.course_id == course_id, or_(*filters))
+            .limit(limit)
+        ).all()
 
     if not docs:
         return "No internal knowledge base context was found."

@@ -1,0 +1,66 @@
+import unittest
+
+from sqlalchemy import create_engine, inspect
+
+from tests._env import setup_test_environment
+
+setup_test_environment()
+
+from src.db import Base
+
+
+class CanonicalSchemaContractTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.engine = create_engine("sqlite://")
+        Base.metadata.create_all(bind=cls.engine)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.engine.dispose()
+
+    def test_user_identity_and_profile_have_one_source_of_truth(self) -> None:
+        inspector = inspect(self.engine)
+        tables = set(inspector.get_table_names())
+        user_columns = {
+            column["name"]: column
+            for column in inspector.get_columns("users")
+        }
+        profile_columns = {
+            column["name"]: column
+            for column in inspector.get_columns("user_profiles")
+        }
+
+        self.assertNotIn("username", user_columns)
+        self.assertNotIn("full_name", user_columns)
+        self.assertNotIn("profession", user_columns)
+        self.assertFalse(user_columns["phone"]["nullable"])
+        self.assertFalse(user_columns["display_name"]["nullable"])
+
+        self.assertEqual(
+            set(profile_columns),
+            {
+                "user_id",
+                "work_or_study_field",
+                "education_level",
+                "learning_goal_interests",
+                "ai_familiarity_level",
+                "daily_learning_minutes",
+                "preferred_career_path",
+                "referral_source",
+                "completed_at",
+                "created_at",
+                "updated_at",
+            },
+        )
+        self.assertTrue(profile_columns["user_id"]["primary_key"])
+
+        for legacy_table in {
+            "answers",
+            "questions",
+            "knowledge_documents",
+            "profile_builder_answers",
+            "user_profiles_v2",
+            "user_progress",
+        }:
+            self.assertNotIn(legacy_table, tables)

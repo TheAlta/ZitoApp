@@ -3,20 +3,6 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
-class QuestionOut(BaseModel):
-    id: int
-    key: str
-    text: str
-    sort_order: int
-
-    model_config = {"from_attributes": True}
-
-
-class OnboardingStartOut(BaseModel):
-    user_id: int
-    question: QuestionOut
-
-
 class PhoneLoginOut(BaseModel):
     user_id: int
     phone: str
@@ -93,47 +79,20 @@ class EnrollmentOut(BaseModel):
     progress_percentage: int
 
 
-class OnboardingStateOut(BaseModel):
-    user_id: int
-    completed: bool = False
-    question: QuestionOut | None = None
-
-
-class AnswerIn(BaseModel):
-    question_id: int
-    answer_text: str = Field(min_length=1, max_length=2000)
-
-
-class OnboardingAnswerOut(BaseModel):
-    valid: bool
-    reason: str
-    guidance: str | None = None
-    completed: bool = False
-    next_question: QuestionOut | None = None
-
-
-class AnswerOut(BaseModel):
-    id: int
-    question_id: int
-    question_text: str
-    answer_text: str
-    is_valid: bool
-    validation_reason: str | None
-    validated_at: datetime
-
-
 class UserOut(BaseModel):
     id: int
-    phone: str | None
+    phone: str
     display_name: str
-    work_or_study_field: str | None = None
     deleted_at: datetime | None = None
     created_at: datetime
-    answers: list[AnswerOut] = []
-
-
-class AdminAnswerUpdate(BaseModel):
-    answer_text: str = Field(min_length=1, max_length=2000)
+    work_or_study_field: str | None = None
+    education_level: str | None = None
+    learning_goal_interests: str | None = None
+    ai_familiarity_level: str | None = None
+    daily_learning_minutes: int | None = None
+    preferred_career_path: str | None = None
+    referral_source: str | None = None
+    profile_completed: bool = False
 
 
 class AdminLoginIn(BaseModel):
@@ -144,16 +103,6 @@ class AdminLoginIn(BaseModel):
 class AdminLoginOut(BaseModel):
     ok: bool = True
     username: str
-
-
-class KnowledgeIn(BaseModel):
-    title: str = Field(min_length=2, max_length=255)
-    content: str = Field(min_length=10)
-    tags: str | None = Field(default=None, max_length=255)
-
-
-class KnowledgeOut(KnowledgeIn):
-    id: int
 
 
 class TrainingQuestionIn(BaseModel):

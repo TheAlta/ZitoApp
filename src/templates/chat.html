@@ -718,7 +718,6 @@
 
   <script>
     let userId = null;
-    let currentQuestion = null;
     let currentLesson = null;
     let profileBuilder = null;
     let stage = "onboarding";
@@ -797,7 +796,6 @@
       localStorage.removeItem("zito_display_name");
       sessionUserId = null;
       userId = null;
-      currentQuestion = null;
       currentLesson = null;
       profileBuilder = null;
       selectedTrack = "accounting";
@@ -844,12 +842,6 @@
       if (normalized.includes("نیم")) return 30;
       if (normalized.includes("یک ساعت") || normalized.includes("يه ساعت") || normalized.includes("یه ساعت")) return 60;
       return NaN;
-    }
-    function detectTrack(value) {
-      const normalized = String(value || "").toLowerCase().replaceAll("‌", " ");
-      if (normalized.includes("روان") || normalized.includes("psych")) return "psychology";
-      if (normalized.includes("حقوق") || normalized.includes("law")) return "law";
-      return "accounting";
     }
     function trackInfo() { return TRACKS[selectedTrack] || TRACKS.accounting; }
     function applyPlanetTheme() {
@@ -1134,18 +1126,6 @@
       renderLesson(lesson);
     }
 
-    async function submitOnboarding(value) {
-      const data = await api(`/api/onboarding/${userId}/answer`, { method: "POST", body: JSON.stringify({ question_id: currentQuestion.id, answer_text: value }) });
-      if (!data.valid) { currentQuestion = data.next_question; addMessage(`${data.reason}\n${data.guidance}\n\n${currentQuestion.text}`); return; }
-      if (currentQuestion.key === "profession") {
-        selectedTrack = detectTrack(value);
-        localStorage.setItem("zito_track", selectedTrack);
-      }
-      if (data.completed) { currentQuestion = null; showPlanet(); return; }
-      currentQuestion = data.next_question;
-      addMessage(currentQuestion.text);
-    }
-
     async function submitTrainingMessage(value) {
       if (!currentLesson) { await loadLesson(); return; }
       const data = await api(`/api/training/${userId}/message`, { method: "POST", body: JSON.stringify({ lesson: currentLesson.lesson, check_question: currentLesson.check_question, message: value }) });
@@ -1166,14 +1146,14 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (stage !== "profile") return;
       const value = input.value.trim();
       if (!value) return;
       addMessage(value, "user");
       input.value = "";
       setBusy(true);
       try {
-        if (stage === "profile") await submitProfileAnswer(value);
-        else await submitOnboarding(value);
+        await submitProfileAnswer(value);
       }
       catch (error) { if (!handleMissingUser(error)) addMessage(error.message); }
       finally { setBusy(false); input.focus(); }

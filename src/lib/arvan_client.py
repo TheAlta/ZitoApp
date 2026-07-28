@@ -59,17 +59,17 @@ def _mock_response(system_prompt: str, user_message: str) -> str:
 
     if "title" in system_prompt and "lesson" in system_prompt:
         user_context = str(message_data.get("user_context", ""))
-        profession_context = user_context.lower()
+        domain_context = user_context.lower()
         for line in user_context.splitlines():
-            if line.lower().startswith("profession:"):
-                profession_context = line.lower()
+            if line.lower().startswith("work or study field:"):
+                domain_context = line.lower()
                 break
 
-        if "حقوق" in profession_context or "law" in profession_context:
+        if "حقوق" in domain_context or "law" in domain_context:
             title = "هوش مصنوعی در بررسی اولیه قرارداد"
             lesson = "در این مرحله یاد می گیری از AI برای پیدا کردن ریسک های احتمالی یک بند قراردادی استفاده کنی، بدون اینکه خروجی را مشاوره حقوقی قطعی بدانی."
             exercise = "در دو جمله توضیح بده چرا خروجی AI در حقوق باید توسط متخصص انسانی بررسی شود."
-        elif "روان" in profession_context or "psych" in profession_context:
+        elif "روان" in domain_context or "psych" in domain_context:
             title = "هوش مصنوعی به عنوان دستیار یادگیری روانشناسی"
             lesson = "در این مرحله تمرین می کنی از AI برای ساخت سوال های باز و پاسخ همدلانه استفاده کنی، بدون تشخیص قطعی یا جایگزین کردن درمانگر."
             exercise = "در دو جمله توضیح بده چرا AI نباید تشخیص روانشناختی قطعی بدهد."

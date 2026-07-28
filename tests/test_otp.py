@@ -82,8 +82,8 @@ class OtpFlowTests(unittest.TestCase):
             sessions = db.scalars(select(UserSession).where(UserSession.user_id == user.id)).all()
 
             self.assertEqual(user.display_name, "Shayan")
+            self.assertEqual(user.phone, "09123456789")
             self.assertIsNotNone(user.phone_verified_at)
-            self.assertIsNone(user.legacy_full_name)
             self.assertIsNone(db.get(UserProfile, user.id))
             self.assertIsNotNone(otp.consumed_at)
             self.assertEqual(len(sessions), 1)

@@ -1,16 +1,17 @@
 # Zito Database V2 - Canonical Design
 
-Status: canonical baseline; Sprint 1 identity/profile subset implemented in migration `20260728_0006`
+Status: canonical Sprint 1 identity/profile schema finalized through migration `20260728_0007`
 Date: 2026-07-28  
 Scope: identity, profile, course publishing, 20 learning templates, course-scoped KB/RAG, runtime AI supervision, progress, legacy migration and rollback  
 
-This document remains the database source of truth. Only the subset listed below has been migrated; later sections are still design contracts.
+This document remains the database source of truth. Sprint 1 identity/profile cleanup is implemented; later learning-engine sections remain design contracts.
 
 Implementation status on 2026-07-28:
 
-- Implemented: canonical `users` fields, one-to-one `user_profiles`, `user_sessions`, OTP purpose/indexes, profile backfill, HttpOnly user sessions, soft delete/restore, session-owned profile and enrollment APIs.
-- Preserved for transition: legacy user columns, `user_profiles_v2`, `profile_builder_answers`, old onboarding/training tables and the current course schema.
-- Not implemented yet: canonical 20-template engine, versioned KB/tag joins, AI policy tables, runtime interaction/evaluation tables, normalized progress/exam/certificate cleanup.
+- Implemented in `20260728_0006`: canonical `users` fields, one-to-one `user_profiles`, `user_sessions`, OTP purpose/indexes, profile backfill, HttpOnly user sessions, soft delete/restore, session-owned profile and enrollment APIs.
+- Implemented in `20260728_0007`: mandatory unique phone identity; removal of `users.full_name`, `users.username`, `users.profession`; removal of `user_profiles_v2`, `profile_builder_answers`, `questions`, `answers`, global `knowledge_documents`, and legacy `user_progress`.
+- Runtime compatibility now uses `user_course_enrollments` for progress and `course_kb_documents` for course-scoped retrieval. These temporary routes will be replaced by the full stage engine.
+- Not implemented yet: canonical 20-template runtime engine, versioned KB/tag joins, AI policy tables, runtime interaction/evaluation tables, and final exam/certificate workflow.
 
 ## 1. Confirmed Product Decisions
 
@@ -26,7 +27,7 @@ Implementation status on 2026-07-28:
 10. The active learning engine uses the published course version and its 20 stored stage contents.
 11. The CMS content-generation AI and the runtime supervisor AI are separate use cases.
 12. Runtime RAG is restricted to the learner's enrolled course version and current stage tags.
-13. Legacy tables are not dropped in the first migration. They are migrated, made read-only, observed, and removed later.
+13. Legacy data was first preserved and backfilled by migration `0006`; after the explicit user reset decision, duplicate legacy structures were removed by migration `0007`.
 
 ## 2. Canonical System Boundaries
 

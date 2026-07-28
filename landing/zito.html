@@ -1085,13 +1085,17 @@
     document.querySelector('.cta').addEventListener('click', () => {
       alert('فاز بعدی: مسیر ورود به زیتو از اینجا شروع می‌شه 🚀');
     });
-    document.querySelector('.cta').addEventListener('click', (event) => {
+    document.querySelector('.cta').addEventListener('click', async (event) => {
       event.preventDefault();
       event.stopImmediatePropagation();
-      const savedUserId = localStorage.getItem('zito_user_id');
-      if (savedUserId) {
-        window.location.href = '/app/';
-        return;
+      try {
+        const sessionResponse = await fetch('/api/me');
+        if (sessionResponse.ok) {
+          window.location.href = '/app/';
+          return;
+        }
+      } catch (_) {
+        // The login modal remains available when session lookup is unavailable.
       }
       phoneModal.classList.add('show');
       phoneModal.setAttribute('aria-hidden', 'false');
@@ -1186,14 +1190,12 @@
           body: JSON.stringify({
             phone: pendingPhone,
             code: otpInput.value.trim(),
-            full_name: pendingFullName
+            display_name: pendingFullName
           })
         });
         const data = await readApiResponse(response);
         if (!response.ok) throw new Error(getErrorMessage(data, 'کد تایید درست نیست یا منقضی شده.'));
-        localStorage.setItem('zito_user_id', String(data.user_id));
-        localStorage.setItem('zito_username', data.username || pendingFullName);
-        localStorage.setItem('zito_full_name', pendingFullName);
+        localStorage.setItem('zito_display_name', data.display_name || pendingFullName);
         window.location.href = data.redirect_url;
       } catch (error) {
         phoneError.textContent = error.message;

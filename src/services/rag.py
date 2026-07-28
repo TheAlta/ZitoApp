@@ -5,15 +5,19 @@ from src.models import KnowledgeDocument, User
 
 
 def build_user_context(user: User) -> str:
+    profile = user.profile
     answers = "\n".join(
         f"- {answer.question.text}: {answer.answer_text}"
         for answer in sorted(user.answers, key=lambda item: item.question.sort_order)
     )
     return (
         f"User ID: {user.id}\n"
-        f"Full name: {user.full_name or 'unknown'}\n"
-        f"Username: {user.username or 'unknown'}\n"
-        f"Profession: {user.profession or 'unknown'}\n"
+        f"Display name: {user.display_name}\n"
+        f"Work or study field: {profile.work_or_study_field if profile else 'unknown'}\n"
+        f"Education level: {profile.education_level if profile else 'unknown'}\n"
+        f"Learning goals: {profile.learning_goal_interests if profile else 'unknown'}\n"
+        f"AI familiarity: {profile.ai_familiarity_level if profile else 'unknown'}\n"
+        f"Preferred career path: {profile.preferred_career_path if profile else 'unknown'}\n"
         f"Onboarding answers:\n{answers or '- no answers'}"
     )
 

@@ -1,7 +1,7 @@
 import unittest
 
 from fastapi.testclient import TestClient
-from sqlalchemy import func, select
+from sqlalchemy import select
 
 from tests._env import setup_test_environment
 
@@ -10,8 +10,31 @@ setup_test_environment()
 from src.config import get_settings
 from src.db import Base, SessionLocal, engine
 from src.main import app
-from src.models import ProfileBuilderAnswer, User, UserCourseEnrollment, UserProfileV2
+from src.models import User, UserCourseEnrollment, UserProfile
 from src.seed import seed_defaults
+
+
+PROFILE_PAYLOAD = {
+    "work_or_study_field": "Software engineering",
+    "education_level": "Bachelor",
+    "learning_goal_interests": "Practical AI",
+    "ai_familiarity_level": "Beginner",
+    "daily_learning_minutes": 30,
+    "preferred_career_path": "AI product engineer",
+    "referral_source": "Friend",
+}
+
+
+def login(client: TestClient, phone: str, display_name: str = "Learner") -> int:
+    request_response = client.post("/api/auth/otp/request", json={"phone": phone})
+    code = request_response.json()["mock_code"]
+    verify_response = client.post(
+        "/api/auth/otp/verify",
+        json={"phone": phone, "code": code, "display_name": display_name},
+    )
+    if verify_response.status_code != 200:
+        raise AssertionError(verify_response.text)
+    return verify_response.json()["user_id"]
 
 
 class ProfileAndCourseTests(unittest.TestCase):
@@ -29,75 +52,52 @@ class ProfileAndCourseTests(unittest.TestCase):
     def setUp(self) -> None:
         get_settings.cache_clear()
 
-    def _create_user(self) -> int:
-        with SessionLocal() as db:
-            user_count = db.scalar(select(func.count(User.id))) or 0
-            user = User(phone=f"0912{user_count:07d}")
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-            return user.id
-
-    def test_profile_submit_saves_v2_profile_and_builder_answers(self) -> None:
-        user_id = self._create_user()
-        payload = {
-            "full_name": "امیر مسعود",
-            "work_domain": "توسعه فردی",
-            "referral_source": "اینستاگرام",
-            "daily_study_minutes": 30,
-            "learning_goal": "یادگیری کاربردی هوش مصنوعی",
-            "experience_level": "مبتدی",
-            "preferred_learning_style": "تمرین عملی",
-        }
-
+    def test_profile_answers_are_persisted_incrementally_in_one_to_one_row(self) -> None:
         with TestClient(app) as client:
-            response = client.post(f"/api/profile/{user_id}", json=payload)
+            user_id = login(client, "09120000001", "Single name")
+            first_response = client.patch(
+                "/api/me/profile",
+                json={"work_or_study_field": PROFILE_PAYLOAD["work_or_study_field"]},
+            )
+            self.assertEqual(first_response.status_code, 200)
+            self.assertFalse(first_response.json()["completed"])
 
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertTrue(data["completed"])
-        self.assertEqual(data["full_name"], "امیر مسعود")
-        self.assertEqual(data["daily_study_minutes"], 30)
+            for field, value in list(PROFILE_PAYLOAD.items())[1:]:
+                response = client.patch("/api/me/profile", json={field: value})
+                self.assertEqual(response.status_code, 200)
+
+            profile_response = client.get("/api/me/profile")
+
+        self.assertTrue(profile_response.json()["completed"])
+        self.assertEqual(profile_response.json()["display_name"], "Single name")
+        self.assertEqual(profile_response.json()["daily_learning_minutes"], 30)
 
         with SessionLocal() as db:
-            profile = db.scalars(select(UserProfileV2).where(UserProfileV2.user_id == user_id)).one()
-            answers = db.scalars(select(ProfileBuilderAnswer).where(ProfileBuilderAnswer.user_id == user_id)).all()
+            profile = db.get(UserProfile, user_id)
             user = db.get(User, user_id)
+            profiles = db.scalars(select(UserProfile).where(UserProfile.user_id == user_id)).all()
 
-        self.assertEqual(profile.work_domain, "توسعه فردی")
-        self.assertEqual(user.full_name, "امیر مسعود")
-        self.assertEqual(user.username, "امیر مسعود")
-        self.assertRegex(user.phone, r"^0912\d{7}$")
-        self.assertEqual(user.profession, "توسعه فردی")
-        self.assertEqual(len(answers), 7)
+        self.assertEqual(len(profiles), 1)
+        self.assertEqual(profile.work_or_study_field, "Software engineering")
+        self.assertIsNotNone(profile.completed_at)
+        self.assertEqual(user.display_name, "Single name")
+        self.assertIsNone(user.legacy_profession)
 
-    def test_profile_accepts_single_part_name(self) -> None:
-        user_id = self._create_user()
-        payload = {
-            "full_name": "شایان",
-            "work_domain": "روانشناسی",
-            "referral_source": "دوستان",
-            "daily_study_minutes": 30,
-        }
+    def test_profile_and_enrollment_require_authenticated_owner(self) -> None:
+        with TestClient(app) as anonymous:
+            self.assertEqual(anonymous.get("/api/me/profile").status_code, 401)
+            self.assertEqual(anonymous.patch("/api/me/profile", json=PROFILE_PAYLOAD).status_code, 401)
 
         with TestClient(app) as client:
-            response = client.post(f"/api/profile/{user_id}", json=payload)
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["full_name"], "شایان")
-
-    def test_courses_and_enrollment_use_fake_cms_seed(self) -> None:
-        user_id = self._create_user()
-
-        with TestClient(app) as client:
-            courses_response = client.get("/api/courses")
-            self.assertEqual(courses_response.status_code, 200)
-            courses = courses_response.json()
+            login(client, "09120000002")
+            courses = client.get("/api/courses").json()
             course = next(item for item in courses if item["slug"] == "personal-development-ai")
-            self.assertEqual(course["stage_count"], 20)
-
-            first_enroll = client.post(f"/api/courses/{course['id']}/enroll", params={"user_id": user_id})
-            second_enroll = client.post(f"/api/courses/{course['id']}/enroll", params={"user_id": user_id})
+            incomplete_enroll = client.post(f"/api/courses/{course['id']}/enroll")
+            self.assertEqual(incomplete_enroll.status_code, 409)
+            profile_response = client.patch("/api/me/profile", json=PROFILE_PAYLOAD)
+            self.assertEqual(profile_response.status_code, 200)
+            first_enroll = client.post(f"/api/courses/{course['id']}/enroll")
+            second_enroll = client.post(f"/api/courses/{course['id']}/enroll")
 
         self.assertEqual(first_enroll.status_code, 200)
         self.assertEqual(second_enroll.status_code, 200)
@@ -105,9 +105,9 @@ class ProfileAndCourseTests(unittest.TestCase):
 
         with SessionLocal() as db:
             enrollments = db.scalars(
-                select(UserCourseEnrollment).where(UserCourseEnrollment.user_id == user_id)
+                select(UserCourseEnrollment).where(
+                    UserCourseEnrollment.user_id == first_enroll.json()["user_id"]
+                )
             ).all()
-
         self.assertEqual(len(enrollments), 1)
         self.assertEqual(enrollments[0].current_stage_number, 1)
-        self.assertEqual(enrollments[0].progress_percentage, 0)

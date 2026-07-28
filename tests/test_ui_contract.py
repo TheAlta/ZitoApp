@@ -20,7 +20,9 @@ class UiContractTests(unittest.TestCase):
         self.assertIn(".phone-input:-webkit-autofill", html)
         self.assertIn('label for="fullNameInput"', html)
         self.assertIn('label for="phoneInput"', html)
-        self.assertIn("full_name: pendingFullName", html)
+        self.assertIn("display_name: pendingFullName", html)
+        self.assertIn("fetch('/api/me')", html)
+        self.assertNotIn("localStorage.setItem('zito_user_id'", html)
         self.assertNotIn("fullName.split(/\\s+/)", html)
         self.assertLess(html.index('id="fullNameInput"'), html.index('id="phoneInput"'))
 
@@ -34,7 +36,10 @@ class UiContractTests(unittest.TestCase):
         self.assertIn('id="welcomeSub"', html)
         self.assertIn("سلام ${firstName}، من زیتو هستم", html)
         self.assertIn("خوشحالم که اینجایی", html)
-        self.assertIn('question: "حوزه کاری یا علاقه اصلی‌ات چیه؟"', html)
+        self.assertIn('question: "حوزه کاری یا رشته تحصیلی‌ات چیه؟"', html)
+        self.assertIn('key: "education_level"', html)
+        self.assertIn('key: "preferred_career_path"', html)
+        self.assertIn('api("/api/me/profile"', html)
         self.assertNotIn("${firstNameOf(profile.full_name)} سلام", html)
 
 

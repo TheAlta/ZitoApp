@@ -1,10 +1,16 @@
 # Zito Database V2 - Canonical Design
 
-Status: proposed canonical baseline; migration requires explicit final approval  
+Status: canonical baseline; Sprint 1 identity/profile subset implemented in migration `20260728_0006`
 Date: 2026-07-28  
 Scope: identity, profile, course publishing, 20 learning templates, course-scoped KB/RAG, runtime AI supervision, progress, legacy migration and rollback  
 
-This document is the database source of truth for the next implementation step. It does not mean that the migration has already been executed.
+This document remains the database source of truth. Only the subset listed below has been migrated; later sections are still design contracts.
+
+Implementation status on 2026-07-28:
+
+- Implemented: canonical `users` fields, one-to-one `user_profiles`, `user_sessions`, OTP purpose/indexes, profile backfill, HttpOnly user sessions, soft delete/restore, session-owned profile and enrollment APIs.
+- Preserved for transition: legacy user columns, `user_profiles_v2`, `profile_builder_answers`, old onboarding/training tables and the current course schema.
+- Not implemented yet: canonical 20-template engine, versioned KB/tag joins, AI policy tables, runtime interaction/evaluation tables, normalized progress/exam/certificate cleanup.
 
 ## 1. Confirmed Product Decisions
 

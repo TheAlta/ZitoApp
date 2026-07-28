@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     admin_password: str = Field("change-me", alias="ADMIN_PASSWORD")
     admin_session_secret: str = Field("change-me-admin-session-secret", alias="ADMIN_SESSION_SECRET")
     admin_session_days: int = Field(3650, alias="ADMIN_SESSION_DAYS")
+    user_session_days: int = Field(3650, alias="USER_SESSION_DAYS")
 
     otp_mock: bool = Field(True, alias="OTP_MOCK")
     otp_code_digits: int = Field(6, alias="OTP_CODE_DIGITS")

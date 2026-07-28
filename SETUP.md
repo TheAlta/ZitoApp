@@ -11,13 +11,14 @@ $env:ARVAN_MOCK_AI="true"
 $env:ADMIN_USERNAME="zito_admin"
 $env:ADMIN_PASSWORD="local-dev-only-password"
 $env:ADMIN_SESSION_SECRET="local-test-session-secret-that-is-long-enough"
+$env:USER_SESSION_DAYS="3650"
 $env:OTP_MOCK="true"
 .\.venv\Scripts\python.exe -m alembic upgrade head
 .\.venv\Scripts\python.exe -m uvicorn src.main:app --reload
 ```
 
 Open in browser:
-- User chat: `http://127.0.0.1:8000/chat`
+- User app: `http://127.0.0.1:8000/app/`
 - Admin panel: `http://127.0.0.1:8000/admin`
 - API docs: `http://127.0.0.1:8000/docs`
 
@@ -37,9 +38,19 @@ Admin login for local test:
 4. If `OTP_MOCK=true`, the modal shows the local test code. If `OTP_MOCK=false`, read the SMS code.
 5. Enter the OTP code and submit.
 6. `/app/` opens, greets you by first name, and asks the profile questions in chat.
-7. Answer work domain, referral source, and daily study time. These answers are saved without AI validation.
+7. Answer all seven profile questions. Every accepted chat answer is saved immediately in `user_profiles` without AI validation.
 8. After the last answer, Zito enrolls the user in the current published Fake CMS course and shows the learning planet.
 9. Open `/admin/login`; after login, you should see saved users.
+
+The seven canonical profile fields are:
+
+- work or study field
+- education level
+- learning goals and interests
+- AI familiarity
+- daily learning minutes
+- preferred career path
+- referral source
 
 ## Real Arvan Mode
 Create `.env` from `.env.example` and set:
@@ -54,6 +65,7 @@ ARVAN_MODEL=GPT-5.4-Mini
 ADMIN_USERNAME=zito_admin
 ADMIN_PASSWORD=choose_a_strong_password
 ADMIN_SESSION_SECRET=choose_a_long_random_session_secret
+USER_SESSION_DAYS=3650
 OTP_MOCK=true
 ```
 

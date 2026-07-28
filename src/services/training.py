@@ -81,7 +81,8 @@ FALLBACK_LESSONS = {
 
 
 def _track_key(user: User) -> str:
-    profile = f"{user.profession or ''} " + " ".join(answer.answer_text for answer in user.answers)
+    work_field = user.profile.work_or_study_field if user.profile else ""
+    profile = f"{work_field or ''} " + " ".join(answer.answer_text for answer in user.answers)
     normalized = profile.lower().replace("\u200c", " ")
     if "روان" in normalized or "psych" in normalized:
         return "psychology"
@@ -134,7 +135,8 @@ def looks_like_question(message: str) -> bool:
 async def generate_lesson(db: Session, user: User) -> dict:
     prompt = load_prompt("training_lesson_generation.md")
     user_context = build_user_context(user)
-    rag_context = retrieve_context(db, f"{user.profession or ''} هوش مصنوعی AI {user_context}")
+    work_field = user.profile.work_or_study_field if user.profile else ""
+    rag_context = retrieve_context(db, f"{work_field or ''} هوش مصنوعی AI {user_context}")
     user_message = json.dumps(
         {
             "user_context": user_context,
@@ -163,7 +165,8 @@ async def generate_lesson(db: Session, user: User) -> dict:
 
 async def answer_training_question(db: Session, user: User, question: str) -> str:
     user_context = build_user_context(user)
-    rag_context = retrieve_context(db, f"{user.profession or ''} هوش مصنوعی AI {question}")
+    work_field = user.profile.work_or_study_field if user.profile else ""
+    rag_context = retrieve_context(db, f"{work_field or ''} هوش مصنوعی AI {question}")
     system_prompt = (
         "تو مربی آموزشی زیتو هستی. فقط در سه مسیر حسابداری، روانشناسی و حقوق با محور هوش مصنوعی آموزش می دهی. "
         "با تکیه بر context بازیابی شده و پروفایل کاربر پاسخ بده. "

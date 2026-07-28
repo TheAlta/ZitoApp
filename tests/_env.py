@@ -17,6 +17,7 @@ def setup_test_environment() -> None:
     os.environ["ADMIN_PASSWORD"] = "local-test-admin-password"
     os.environ["ADMIN_SESSION_SECRET"] = "local-test-session-secret-that-is-long-enough"
     os.environ["ADMIN_SESSION_DAYS"] = "7"
+    os.environ["USER_SESSION_DAYS"] = "30"
     os.environ["OTP_MOCK"] = "true"
     os.environ["OTP_CODE_DIGITS"] = "6"
     os.environ["OTP_EXPIRE_MINUTES"] = "2"

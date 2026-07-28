@@ -37,4 +37,8 @@ jobs:
           ADMIN_PASSWORD: local-test-admin-password
           ADMIN_SESSION_SECRET: local-test-session-secret-that-is-long-enough
           ADMIN_SESSION_DAYS: "7"
-        run: python -m unittest discover -s tests
+          USER_SESSION_DAYS: "30"
+          OTP_MOCK: "true"
+        run: |
+          python -m alembic upgrade head
+          python -m unittest discover -s tests

@@ -1,6 +1,18 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    JSON,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db import Base
@@ -11,18 +23,81 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=True, index=True)
-    full_name: Mapped[str] = mapped_column(String(255), nullable=True)
-    username: Mapped[str] = mapped_column(String(100), nullable=True)
-    profession: Mapped[str] = mapped_column(String(255), nullable=True)
+    display_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    phone_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    # Kept mapped until the separate legacy cleanup migration.
+    legacy_full_name: Mapped[str] = mapped_column("full_name", String(255), nullable=True)
+    legacy_username: Mapped[str] = mapped_column("username", String(100), nullable=True)
+    legacy_profession: Mapped[str] = mapped_column("profession", String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     answers: Mapped[list["Answer"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    profile: Mapped["UserProfile"] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    sessions: Mapped[list["UserSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     progress: Mapped["UserProgress"] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
         uselist=False,
     )
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+    __table_args__ = (
+        Index("ix_user_sessions_user_active", "user_id", "revoked_at", "expires_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    ip_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str] = mapped_column(String(500), nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="sessions")
+
+
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+    __table_args__ = (
+        CheckConstraint(
+            "daily_learning_minutes IS NULL OR "
+            "(daily_learning_minutes >= 0 AND daily_learning_minutes <= 1440)",
+            name="ck_user_profiles_daily_learning_minutes",
+        ),
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    work_or_study_field: Mapped[str] = mapped_column(String(255), nullable=True)
+    education_level: Mapped[str] = mapped_column(String(80), nullable=True)
+    learning_goal_interests: Mapped[str] = mapped_column(Text, nullable=True)
+    ai_familiarity_level: Mapped[str] = mapped_column(String(50), nullable=True)
+    daily_learning_minutes: Mapped[int] = mapped_column(Integer, nullable=True)
+    preferred_career_path: Mapped[str] = mapped_column(String(255), nullable=True)
+    referral_source: Mapped[str] = mapped_column(String(120), nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    user: Mapped[User] = relationship(back_populates="profile")
 
 
 class Admin(Base):
@@ -157,7 +232,7 @@ class CourseKbDocument(Base):
     course: Mapped[Course] = relationship(back_populates="kb_documents")
 
 
-class UserProfileV2(Base):
+class LegacyUserProfileV2(Base):
     __tablename__ = "user_profiles_v2"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -273,10 +348,15 @@ class Certificate(Base):
 
 class PhoneOtpCode(Base):
     __tablename__ = "phone_otp_codes"
+    __table_args__ = (
+        Index("ix_phone_otp_latest", "phone", "purpose", "created_at"),
+        Index("ix_phone_otp_cleanup", "expires_at", "consumed_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     phone: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     code_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(30), default="login", nullable=False)
     provider: Mapped[str] = mapped_column(String(40), default="mock", nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)

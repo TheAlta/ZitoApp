@@ -6,14 +6,15 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from src.config import get_settings
 from src.db import get_db
-from src.models import Admin
+from src.models import Admin, User, UserSession
 
 ADMIN_COOKIE_NAME = "zito_admin_session"
+USER_COOKIE_NAME = "zito_user_session"
 PASSWORD_ITERATIONS = 260_000
 
 
@@ -67,7 +68,7 @@ def set_admin_cookie(response: Response, token: str) -> None:
         max_age=settings.admin_session_days * 24 * 60 * 60,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=settings.is_production,
     )
 
 
@@ -106,3 +107,101 @@ def authenticate_admin(db: Session, username: str, password: str) -> Admin | Non
     if not admin or not verify_password(password, admin.password_hash):
         return None
     return admin
+
+
+def _hash_user_session_token(token: str) -> str:
+    return hashlib.sha256(token.encode("ascii")).hexdigest()
+
+
+def _hash_ip(value: str | None) -> str | None:
+    if not value:
+        return None
+    settings = get_settings()
+    return hmac.new(
+        settings.admin_session_secret.encode("utf-8"),
+        value.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def create_user_session(db: Session, user: User, request: Request) -> str:
+    settings = get_settings()
+    token = secrets.token_urlsafe(48)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.user_session_days)
+    db.add(
+        UserSession(
+            user_id=user.id,
+            token_hash=_hash_user_session_token(token),
+            expires_at=expires_at,
+            ip_hash=_hash_ip(request.client.host if request.client else None),
+            user_agent=(request.headers.get("user-agent") or "")[:500] or None,
+        )
+    )
+    return token
+
+
+def set_user_cookie(response: Response, token: str) -> None:
+    settings = get_settings()
+    response.set_cookie(
+        USER_COOKIE_NAME,
+        token,
+        max_age=settings.user_session_days * 24 * 60 * 60,
+        httponly=True,
+        samesite="lax",
+        secure=settings.is_production,
+        path="/",
+    )
+
+
+def clear_user_cookie(response: Response) -> None:
+    response.delete_cookie(USER_COOKIE_NAME, path="/")
+
+
+def get_user_from_request(request: Request, db: Session) -> User | None:
+    token = request.cookies.get(USER_COOKIE_NAME)
+    if not token:
+        return None
+    now = datetime.now(timezone.utc)
+    user_session = db.scalars(
+        select(UserSession).where(
+            UserSession.token_hash == _hash_user_session_token(token),
+            UserSession.revoked_at.is_(None),
+            UserSession.expires_at > now,
+        )
+    ).first()
+    if not user_session:
+        return None
+    user = db.get(User, user_session.user_id)
+    if not user or user.deleted_at is not None:
+        return None
+    return user
+
+
+def require_user(request: Request, db: Session = Depends(get_db)) -> User:
+    user = get_user_from_request(request, db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User login required.")
+    return user
+
+
+def revoke_user_sessions(db: Session, user_id: int) -> None:
+    now = datetime.now(timezone.utc)
+    db.execute(
+        update(UserSession)
+        .where(UserSession.user_id == user_id, UserSession.revoked_at.is_(None))
+        .values(revoked_at=now)
+    )
+
+
+def revoke_current_user_session(request: Request, db: Session) -> None:
+    token = request.cookies.get(USER_COOKIE_NAME)
+    if not token:
+        return
+    db.execute(
+        update(UserSession)
+        .where(
+            UserSession.token_hash == _hash_user_session_token(token),
+            UserSession.revoked_at.is_(None),
+        )
+        .values(revoked_at=datetime.now(timezone.utc))
+    )

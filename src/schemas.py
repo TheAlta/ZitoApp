@@ -20,7 +20,7 @@ class OnboardingStartOut(BaseModel):
 class PhoneLoginOut(BaseModel):
     user_id: int
     phone: str
-    username: str | None = None
+    display_name: str
     redirect_url: str
 
 
@@ -40,28 +40,37 @@ class OtpRequestOut(BaseModel):
 class OtpVerifyIn(BaseModel):
     phone: str = Field(min_length=8, max_length=20)
     code: str = Field(min_length=4, max_length=8)
-    full_name: str = Field(min_length=1, max_length=100)
+    display_name: str = Field(min_length=1, max_length=100)
 
 
-class ProfileV2In(BaseModel):
-    full_name: str = Field(min_length=1, max_length=100)
-    work_domain: str = Field(min_length=2, max_length=255)
+class ProfilePatchIn(BaseModel):
+    work_or_study_field: str | None = Field(default=None, min_length=1, max_length=255)
+    education_level: str | None = Field(default=None, min_length=1, max_length=80)
+    learning_goal_interests: str | None = Field(default=None, min_length=1, max_length=2000)
+    ai_familiarity_level: str | None = Field(default=None, min_length=1, max_length=50)
+    daily_learning_minutes: int | None = Field(default=None, ge=0, le=1440)
+    preferred_career_path: str | None = Field(default=None, min_length=1, max_length=255)
     referral_source: str | None = Field(default=None, max_length=120)
-    daily_study_minutes: int = Field(ge=5, le=600)
-    learning_goal: str | None = Field(default=None, max_length=255)
-    experience_level: str | None = Field(default=None, max_length=80)
-    preferred_learning_style: str | None = Field(default=None, max_length=120)
 
-class ProfileV2Out(BaseModel):
+
+class ProfileOut(BaseModel):
     user_id: int
+    display_name: str
     completed: bool
-    full_name: str | None = None
-    work_domain: str | None = None
+    work_or_study_field: str | None = None
+    education_level: str | None = None
+    learning_goal_interests: str | None = None
+    ai_familiarity_level: str | None = None
+    daily_learning_minutes: int | None = None
+    preferred_career_path: str | None = None
     referral_source: str | None = None
-    daily_study_minutes: int | None = None
-    learning_goal: str | None = None
-    experience_level: str | None = None
-    preferred_learning_style: str | None = None
+    completed_at: datetime | None = None
+
+
+class UserMeOut(BaseModel):
+    id: int
+    phone: str
+    display_name: str
 
 
 class CourseOut(BaseModel):
@@ -116,9 +125,9 @@ class AnswerOut(BaseModel):
 class UserOut(BaseModel):
     id: int
     phone: str | None
-    full_name: str | None
-    username: str | None
-    profession: str | None
+    display_name: str
+    work_or_study_field: str | None = None
+    deleted_at: datetime | None = None
     created_at: datetime
     answers: list[AnswerOut] = []
 

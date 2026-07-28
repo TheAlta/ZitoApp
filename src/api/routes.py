@@ -1,6 +1,8 @@
 ﻿import re
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session, selectinload
 
@@ -12,11 +14,10 @@ from src.models import (
     CourseStageContent,
     CourseVersion,
     KnowledgeDocument,
-    ProfileBuilderAnswer,
     Question,
     User,
     UserCourseEnrollment,
-    UserProfileV2,
+    UserProfile,
     UserProgress,
 )
 from src.schemas import (
@@ -36,16 +37,29 @@ from src.schemas import (
     OtpRequestOut,
     OtpVerifyIn,
     PhoneLoginOut,
-    ProfileV2In,
-    ProfileV2Out,
+    ProfileOut,
+    ProfilePatchIn,
     QuestionOut,
     TrainingAnswerIn,
     TrainingLessonOut,
     TrainingMessageIn,
     TrainingQuestionIn,
+    UserMeOut,
     UserOut,
 )
-from src.security import authenticate_admin, clear_admin_cookie, create_admin_session, require_admin, set_admin_cookie
+from src.security import (
+    authenticate_admin,
+    clear_admin_cookie,
+    clear_user_cookie,
+    create_admin_session,
+    create_user_session,
+    require_admin,
+    require_user,
+    revoke_current_user_session,
+    revoke_user_sessions,
+    set_admin_cookie,
+    set_user_cookie,
+)
 from src.seed import seed_questions
 from src.services.rag import build_user_context
 from src.services.otp import OtpError, OtpRateLimitError, request_otp, verify_otp
@@ -82,9 +96,9 @@ def _user_out(user: User) -> UserOut:
     return UserOut(
         id=user.id,
         phone=user.phone,
-        full_name=user.full_name,
-        username=user.username,
-        profession=user.profession,
+        display_name=user.display_name,
+        work_or_study_field=user.profile.work_or_study_field if user.profile else None,
+        deleted_at=user.deleted_at,
         created_at=user.created_at,
         answers=[_answer_out(answer) for answer in sorted(user.answers, key=lambda item: item.question.sort_order)],
     )
@@ -107,40 +121,70 @@ def _guidance_for(question: Question) -> str:
         return "یکی از مسیرهای آموزشی را واضح انتخاب کن: حسابداری و هوش مصنوعی، روانشناسی و هوش مصنوعی، یا حقوق و هوش مصنوعی."
     return "لطفا یک جواب کوتاه، مرتبط و قابل فهم به همین سوال بنویس."
 
-def _apply_profile_field(user: User, question: Question, answer_text: str) -> None:
+def _apply_profile_field(db: Session, user: User, question: Question, answer_text: str) -> None:
     if question.key == "identity":
-        user.full_name = answer_text.strip()
-        user.username = user.full_name
+        user.display_name = answer_text.strip()
     elif question.key == "profession":
-        user.profession = answer_text.strip()
+        profile = user.profile or UserProfile(user_id=user.id)
+        profile.work_or_study_field = answer_text.strip()
+        if user.profile is None:
+            db.add(profile)
 
 
-def _get_or_create_phone_user(db: Session, phone: str) -> User:
+def _get_or_create_phone_user(db: Session, phone: str, display_name: str) -> User:
+    now = datetime.now(timezone.utc)
     user = db.scalars(select(User).where(User.phone == phone).limit(1)).first()
     if user:
+        if user.deleted_at is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="این حساب غیرفعال شده است. برای بازیابی با پشتیبانی تماس بگیر.",
+            )
+        user.display_name = display_name
+        user.phone_verified_at = now
+        user.last_login_at = now
         return user
-    user = User(phone=phone)
+    user = User(
+        phone=phone,
+        display_name=display_name,
+        phone_verified_at=now,
+        last_login_at=now,
+    )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    db.flush()
     return user
 
 
-def _profile_out(user: User, profile: UserProfileV2 | None) -> ProfileV2Out:
+PROFILE_FIELDS = (
+    "work_or_study_field",
+    "education_level",
+    "learning_goal_interests",
+    "ai_familiarity_level",
+    "daily_learning_minutes",
+    "preferred_career_path",
+    "referral_source",
+)
+
+
+def _profile_is_complete(profile: UserProfile) -> bool:
+    return all(getattr(profile, field) not in (None, "") for field in PROFILE_FIELDS)
+
+
+def _profile_out(user: User, profile: UserProfile | None) -> ProfileOut:
     if not profile:
-        return ProfileV2Out(user_id=user.id, completed=False, full_name=user.full_name)
-    full_name = profile.full_name or user.full_name
-    completed = bool(full_name and profile.work_domain and profile.daily_study_minutes)
-    return ProfileV2Out(
+        return ProfileOut(user_id=user.id, display_name=user.display_name, completed=False)
+    return ProfileOut(
         user_id=user.id,
-        completed=completed,
-        full_name=full_name,
-        work_domain=profile.work_domain,
+        display_name=user.display_name,
+        completed=_profile_is_complete(profile),
+        work_or_study_field=profile.work_or_study_field,
+        education_level=profile.education_level,
+        learning_goal_interests=profile.learning_goal_interests,
+        ai_familiarity_level=profile.ai_familiarity_level,
+        daily_learning_minutes=profile.daily_learning_minutes,
+        preferred_career_path=profile.preferred_career_path,
         referral_source=profile.referral_source,
-        daily_study_minutes=profile.daily_study_minutes,
-        learning_goal=profile.learning_goal,
-        experience_level=profile.experience_level,
-        preferred_learning_style=profile.preferred_learning_style,
+        completed_at=profile.completed_at,
     )
 
 
@@ -215,80 +259,91 @@ async def request_phone_otp(payload: OtpRequestIn, db: Session = Depends(get_db)
 
 
 @router.post("/api/auth/otp/verify", response_model=PhoneLoginOut)
-def verify_phone_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> PhoneLoginOut:
+def verify_phone_otp(
+    payload: OtpVerifyIn,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> PhoneLoginOut:
     phone = _normalize_phone(payload.phone)
-    full_name = payload.full_name.strip()
-    if not full_name:
+    display_name = payload.display_name.strip()
+    if not display_name:
         raise HTTPException(status_code=422, detail="یک نام وارد کن.")
     if not verify_otp(db, phone, payload.code):
         raise HTTPException(status_code=401, detail="کد تایید اشتباه است یا منقضی شده.")
-    user = _get_or_create_phone_user(db, phone)
-    user.full_name = full_name
-    user.username = full_name
+    user = _get_or_create_phone_user(db, phone, display_name)
+    session_token = create_user_session(db, user, request)
     db.commit()
     db.refresh(user)
-    return PhoneLoginOut(user_id=user.id, phone=phone, username=user.username, redirect_url="/app/")
+    set_user_cookie(response, session_token)
+    return PhoneLoginOut(
+        user_id=user.id,
+        phone=phone,
+        display_name=user.display_name,
+        redirect_url="/app/",
+    )
 
 
-@router.get("/api/profile/{user_id}", response_model=ProfileV2Out)
-def get_profile_v2(user_id: int, db: Session = Depends(get_db)) -> ProfileV2Out:
-    user = db.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    profile = db.scalars(select(UserProfileV2).where(UserProfileV2.user_id == user.id)).first()
+@router.post("/api/auth/logout")
+def user_logout(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> dict:
+    revoke_current_user_session(request, db)
+    db.commit()
+    clear_user_cookie(response)
+    return {"ok": True}
+
+
+@router.get("/api/me", response_model=UserMeOut)
+def get_me(user: User = Depends(require_user)) -> UserMeOut:
+    return UserMeOut(id=user.id, phone=user.phone or "", display_name=user.display_name)
+
+
+@router.get("/api/me/profile", response_model=ProfileOut)
+def get_my_profile(
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> ProfileOut:
+    profile = db.get(UserProfile, user.id)
     return _profile_out(user, profile)
 
 
-@router.post("/api/profile/{user_id}", response_model=ProfileV2Out)
-def submit_profile_v2(user_id: int, payload: ProfileV2In, db: Session = Depends(get_db)) -> ProfileV2Out:
-    user = db.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
+@router.patch("/api/me/profile", response_model=ProfileOut)
+def update_my_profile(
+    payload: ProfilePatchIn,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> ProfileOut:
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=422, detail="حداقل یک فیلد پروفایل را ارسال کن.")
 
-    profile = db.scalars(select(UserProfileV2).where(UserProfileV2.user_id == user.id)).first()
+    profile = db.get(UserProfile, user.id)
     if not profile:
-        profile = UserProfileV2(user_id=user.id)
+        profile = UserProfile(user_id=user.id)
         db.add(profile)
 
-    profile.full_name = payload.full_name.strip()
-    profile.work_domain = payload.work_domain.strip()
-    profile.referral_source = payload.referral_source.strip() if payload.referral_source else None
-    profile.daily_study_minutes = payload.daily_study_minutes
-    profile.learning_goal = payload.learning_goal.strip() if payload.learning_goal else None
-    profile.experience_level = payload.experience_level.strip() if payload.experience_level else None
-    profile.preferred_learning_style = (
-        payload.preferred_learning_style.strip() if payload.preferred_learning_style else None
-    )
+    for field, value in updates.items():
+        normalized = value.strip() if isinstance(value, str) else value
+        setattr(profile, field, normalized or None)
 
-    user.full_name = profile.full_name
-    user.username = profile.full_name
-    user.profession = profile.work_domain
-
-    answers = {
-        "full_name": profile.full_name,
-        "work_domain": profile.work_domain,
-        "referral_source": profile.referral_source,
-        "daily_study_minutes": profile.daily_study_minutes,
-        "learning_goal": profile.learning_goal,
-        "experience_level": profile.experience_level,
-        "preferred_learning_style": profile.preferred_learning_style,
-    }
-    for step_key, value in answers.items():
-        current = db.scalars(
-            select(ProfileBuilderAnswer).where(
-                ProfileBuilderAnswer.user_id == user.id,
-                ProfileBuilderAnswer.step_key == step_key,
-            )
-        ).first()
-        answer_json = {"value": value}
-        if current:
-            current.answer_json = answer_json
-        else:
-            db.add(ProfileBuilderAnswer(user_id=user.id, step_key=step_key, answer_json=answer_json))
-
+    profile.completed_at = datetime.now(timezone.utc) if _profile_is_complete(profile) else None
     db.commit()
     db.refresh(profile)
     return _profile_out(user, profile)
+
+
+@router.get("/api/profile/{user_id}", response_model=ProfileOut, include_in_schema=False)
+def get_profile_compat(
+    user_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> ProfileOut:
+    if user.id != user_id:
+        raise HTTPException(status_code=403, detail="You cannot access another user profile.")
+    return _profile_out(user, db.get(UserProfile, user.id))
 
 
 @router.get("/api/courses", response_model=list[CourseOut])
@@ -306,15 +361,19 @@ def list_published_courses(db: Session = Depends(get_db)) -> list[CourseOut]:
 
 
 @router.post("/api/courses/{course_id}/enroll", response_model=EnrollmentOut)
-def enroll_course(course_id: int, user_id: int, db: Session = Depends(get_db)) -> EnrollmentOut:
-    user = db.get(User, user_id)
+def enroll_course(
+    course_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> EnrollmentOut:
+    profile = db.get(UserProfile, user.id)
+    if not profile or not _profile_is_complete(profile):
+        raise HTTPException(status_code=409, detail="Complete your profile before enrollment.")
     course = db.get(
         Course,
         course_id,
         options=[selectinload(Course.versions).selectinload(CourseVersion.stages)],
     )
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
     if not course or course.status != "published":
         raise HTTPException(status_code=404, detail="Course not found.")
 
@@ -354,19 +413,17 @@ def enroll_course(course_id: int, user_id: int, db: Session = Depends(get_db)) -
 
 @router.post("/api/onboarding/start", response_model=OnboardingStartOut)
 def start_onboarding(db: Session = Depends(get_db)) -> OnboardingStartOut:
-    seed_questions(db)
-    user = User()
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    question = db.scalars(select(Question).where(Question.is_active.is_(True)).order_by(Question.sort_order).limit(1)).first()
-    if not question:
-        raise HTTPException(status_code=500, detail="No onboarding questions are configured.")
-    return OnboardingStartOut(user_id=user.id, question=QuestionOut.model_validate(question))
+    raise HTTPException(status_code=410, detail="Use OTP login and /api/me/profile.")
 
 
 @router.get("/api/onboarding/{user_id}/state", response_model=OnboardingStateOut)
-def onboarding_state(user_id: int, db: Session = Depends(get_db)) -> OnboardingStateOut:
+def onboarding_state(
+    user_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> OnboardingStateOut:
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="You cannot access another user.")
     seed_questions(db)
     user = db.get(User, user_id, options=[selectinload(User.answers).selectinload(Answer.question)])
     if not user:
@@ -380,7 +437,14 @@ def onboarding_state(user_id: int, db: Session = Depends(get_db)) -> OnboardingS
 
 
 @router.post("/api/onboarding/{user_id}/answer", response_model=OnboardingAnswerOut)
-async def answer_onboarding(user_id: int, payload: AnswerIn, db: Session = Depends(get_db)) -> OnboardingAnswerOut:
+async def answer_onboarding(
+    user_id: int,
+    payload: AnswerIn,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> OnboardingAnswerOut:
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="You cannot access another user.")
     user = db.get(User, user_id, options=[selectinload(User.answers).selectinload(Answer.question)])
     question = db.get(Question, payload.question_id)
     if not user or not question:
@@ -413,7 +477,7 @@ async def answer_onboarding(user_id: int, payload: AnswerIn, db: Session = Depen
         validation_reason=validation["reason"],
     )
     db.add(answer)
-    _apply_profile_field(user, question, answer_text)
+    _apply_profile_field(db, user, question, answer_text)
     db.commit()
 
     db.refresh(user)
@@ -428,14 +492,27 @@ async def answer_onboarding(user_id: int, payload: AnswerIn, db: Session = Depen
 
 
 @router.get("/api/admin/users", response_model=list[UserOut], dependencies=[Depends(require_admin)])
-def list_users(db: Session = Depends(get_db)) -> list[UserOut]:
-    users = db.scalars(select(User).options(selectinload(User.answers).selectinload(Answer.question)).order_by(User.id.desc())).all()
+def list_users(include_deleted: bool = False, db: Session = Depends(get_db)) -> list[UserOut]:
+    query = select(User).options(
+        selectinload(User.profile),
+        selectinload(User.answers).selectinload(Answer.question),
+    )
+    if not include_deleted:
+        query = query.where(User.deleted_at.is_(None))
+    users = db.scalars(query.order_by(User.id.desc())).all()
     return [_user_out(user) for user in users]
 
 
 @router.get("/api/admin/users/{user_id}", response_model=UserOut, dependencies=[Depends(require_admin)])
 def get_user(user_id: int, db: Session = Depends(get_db)) -> UserOut:
-    user = db.get(User, user_id, options=[selectinload(User.answers).selectinload(Answer.question)])
+    user = db.get(
+        User,
+        user_id,
+        options=[
+            selectinload(User.profile),
+            selectinload(User.answers).selectinload(Answer.question),
+        ],
+    )
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
     return _user_out(user)
@@ -447,7 +524,7 @@ def update_answer(answer_id: int, payload: AdminAnswerUpdate, db: Session = Depe
     if not answer:
         raise HTTPException(status_code=404, detail="Answer not found.")
     answer.answer_text = payload.answer_text.strip()
-    _apply_profile_field(answer.user, answer.question, answer.answer_text)
+    _apply_profile_field(db, answer.user, answer.question, answer.answer_text)
     db.commit()
     db.refresh(answer)
     return _answer_out(answer)
@@ -458,9 +535,21 @@ def delete_user(user_id: int, db: Session = Depends(get_db)) -> dict:
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-    db.delete(user)
+    if user.deleted_at is None:
+        user.deleted_at = datetime.now(timezone.utc)
+        revoke_user_sessions(db, user.id)
     db.commit()
-    return {"deleted": True}
+    return {"deleted": True, "soft_deleted": True}
+
+
+@router.post("/api/admin/users/{user_id}/restore", dependencies=[Depends(require_admin)])
+def restore_user(user_id: int, db: Session = Depends(get_db)) -> dict:
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    user.deleted_at = None
+    db.commit()
+    return {"restored": True}
 
 
 @router.post("/api/training/knowledge", response_model=KnowledgeOut, dependencies=[Depends(require_admin)])
@@ -473,7 +562,13 @@ def create_knowledge(payload: KnowledgeIn, db: Session = Depends(get_db)) -> Kno
 
 
 @router.post("/api/training/{user_id}/lesson", response_model=TrainingLessonOut)
-async def create_lesson(user_id: int, db: Session = Depends(get_db)) -> TrainingLessonOut:
+async def create_lesson(
+    user_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> TrainingLessonOut:
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="You cannot access another user.")
     user = db.get(
         User,
         user_id,
@@ -509,7 +604,14 @@ async def create_lesson(user_id: int, db: Session = Depends(get_db)) -> Training
 
 
 @router.post("/api/training/{user_id}/question")
-async def ask_training_question(user_id: int, payload: TrainingQuestionIn, db: Session = Depends(get_db)) -> dict:
+async def ask_training_question(
+    user_id: int,
+    payload: TrainingQuestionIn,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="You cannot access another user.")
     user = db.get(User, user_id, options=[selectinload(User.answers).selectinload(Answer.question)])
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
@@ -535,7 +637,14 @@ async def ask_training_question(user_id: int, payload: TrainingQuestionIn, db: S
 
 
 @router.post("/api/training/{user_id}/answer")
-async def submit_training_answer(user_id: int, payload: TrainingAnswerIn, db: Session = Depends(get_db)) -> dict:
+async def submit_training_answer(
+    user_id: int,
+    payload: TrainingAnswerIn,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="You cannot access another user.")
     user = db.get(User, user_id, options=[selectinload(User.progress)])
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
@@ -566,7 +675,14 @@ async def submit_training_answer(user_id: int, payload: TrainingAnswerIn, db: Se
 
 
 @router.post("/api/training/{user_id}/message")
-async def submit_training_message(user_id: int, payload: TrainingMessageIn, db: Session = Depends(get_db)) -> dict:
+async def submit_training_message(
+    user_id: int,
+    payload: TrainingMessageIn,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="You cannot access another user.")
     user = db.get(
         User,
         user_id,

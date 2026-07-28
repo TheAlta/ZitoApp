@@ -723,14 +723,8 @@
     let profileBuilder = null;
     let stage = "onboarding";
     let selectedTrack = localStorage.getItem("zito_track") || "accounting";
-    const savedFullName = localStorage.getItem("zito_full_name") || "";
-    const urlUserId = new URLSearchParams(window.location.search).get("user_id");
-    const savedUserId = localStorage.getItem("zito_user_id");
-    let sessionUserId = urlUserId || savedUserId;
-    if (urlUserId) {
-      localStorage.setItem("zito_user_id", urlUserId);
-      window.history.replaceState({}, "", "/app/");
-    }
+    const savedDisplayName = localStorage.getItem("zito_display_name") || "";
+    let sessionUserId = null;
 
     const appShell = document.querySelector("#appShell");
     const welcomeTitle = document.querySelector("#welcomeTitle");
@@ -800,6 +794,7 @@
       localStorage.removeItem("zito_username");
       localStorage.removeItem("zito_track");
       localStorage.removeItem("zito_full_name");
+      localStorage.removeItem("zito_display_name");
       sessionUserId = null;
       userId = null;
       currentQuestion = null;
@@ -809,9 +804,9 @@
       window.history.replaceState({}, "", "/app/");
     }
     function handleMissingUser(error) {
-      if (error.status !== 404 || !String(error.message || "").toLowerCase().includes("user")) return false;
+      if (![401, 403, 404].includes(error.status)) return false;
       clearSavedSession();
-      addMessage("حساب ذخیره‌شده قبلی دیگر در دیتابیس وجود ندارد. اطلاعات ورود قبلی پاک شد و به صفحه ورود برمی‌گردی.");
+      addMessage("نشست ورودت معتبر نیست یا حساب غیرفعال شده است. به صفحه ورود برمی‌گردی.");
       setTimeout(() => { window.location.href = "/"; }, 900);
       return true;
     }
@@ -892,35 +887,56 @@
     function setModalBusy(isBusy) { modalSend.disabled = isBusy; modalInput.disabled = isBusy; }
     const PROFILE_STEPS = [
       {
-        key: "full_name",
-        question: "دوست داری با چه اسمی صدات کنم؟",
-        retry: "یک نام وارد کن تا بتونم صدات کنم.",
+        key: "work_or_study_field",
+        question: "حوزه کاری یا رشته تحصیلی‌ات چیه؟",
+        retry: "حوزه کاری یا رشته تحصیلی را کوتاه و واضح بنویس.",
         parse: (value) => value.trim(),
         isValid: (value) => value.trim().length >= 1,
       },
       {
-        key: "work_domain",
-        question: "حوزه کاری یا علاقه اصلی‌ات چیه؟",
-        retry: "حوزه کاری را کوتاه و واضح بنویس؛ مثلا: حسابداری، روانشناسی، حقوق، توسعه فردی یا مدیریت.",
-        parse: (value) => value.trim(),
-        isValid: (value) => value.trim().length >= 2,
-      },
-      {
-        key: "referral_source",
-        question: "از کجا با زیتو آشنا شدی؟",
-        retry: "فقط کوتاه بنویس از کجا پیدامون کردی؛ مثلا اینستاگرام، سایت، معرفی دوست یا تبلیغات.",
+        key: "education_level",
+        question: "سطح تحصیلاتت چیه؟",
+        retry: "سطح تحصیلاتت را بنویس؛ مثلا دیپلم، کارشناسی یا کارشناسی ارشد.",
         parse: (value) => value.trim(),
         isValid: (value) => value.trim().length >= 1,
       },
       {
-        key: "daily_study_minutes",
+        key: "learning_goal_interests",
+        question: "هدفت از یادگیری چیه و به چه موضوع‌هایی علاقه داری؟",
+        retry: "هدفت یا علاقه اصلی‌ات از یادگیری را در یک جمله کوتاه بنویس.",
+        parse: (value) => value.trim(),
+        isValid: (value) => value.trim().length >= 1,
+      },
+      {
+        key: "ai_familiarity_level",
+        question: "میزان آشنایی‌ات با هوش مصنوعی چقدره؟",
+        retry: "مثلا بنویس تازه‌کار، متوسط یا حرفه‌ای.",
+        parse: (value) => value.trim(),
+        isValid: (value) => value.trim().length >= 1,
+      },
+      {
+        key: "daily_learning_minutes",
         question: "روزانه حدودا چقدر زمان برای مطالعه و تمرین داری؟",
         retry: "زمان مطالعه روزانه را با عدد یا عبارت ساده بنویس؛ مثلا ۳۰ دقیقه، نیم ساعت یا ۶۰ دقیقه.",
         parse: studyMinutesFrom,
         isValid: (value) => {
           const minutes = studyMinutesFrom(value);
-          return Number.isFinite(minutes) && minutes >= 5 && minutes <= 600;
+          return Number.isFinite(minutes) && minutes >= 0 && minutes <= 1440;
         },
+      },
+      {
+        key: "preferred_career_path",
+        question: "دوست داری در آینده در چه مسیر شغلی پیشرفت کنی؟",
+        retry: "مسیر شغلی مورد علاقه‌ات را کوتاه بنویس.",
+        parse: (value) => value.trim(),
+        isValid: (value) => value.trim().length >= 1,
+      },
+      {
+        key: "referral_source",
+        question: "از کجا با زیتو آشنا شدی؟",
+        retry: "کوتاه بنویس از کجا پیدامون کردی؛ مثلا اینستاگرام، سایت یا معرفی دوست.",
+        parse: (value) => value.trim(),
+        isValid: (value) => value.trim().length >= 1,
       },
     ];
     function nextProfileStepIndex(profile) {
@@ -931,22 +947,25 @@
     }
     function startProfileChat(profile = {}) {
       stage = "profile";
-      const initialFullName = profile.full_name || savedFullName;
+      const initialDisplayName = profile.display_name || savedDisplayName;
       profileBuilder = {
         data: {
-          full_name: initialFullName || "",
-          work_domain: profile.work_domain || "",
+          work_or_study_field: profile.work_or_study_field || "",
+          education_level: profile.education_level || "",
+          learning_goal_interests: profile.learning_goal_interests || "",
+          ai_familiarity_level: profile.ai_familiarity_level || "",
+          daily_learning_minutes: profile.daily_learning_minutes ?? "",
+          preferred_career_path: profile.preferred_career_path || "",
           referral_source: profile.referral_source || "",
-          daily_study_minutes: profile.daily_study_minutes || "",
         },
-        stepIndex: nextProfileStepIndex({ ...profile, full_name: initialFullName }),
+        stepIndex: nextProfileStepIndex(profile),
       };
       if (profileBuilder.stepIndex < 0) {
         submitProfileBuilder();
         return;
       }
-      if (initialFullName) {
-        personalizeWelcome(initialFullName);
+      if (initialDisplayName) {
+        personalizeWelcome(initialDisplayName);
       }
       askCurrentProfileStep();
     }
@@ -954,29 +973,18 @@
       const step = PROFILE_STEPS[profileBuilder.stepIndex];
       const question = typeof step.question === "function" ? step.question(profileBuilder.data) : step.question;
       addMessage(question);
-      input.placeholder = step.key === "daily_study_minutes" ? "مثلا ۳۰ دقیقه..." : "پاسخت را بنویس...";
+      input.placeholder = step.key === "daily_learning_minutes" ? "مثلا ۳۰ دقیقه..." : "پاسخت را بنویس...";
       hint.textContent = "پاسخ‌ها همین‌جا در چت گرفته می‌شوند و بعد از تکمیل، مسیر آموزشی آماده می‌شود.";
       setStatus("ساخت پروفایل");
     }
     async function submitProfileBuilder() {
       setStatus("ذخیره پروفایل");
-      const minutes = Number(profileBuilder.data.daily_study_minutes);
-      await api(`/api/profile/${userId}`, {
-        method: "POST",
-        body: JSON.stringify({
-          full_name: profileBuilder.data.full_name,
-          work_domain: profileBuilder.data.work_domain,
-          referral_source: profileBuilder.data.referral_source || null,
-          daily_study_minutes: minutes,
-          learning_goal: null,
-          experience_level: null,
-          preferred_learning_style: null,
-        }),
-      });
+      const profile = await api("/api/me/profile");
+      if (!profile.completed) throw new Error("پروفایل هنوز کامل نشده است.");
       await enrollDefaultCourse();
-      const firstName = firstNameOf(profileBuilder.data.full_name);
+      const firstName = firstNameOf(profile.display_name);
       addMessage(`${firstName} عزیز، پروفایلت ذخیره شد و مسیر یادگیری اختصاصی‌ات آماده است. حالا سیاره آموزشی تو ظاهر می‌شود.`);
-      localStorage.removeItem("zito_full_name");
+      localStorage.removeItem("zito_display_name");
       profileBuilder = null;
       setTimeout(showPlanet, 650);
     }
@@ -986,8 +994,12 @@
         addMessage(step.retry);
         return;
       }
-      profileBuilder.data[step.key] = step.parse(value);
-      if (step.key === "full_name") personalizeWelcome(profileBuilder.data.full_name);
+      const parsedValue = step.parse(value);
+      await api("/api/me/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ [step.key]: parsedValue }),
+      });
+      profileBuilder.data[step.key] = parsedValue;
       profileBuilder.stepIndex = nextProfileStepIndex(profileBuilder.data);
       if (profileBuilder.stepIndex < 0) {
         await submitProfileBuilder();
@@ -996,13 +1008,13 @@
       askCurrentProfileStep();
     }
     function openProfileModal(profile = {}) {
-      profileName.value = profile.full_name || "";
-      profileDomain.value = profile.work_domain || "";
+      profileName.value = profile.display_name || "";
+      profileDomain.value = profile.work_or_study_field || "";
       profileReferral.value = profile.referral_source || "";
-      profileMinutes.value = profile.daily_study_minutes || "";
-      profileGoal.value = profile.learning_goal || "";
-      profileLevel.value = profile.experience_level || "";
-      profileStyle.value = profile.preferred_learning_style || "";
+      profileMinutes.value = profile.daily_learning_minutes || "";
+      profileGoal.value = profile.learning_goal_interests || "";
+      profileLevel.value = profile.ai_familiarity_level || "";
+      profileStyle.value = profile.preferred_career_path || "";
       profileError.textContent = "";
       profileModal.classList.add("show");
       profileModal.setAttribute("aria-hidden", "false");
@@ -1066,47 +1078,32 @@
     }
 
     async function start() {
-      if (sessionUserId) {
-        await startPhase2();
-        return;
-      }
       setMode("onboarding");
-      setStatus("شناخت اولیه");
-      let data;
-      if (sessionUserId) {
-        try {
-          data = await api(`/api/onboarding/${sessionUserId}/state`);
-        } catch (error) {
-          if (error.status !== 404) throw error;
-          clearSavedSession();
-          addMessage("حساب ذخیره‌شده قبلی دیگر در دیتابیس وجود ندارد. اطلاعات ورود قبلی پاک شد و مسیر تازه‌ای شروع می‌کنیم.");
-          data = await api("/api/onboarding/start", { method: "POST" });
-        }
-      } else {
-        data = await api("/api/onboarding/start", { method: "POST" });
+      setStatus("بررسی ورود");
+      try {
+        const me = await api("/api/me");
+        userId = me.id;
+        sessionUserId = String(me.id);
+        localStorage.setItem("zito_display_name", me.display_name);
+        personalizeWelcome(me.display_name);
+        await startPhase2();
+      } catch (error) {
+        if (!handleMissingUser(error)) addMessage(error.message);
       }
-      userId = data.user_id;
-      localStorage.setItem("zito_user_id", String(userId));
-      if (data.completed) {
-        showPlanet();
-        return;
-      }
-      currentQuestion = data.question;
-      addMessage(currentQuestion.text);
     }
 
     async function startPhase2() {
       setMode("onboarding");
       setStatus("پروفایل");
-      userId = Number(sessionUserId);
-      localStorage.setItem("zito_user_id", String(userId));
       let profile;
       try {
-        profile = await api(`/api/profile/${userId}`);
+        profile = await api("/api/me/profile");
       } catch (error) {
         if (handleMissingUser(error)) return;
         throw error;
       }
+      userId = profile.user_id;
+      personalizeWelcome(profile.display_name);
       if (!profile.completed) {
         startProfileChat(profile);
         return;
@@ -1125,7 +1122,7 @@
       localStorage.setItem("zito_track", selectedTrack);
       localStorage.setItem("zito_course_id", String(course.id));
       localStorage.setItem("zito_course_version_id", String(course.version_id));
-      await api(`/api/courses/${course.id}/enroll?user_id=${userId}`, { method: "POST" });
+      await api(`/api/courses/${course.id}/enroll`, { method: "POST" });
     }
 
     async function loadLesson() {
@@ -1208,16 +1205,15 @@
       profileError.textContent = "";
       setProfileBusy(true);
       try {
-        await api(`/api/profile/${userId}`, {
-          method: "POST",
+        await api("/api/me/profile", {
+          method: "PATCH",
           body: JSON.stringify({
-            full_name: profileName.value.trim(),
-            work_domain: profileDomain.value.trim(),
+            work_or_study_field: profileDomain.value.trim(),
             referral_source: profileReferral.value.trim() || null,
-            daily_study_minutes: Number(profileMinutes.value),
-            learning_goal: profileGoal.value.trim() || null,
-            experience_level: profileLevel.value.trim() || null,
-            preferred_learning_style: profileStyle.value.trim() || null,
+            daily_learning_minutes: Number(profileMinutes.value),
+            learning_goal_interests: profileGoal.value.trim() || null,
+            ai_familiarity_level: profileLevel.value.trim() || null,
+            preferred_career_path: profileStyle.value.trim() || null,
           }),
         });
         await enrollDefaultCourse();

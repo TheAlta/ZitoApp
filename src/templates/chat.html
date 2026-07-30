@@ -9,7 +9,7 @@
     @font-face { font-family: "YekanZito"; src: local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan"); font-display: swap; }
     * { box-sizing: border-box; }
     :root {
-      color-scheme: dark;
+      color-scheme: light;
       --font-yekan: "YekanZito", "Yekan", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif;
       --bg-0: #030615;
       --bg-1: #070d24;
@@ -602,13 +602,154 @@
     }
     @media (max-width: 420px) { .phone-shell { padding: 10px; } .hero { border-radius: 24px; } .welcome { padding-top: 2px; } .zito-orb { width: 108px; height: 132px; } .msg { max-width: 90%; } .subtitle { max-width: 205px; } }
     @media (max-width: 560px) { .profile-grid { grid-template-columns: 1fr; } }
+
+    /* Light cosmic theme: preserves the current learning layout and motion system. */
+    :root {
+      color-scheme: light;
+      --bg-0: #fffdfb;
+      --bg-1: #fbf5f1;
+      --card: rgba(255, 253, 250, .82);
+      --card-strong: rgba(255, 253, 250, .95);
+      --line: rgba(138, 116, 172, .20);
+      --line-strong: rgba(135, 102, 194, .40);
+      --text: #353354;
+      --soft: #746d82;
+      --muted: #90879c;
+      --purple: #8b67cf;
+      --violet: #7054c1;
+      --blue: #4f99d0;
+      --cyan: #4baeb5;
+      --success: #169b74;
+      --danger: #d94f76;
+      --glow: 0 0 28px rgba(151, 108, 202, .18), 0 0 70px rgba(77, 153, 208, .12);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 50% -12%, rgba(207, 148, 215, .16), transparent 35%),
+        radial-gradient(circle at 13% 18%, rgba(103, 181, 190, .12), transparent 30%),
+        radial-gradient(circle at 90% 84%, rgba(213, 176, 233, .16), transparent 34%),
+        linear-gradient(180deg, #fffdfb 0%, #fff9f5 58%, #f5f0f8 100%);
+    }
+
+    body::before {
+      background-image:
+        radial-gradient(circle, rgba(118, 96, 169, .50) 0 1px, transparent 1.6px),
+        radial-gradient(circle, rgba(87, 154, 187, .38) 0 1px, transparent 1.8px);
+      opacity: .46;
+    }
+
+    body::after {
+      background: linear-gradient(180deg, transparent 0%, rgba(250, 239, 235, .34) 78%, rgba(244, 238, 248, .68) 100%);
+    }
+
+    .mark {
+      background: rgba(255, 253, 250, .82);
+      box-shadow: 0 0 24px rgba(120, 105, 187, .18);
+    }
+
+    .mark::after { border-color: rgba(145, 113, 183, .22); }
+    .status-pill { color: #706782; background: rgba(255, 253, 250, .78); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .94); }
+
+    .hero {
+      background:
+        linear-gradient(180deg, rgba(255, 253, 250, .90), rgba(255, 247, 244, .80)),
+        radial-gradient(circle at 50% 0%, rgba(194, 136, 210, .16), transparent 40%);
+      box-shadow: 0 28px 90px rgba(128, 94, 131, .13), inset 0 1px 0 rgba(255, 255, 255, .96);
+    }
+
+    .hero::before { background: radial-gradient(circle, rgba(105, 176, 192, .14), transparent 62%); }
+    .zito-orb { filter: drop-shadow(0 0 26px rgba(155, 104, 190, .40)); }
+
+    .bot,
+    .typing {
+      color: #3d3959;
+      background: rgba(255, 253, 250, .88);
+      border-color: rgba(147, 119, 171, .16);
+      box-shadow: 0 12px 30px rgba(130, 94, 130, .10), inset 0 1px 0 rgba(255, 255, 255, .94);
+    }
+
+    .user,
+    button {
+      background: linear-gradient(135deg, #956bd0 0%, #735fca 46%, #4b9bd0 100%);
+      box-shadow: 0 14px 32px rgba(132, 101, 191, .22);
+    }
+
+    .planet-stage {
+      background:
+        radial-gradient(circle at 50% 42%, rgba(181, 135, 218, .15), transparent 36%),
+        radial-gradient(circle at 22% 18%, rgba(101, 184, 190, .10), transparent 28%),
+        linear-gradient(180deg, rgba(255, 253, 250, .88), rgba(253, 246, 244, .84));
+      box-shadow: 0 24px 80px rgba(128, 94, 131, .13), inset 0 1px 0 rgba(255, 255, 255, .96);
+    }
+
+    .planet-stage::before {
+      background-image:
+        radial-gradient(circle, rgba(119, 96, 171, .50) 0 1px, transparent 1.8px),
+        radial-gradient(circle, rgba(86, 154, 187, .36) 0 1px, transparent 2px);
+      opacity: .36;
+    }
+
+    .lesson-dock {
+      color: #3b3655;
+      background:
+        linear-gradient(180deg, rgba(255, 253, 250, .94), rgba(255, 247, 244, .90)),
+        radial-gradient(circle at top right, rgba(196, 137, 211, .16), transparent 42%);
+      box-shadow: 0 22px 60px rgba(127, 93, 128, .13), inset 0 1px 0 rgba(255, 255, 255, .97);
+    }
+
+    .lesson-dock ul { color: #5e5873; }
+    .lesson-dock .label { color: #7e5ab8; }
+    .lesson-avatar { filter: drop-shadow(0 0 22px rgba(153, 104, 190, .40)); }
+    .meter { background: rgba(153, 125, 181, .14); }
+    .typing span { background: #9876aa; }
+
+    .composer {
+      background: rgba(255, 253, 250, .88);
+      box-shadow: 0 20px 64px rgba(127, 93, 128, .13), inset 0 1px 0 rgba(255, 255, 255, .95);
+    }
+
+    input {
+      border-color: rgba(151, 124, 169, .18);
+      background: rgba(255, 252, 249, .94);
+      color: #3d3959;
+    }
+
+    input::placeholder { color: #958b9f; }
+    input:focus { border-color: rgba(91, 148, 197, .58); box-shadow: 0 0 0 4px rgba(104, 153, 201, .10), 0 0 24px rgba(160, 112, 190, .12); background: #fffefd; }
+
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active {
+      -webkit-text-fill-color: #3d3959 !important;
+      -webkit-box-shadow: 0 0 0 1000px #fff8f2 inset !important;
+      transition: background-color 9999s ease-out 0s;
+    }
+
+    .answer-modal { background: rgba(247, 237, 235, .74); }
+    .modal-chat {
+      border-color: rgba(163, 122, 185, .24);
+      background:
+        linear-gradient(180deg, rgba(255, 253, 250, .97), rgba(255, 247, 244, .98)),
+        radial-gradient(circle at 50% 0%, rgba(197, 138, 212, .14), transparent 42%);
+      box-shadow: 0 30px 100px rgba(125, 91, 126, .20), inset 0 1px 0 rgba(255, 255, 255, .98);
+    }
+
+    .modal-head,
+    .modal-form,
+    .profile-form { border-color: rgba(103, 121, 194, .14); }
+    .modal-close { color: #4e5f90; background: rgba(100, 117, 192, .10); box-shadow: none; }
+    .modal-form { background: rgba(242, 246, 255, .84); }
+    .profile-form { background: rgba(245, 248, 255, .78); }
+    .profile-field label { color: #706782; }
   </style>
 </head>
 <body>
   <main id="appShell" class="phone-shell mode-onboarding">
     <header class="topbar">
       <div class="brand">
-        <div class="mark"><img src="/landing-static/logo-z-transparent.png" alt="Zito logo"></div>
+        <div class="mark"><img src="/landing-static/zito-logo.svg" alt="لوگوی زیتو"></div>
         <div>
           <h1>زیتو</h1>
           <div class="subtitle">همراه هوشمند مسیر یادگیری تو</div>

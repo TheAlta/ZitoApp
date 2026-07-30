@@ -16,12 +16,30 @@ class UiContractTests(unittest.TestCase):
             landing_response = client.get("/")
             chat_response = client.get("/app/")
             asset_response = client.get("/landing-static/zito-mascot.svg")
+            logo_response = client.get("/landing-static/zito-logo.svg")
+            obsolete_asset_responses = [
+                client.get(f"/landing-static/{name}")
+                for name in (
+                    "logo-z.png",
+                    "logo-z-transparent.png",
+                    "rocket-svgrepo-com.svg",
+                    "zito-avatar.png",
+                    "zito-avatar-transparent.png",
+                )
+            ]
 
         self.assertEqual(landing_response.status_code, 200)
         self.assertEqual(chat_response.status_code, 200)
         self.assertEqual(asset_response.status_code, 200)
         self.assertEqual(asset_response.headers["content-type"], "image/svg+xml")
+        self.assertEqual(logo_response.status_code, 200)
+        self.assertEqual(logo_response.headers["content-type"], "image/svg+xml")
+        self.assertTrue(all(response.status_code == 404 for response in obsolete_asset_responses))
         self.assertIn("/landing-static/zito-mascot.svg", landing_response.text)
+        self.assertIn("/landing-static/zito-logo.svg", landing_response.text)
+        self.assertIn("/landing-static/zito-logo.svg", chat_response.text)
+        self.assertNotIn("/landing-static/logo-z-transparent.png", landing_response.text)
+        self.assertNotIn("/landing-static/logo-z-transparent.png", chat_response.text)
         self.assertEqual(chat_response.text.count("/landing-static/zito-mascot.svg"), 2)
         self.assertIn("object-fit: contain", landing_response.text)
         self.assertIn("object-fit: contain", chat_response.text)
@@ -33,13 +51,20 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("left: calc(50% + 56px)", landing_response.text)
         self.assertIn("left: calc(50% + 72px)", landing_response.text)
 
-    def test_landing_uses_stacked_dark_autofill_fields(self) -> None:
+        admin_template = Path("src/templates/admin.html").read_text(encoding="utf-8")
+        admin_login_template = Path("src/templates/admin_login.html").read_text(encoding="utf-8")
+        self.assertIn("/landing-static/zito-logo.svg", admin_template)
+        self.assertIn("/landing-static/zito-logo.svg", admin_login_template)
+
+    def test_landing_uses_stacked_light_autofill_fields(self) -> None:
         with TestClient(app) as client:
             response = client.get("/")
 
         self.assertEqual(response.status_code, 200)
         html = response.text
         self.assertIn("flex-direction: column", html)
+        self.assertIn("color-scheme: light", html)
+        self.assertIn("Light cosmic theme", html)
         self.assertIn(".phone-input:-webkit-autofill", html)
         self.assertIn('label for="fullNameInput"', html)
         self.assertIn('label for="phoneInput"', html)
@@ -69,6 +94,11 @@ class UiContractTests(unittest.TestCase):
 
     def test_admin_renders_canonical_profile_without_legacy_answers(self) -> None:
         admin_template = Path("src/templates/admin.html").read_text(encoding="utf-8")
+        admin_login_template = Path("src/templates/admin_login.html").read_text(encoding="utf-8")
+        chat_template = Path("src/templates/chat.html").read_text(encoding="utf-8")
+        self.assertIn("color-scheme: light", admin_template)
+        self.assertIn("color-scheme: light", admin_login_template)
+        self.assertIn("Light cosmic theme", chat_template)
         self.assertIn("user.education_level", admin_template)
         self.assertIn("user.learning_goal_interests", admin_template)
         self.assertNotIn("user.answers", admin_template)

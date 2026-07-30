@@ -25,6 +25,12 @@ class OtpRateLimitError(OtpError):
         self.retry_after_seconds = retry_after_seconds
 
 
+_OTP_DIGIT_TRANSLATION = str.maketrans(
+    "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩",
+    "01234567890123456789",
+)
+
+
 @dataclass
 class OtpRequestResult:
     phone: str
@@ -56,6 +62,10 @@ def _generate_code() -> str:
     digits = max(4, min(settings.otp_code_digits, 8))
     upper_bound = 10**digits
     return f"{secrets.randbelow(upper_bound):0{digits}d}"
+
+
+def normalize_otp_code(code: str) -> str:
+    return code.translate(_OTP_DIGIT_TRANSLATION).strip()
 
 
 def _require_ascii_header_value(name: str, value: str) -> str:
@@ -189,7 +199,7 @@ def verify_otp(db: Session, phone: str, code: str) -> bool:
         return False
 
     otp.attempt_count += 1
-    expected = _hash_code(phone, code.strip())
+    expected = _hash_code(phone, normalize_otp_code(code))
     if not hmac.compare_digest(otp.code_hash, expected):
         db.commit()
         return False

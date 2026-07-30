@@ -423,30 +423,47 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 2;
-      animation: floaty 3.5s ease-in-out infinite;
+      will-change: transform;
+      animation: floaty 5.8s cubic-bezier(.45, 0, .55, 1) infinite;
     }
 
     @keyframes floaty {
 
       0%,
       100% {
-        transform: translateX(-50%) translateY(0);
+        transform: translateX(-50%) translateY(0) scale(1);
       }
 
       50% {
-        transform: translateX(-50%) translateY(-10px);
+        transform: translateX(-50%) translateY(-12px) scale(1.018);
       }
     }
 
     .avatar-img {
-      width: 110px;
-      height: auto;
+      width: auto;
+      height: 132px;
+      max-width: 110px;
+      display: block;
+      object-fit: contain;
+      will-change: filter;
+      animation: mascot-glow 5.8s ease-in-out infinite;
+    }
+
+    @keyframes mascot-glow {
+      0%,
+      100% {
+        filter: drop-shadow(0 4px 10px rgba(75, 94, 255, .12));
+      }
+
+      50% {
+        filter: drop-shadow(0 9px 18px rgba(104, 91, 255, .32));
+      }
     }
 
     /* ---------- چت‌باکس (سمت راست) ---------- */
     .chat-bubble {
       position: absolute;
-      left: calc(50% + 70px);
+      left: calc(50% + 56px);
       right: auto;
       bottom: 42vh;
       transform: translateY(-20px);
@@ -790,6 +807,11 @@
       width: 100%;
     }
 
+    .phone-link:disabled {
+      cursor: wait;
+      opacity: .58;
+    }
+
     /* ========================================================= */
     /* تنظیمات دسکتاپ                                            */
     /* ========================================================= */
@@ -811,7 +833,8 @@
       }
 
       .avatar-img {
-        width: 130px;
+        height: 188px;
+        max-width: 150px;
       }
 
       .avatar-wrap {
@@ -819,7 +842,7 @@
       }
 
       .chat-bubble {
-        left: calc(50% + 80px);
+        left: calc(50% + 72px);
         bottom: 32vh;
         max-width: 260px;
         min-width: 220px;
@@ -866,7 +889,8 @@
       }
 
       .avatar-img {
-        width: 140px;
+        height: 168px;
+        max-width: 140px;
       }
 
       .avatar-wrap {
@@ -914,7 +938,8 @@
       .ambient-star,
       .galaxy-glow .orb,
       .meteor,
-      .avatar-wrap {
+      .avatar-wrap,
+      .avatar-img {
         animation: none;
       }
     }
@@ -950,7 +975,7 @@
 
   <!-- آواتار -->
   <div class="avatar-wrap">
-    <img class="avatar-img" src="/landing-static/zito-avatar-transparent.png" alt="Zito Avatar">
+    <img class="avatar-img" src="/landing-static/zito-mascot.svg" alt="آواتار زیتو">
   </div>
 
   <!-- چت‌باکس -->
@@ -976,17 +1001,20 @@
   <div class="phone-modal" id="phoneModal" aria-hidden="true">
     <div class="phone-card">
       <div class="phone-title">ورود به زیتو</div>
-      <div class="phone-copy" id="phoneCopy">نام و شماره موبایلت را وارد کن تا مسیر یادگیریت شخصی‌سازی شود.</div>
+      <div class="phone-copy" id="phoneCopy">شماره موبایلت را وارد کن تا ورودت را بررسی کنیم.</div>
       <form class="phone-form" id="phoneForm">
-        <div class="phone-field">
-          <label for="fullNameInput">نام</label>
-          <input class="phone-input" id="fullNameInput" autocomplete="name" placeholder="اسمی که دوست داری صدات کنیم" maxlength="80">
-        </div>
         <div class="phone-field">
           <label for="phoneInput">شماره موبایل</label>
           <input class="phone-input" id="phoneInput" data-numeric="true" inputmode="numeric" autocomplete="tel" placeholder="09123456789" maxlength="20">
         </div>
-        <button class="phone-submit" id="phoneSubmit" type="submit">ارسال کد</button>
+        <button class="phone-submit" id="phoneSubmit" type="submit">ادامه</button>
+      </form>
+      <form class="phone-form is-hidden" id="nameForm">
+        <div class="phone-field">
+          <label for="fullNameInput">اسمی که دوست داری صدات کنیم</label>
+          <input class="phone-input" id="fullNameInput" autocomplete="name" placeholder="مثلا شایان" maxlength="80">
+        </div>
+        <button class="phone-submit" id="nameSubmit" type="submit">ادامه</button>
       </form>
       <form class="phone-form is-hidden" id="otpForm">
         <div class="phone-field">
@@ -998,6 +1026,7 @@
       <div class="phone-helper" id="phoneHelper"></div>
       <div class="phone-error" id="phoneError"></div>
       <button class="phone-link is-hidden" id="changePhone" type="button">تغییر شماره موبایل</button>
+      <button class="phone-link is-hidden" id="resendOtp" type="button">ارسال دوباره کد</button>
     </div>
   </div>
 
@@ -1034,18 +1063,22 @@
     const ctaWrap = document.getElementById('ctaWrap');
     const phoneModal = document.getElementById('phoneModal');
     const phoneForm = document.getElementById('phoneForm');
+    const nameForm = document.getElementById('nameForm');
     const otpForm = document.getElementById('otpForm');
     const fullNameInput = document.getElementById('fullNameInput');
     const phoneInput = document.getElementById('phoneInput');
     const otpInput = document.getElementById('otpInput');
     const phoneSubmit = document.getElementById('phoneSubmit');
+    const nameSubmit = document.getElementById('nameSubmit');
     const otpSubmit = document.getElementById('otpSubmit');
     const phoneCopy = document.getElementById('phoneCopy');
     const phoneHelper = document.getElementById('phoneHelper');
     const phoneError = document.getElementById('phoneError');
     const changePhone = document.getElementById('changePhone');
+    const resendOtp = document.getElementById('resendOtp');
     let pendingPhone = '';
     let pendingFullName = '';
+    let pendingOtpRequest = null;
     const fullText = 'سلام من زیتو هستم و قراره به تمام سوالاتی که تو حوزه کاریت داری جواب بدم. اگه آماده ای شروع کنیم؟';
 
     function typeWriter(text, el, speed) {
@@ -1099,7 +1132,7 @@
       }
       phoneModal.classList.add('show');
       phoneModal.setAttribute('aria-hidden', 'false');
-      fullNameInput.focus();
+      phoneInput.focus();
     }, true);
 
     phoneModal.addEventListener('click', (event) => {
@@ -1127,32 +1160,87 @@
       }
     }
 
+    function normalizeDigits(value) {
+      return String(value)
+        .replace(/[۰-۹]/g, digit => '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)])
+        .replace(/[٠-٩]/g, digit => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(digit)]);
+    }
+
+    async function requestOtpCode(phone) {
+      const response = await fetch('/api/auth/otp/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok) throw new Error(getErrorMessage(data, 'ارسال کد ناموفق بود. شماره را دوباره بررسی کن.'));
+      return data;
+    }
+
     function showOtpStep(phone, data) {
       pendingPhone = phone;
       phoneForm.classList.add('is-hidden');
+      nameForm.classList.add('is-hidden');
       otpForm.classList.remove('is-hidden');
       changePhone.classList.remove('is-hidden');
+      resendOtp.classList.remove('is-hidden');
+      resendOtp.disabled = false;
       phoneCopy.textContent = `کد تایید برای ${phone} ارسال شد.`;
+      const validityMinutes = Math.max(1, Math.ceil(Number(data.expires_in_seconds || 0) / 60));
       phoneHelper.textContent = data.mock_code
         ? `حالت تست: کد تایید ${data.mock_code}`
-        : 'کد پیامک‌شده را وارد کن. این کد چند دقیقه بیشتر اعتبار ندارد.';
+        : `کد پیامک‌شده را وارد کن. این کد تا ${validityMinutes} دقیقه معتبر است.`;
       otpInput.value = '';
       otpInput.focus();
+    }
+
+    function showNameStep(phone) {
+      pendingPhone = phone;
+      phoneForm.classList.add('is-hidden');
+      nameForm.classList.remove('is-hidden');
+      otpForm.classList.add('is-hidden');
+      changePhone.classList.remove('is-hidden');
+      resendOtp.classList.add('is-hidden');
+      phoneCopy.textContent = 'خوش آمدی به زیتو. اسمی را وارد کن که دوست داری با آن صدات کنیم.';
+      phoneHelper.textContent = '';
+      fullNameInput.value = '';
+      fullNameInput.focus();
     }
 
     function showPhoneStep() {
       pendingPhone = '';
       pendingFullName = '';
+      pendingOtpRequest = null;
       otpForm.classList.add('is-hidden');
+      nameForm.classList.add('is-hidden');
       phoneForm.classList.remove('is-hidden');
       changePhone.classList.add('is-hidden');
-      phoneCopy.textContent = 'نام و شماره موبایلت را وارد کن تا مسیر یادگیریت شخصی‌سازی شود.';
+      resendOtp.classList.add('is-hidden');
+      phoneCopy.textContent = 'شماره موبایلت را وارد کن تا ورودت را بررسی کنیم.';
       phoneHelper.textContent = '';
       phoneError.textContent = '';
-      fullNameInput.focus();
+      phoneInput.focus();
     }
 
     changePhone.addEventListener('click', showPhoneStep);
+
+    resendOtp.addEventListener('click', async () => {
+      if (!pendingPhone) {
+        showPhoneStep();
+        return;
+      }
+      phoneError.textContent = '';
+      resendOtp.disabled = true;
+      try {
+        const data = await requestOtpCode(pendingPhone);
+        pendingOtpRequest = data;
+        showOtpStep(pendingPhone, data);
+      } catch (error) {
+        phoneError.textContent = error.message;
+      } finally {
+        resendOtp.disabled = false;
+      }
+    });
 
     phoneForm.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -1160,22 +1248,43 @@
       phoneHelper.textContent = '';
       phoneSubmit.disabled = true;
       try {
-        const fullName = fullNameInput.value.trim();
-        if (!fullName) throw new Error('یک نام وارد کن.');
-        const phone = phoneInput.value.trim();
-        pendingFullName = fullName;
-        const response = await fetch('/api/auth/otp/request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone })
-        });
-        const data = await readApiResponse(response);
-        if (!response.ok) throw new Error(getErrorMessage(data, 'ارسال کد ناموفق بود. شماره را دوباره بررسی کن.'));
-        showOtpStep(phone, data);
+        const phone = normalizeDigits(phoneInput.value).trim();
+        phoneInput.value = phone;
+        pendingPhone = phone;
+        pendingFullName = '';
+        const data = await requestOtpCode(phone);
+        pendingOtpRequest = data;
+        if (data.requires_display_name) {
+          showNameStep(phone);
+        } else {
+          showOtpStep(phone, data);
+        }
       } catch (error) {
         phoneError.textContent = error.message;
       } finally {
         phoneSubmit.disabled = false;
+      }
+    });
+
+    nameForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      phoneError.textContent = '';
+      nameSubmit.disabled = true;
+      try {
+        const fullName = fullNameInput.value.trim();
+        if (!fullName) throw new Error('یک نام وارد کن.');
+        if (!pendingPhone) {
+          showPhoneStep();
+          return;
+        }
+        pendingFullName = fullName;
+        const data = pendingOtpRequest || await requestOtpCode(pendingPhone);
+        pendingOtpRequest = data;
+        showOtpStep(pendingPhone, data);
+      } catch (error) {
+        phoneError.textContent = error.message;
+      } finally {
+        nameSubmit.disabled = false;
       }
     });
 
@@ -1189,8 +1298,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             phone: pendingPhone,
-            code: otpInput.value.trim(),
-            display_name: pendingFullName
+            code: normalizeDigits(otpInput.value).trim(),
+            display_name: pendingFullName || null
           })
         });
         const data = await readApiResponse(response);

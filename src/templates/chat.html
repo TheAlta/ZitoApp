@@ -212,9 +212,12 @@
       animation: hover 4.4s ease-in-out infinite;
     }
     .zito-orb img {
-      width: 132px;
-      height: auto;
+      width: auto;
+      height: 100%;
+      max-width: 100%;
+      object-fit: contain;
       display: block;
+      margin: 0 auto;
     }
     .zito-orb .body {
       position: absolute;
@@ -432,9 +435,12 @@
       animation: hover 4.4s ease-in-out infinite;
     }
     .lesson-avatar img {
-      width: 76px;
-      height: auto;
+      width: auto;
+      height: 100%;
+      max-width: 100%;
+      object-fit: contain;
       display: block;
+      margin: 0 auto;
     }
     .lesson-avatar .body {
       position: absolute;
@@ -615,7 +621,7 @@
       <div id="chat" class="chat">
         <div class="welcome">
           <div class="zito-orb" aria-hidden="true">
-            <img src="/landing-static/zito-avatar-transparent.png" alt="">
+            <img src="/landing-static/zito-mascot.svg" alt="">
           </div>
           <h2 id="welcomeTitle" class="welcome-title">سلام، من زیتو هستم</h2>
           <p id="welcomeSub" class="welcome-sub">برای ساختن مسیر آموزشی هوشمند، چند سوال کوتاه ازت می‌پرسم.</p>
@@ -646,7 +652,7 @@
     <aside id="lessonPanel" class="lesson-dock empty">
       <div>
         <div class="lesson-avatar" aria-hidden="true">
-          <img src="/landing-static/zito-avatar-transparent.png" alt="">
+          <img src="/landing-static/zito-mascot.svg" alt="">
         </div>
         <div class="lesson-empty-title">پنل آموزش زیتو</div>
         <p class="lesson-empty-copy">بعد از انتخاب مسیر، درس و تمرین اینجا نمایش داده می‌شود تا چت فقط برای پاسخ و سوال‌های تو بماند.</p>

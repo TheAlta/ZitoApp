@@ -17,6 +17,7 @@ class OtpRequestIn(BaseModel):
 class OtpRequestOut(BaseModel):
     ok: bool = True
     phone: str
+    requires_display_name: bool
     expires_in_seconds: int
     resend_after_seconds: int
     provider: str
@@ -26,7 +27,7 @@ class OtpRequestOut(BaseModel):
 class OtpVerifyIn(BaseModel):
     phone: str = Field(min_length=8, max_length=20)
     code: str = Field(min_length=4, max_length=8)
-    display_name: str = Field(min_length=1, max_length=100)
+    display_name: str | None = Field(default=None, max_length=100)
 
 
 class ProfilePatchIn(BaseModel):

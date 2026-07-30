@@ -50,6 +50,7 @@ class OtpFlowTests(unittest.TestCase):
 
             self.assertEqual(request_response.status_code, 200)
             self.assertEqual(request_data["provider"], "mock")
+            self.assertTrue(request_data["requires_display_name"])
             self.assertRegex(request_data["mock_code"], r"^\d{6}$")
 
             with SessionLocal() as db:
@@ -94,8 +95,17 @@ class OtpFlowTests(unittest.TestCase):
         with TestClient(app) as first_client:
             first_login = request_and_verify(first_client, phone, "First name")
         with TestClient(app) as second_client:
-            second_login = request_and_verify(second_client, phone, "Updated name")
+            request_response = second_client.post("/api/auth/otp/request", json={"phone": phone})
+            request_data = request_response.json()
+            second_verify = second_client.post(
+                "/api/auth/otp/verify",
+                json={"phone": phone, "code": request_data["mock_code"], "display_name": None},
+            )
+            second_login = second_verify.json()
 
+        self.assertEqual(request_response.status_code, 200)
+        self.assertFalse(request_data["requires_display_name"])
+        self.assertEqual(second_verify.status_code, 200)
         self.assertEqual(first_login["user_id"], second_login["user_id"])
         with SessionLocal() as db:
             users = db.scalars(select(User).where(User.phone == phone)).all()
@@ -103,8 +113,26 @@ class OtpFlowTests(unittest.TestCase):
                 select(UserSession).where(UserSession.user_id == first_login["user_id"])
             ).all()
         self.assertEqual(len(users), 1)
-        self.assertEqual(users[0].display_name, "Updated name")
+        self.assertEqual(users[0].display_name, "First name")
         self.assertEqual(len(sessions), 2)
+
+    def test_new_phone_requires_a_name_before_otp_can_create_an_account(self) -> None:
+        phone = "09127778888"
+        with TestClient(app) as client:
+            request_response = client.post("/api/auth/otp/request", json={"phone": phone})
+            request_data = request_response.json()
+            missing_name_response = client.post(
+                "/api/auth/otp/verify",
+                json={"phone": phone, "code": request_data["mock_code"], "display_name": None},
+            )
+            verified_response = client.post(
+                "/api/auth/otp/verify",
+                json={"phone": phone, "code": request_data["mock_code"], "display_name": "New user"},
+            )
+
+        self.assertTrue(request_data["requires_display_name"])
+        self.assertEqual(missing_name_response.status_code, 422)
+        self.assertEqual(verified_response.status_code, 200)
 
     def test_wrong_or_reused_otp_is_rejected(self) -> None:
         with TestClient(app) as client:
@@ -127,6 +155,19 @@ class OtpFlowTests(unittest.TestCase):
         self.assertEqual(wrong_response.status_code, 401)
         self.assertEqual(first_verify.status_code, 200)
         self.assertEqual(reused_response.status_code, 401)
+
+    def test_otp_accepts_persian_digits(self) -> None:
+        phone = "09126667777"
+        with TestClient(app) as client:
+            request_response = client.post("/api/auth/otp/request", json={"phone": phone})
+            code = request_response.json()["mock_code"]
+            persian_code = code.translate(str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹"))
+            verify_response = client.post(
+                "/api/auth/otp/verify",
+                json={"phone": phone, "code": persian_code, "display_name": "Persian code"},
+            )
+
+        self.assertEqual(verify_response.status_code, 200)
 
     def test_soft_delete_keeps_user_and_revokes_login(self) -> None:
         with TestClient(app) as user_client:

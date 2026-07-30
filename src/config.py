@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     otp_mock: bool = Field(True, alias="OTP_MOCK")
     otp_code_digits: int = Field(6, alias="OTP_CODE_DIGITS")
-    otp_expire_minutes: int = Field(2, alias="OTP_EXPIRE_MINUTES")
+    otp_expire_minutes: int = Field(5, alias="OTP_EXPIRE_MINUTES")
     otp_max_attempts: int = Field(5, alias="OTP_MAX_ATTEMPTS")
     otp_resend_seconds: int = Field(60, alias="OTP_RESEND_SECONDS")
 

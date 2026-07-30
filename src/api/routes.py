@@ -48,15 +48,20 @@ from src.security import (
     set_user_cookie,
 )
 from src.services.rag import build_user_context
-from src.services.otp import OtpError, OtpRateLimitError, request_otp, verify_otp
+from src.services.otp import OtpError, OtpRateLimitError, normalize_otp_code, request_otp, verify_otp
 from src.services.training import answer_training_question, generate_lesson, looks_like_question
 from src.services.validation import evaluate_training_answer, validate_training_question
 
 router = APIRouter()
 
+_PHONE_DIGIT_TRANSLATION = str.maketrans(
+    "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩",
+    "01234567890123456789",
+)
+
 
 def _normalize_phone(phone: str) -> str:
-    digits = re.sub(r"\D", "", phone)
+    digits = re.sub(r"\D", "", phone.translate(_PHONE_DIGIT_TRANSLATION))
     if digits.startswith("0098"):
         digits = "0" + digits[4:]
     elif digits.startswith("98") and len(digits) == 12:
@@ -85,7 +90,7 @@ def _user_out(user: User) -> UserOut:
     )
 
 
-def _get_or_create_phone_user(db: Session, phone: str, display_name: str) -> User:
+def _get_or_create_phone_user(db: Session, phone: str, display_name: str | None) -> User:
     now = datetime.now(timezone.utc)
     user = db.scalars(select(User).where(User.phone == phone).limit(1)).first()
     if user:
@@ -94,10 +99,11 @@ def _get_or_create_phone_user(db: Session, phone: str, display_name: str) -> Use
                 status_code=403,
                 detail="این حساب غیرفعال شده است. برای بازیابی با پشتیبانی تماس بگیر.",
             )
-        user.display_name = display_name
         user.phone_verified_at = now
         user.last_login_at = now
         return user
+    if not display_name:
+        raise HTTPException(status_code=422, detail="برای ساخت حساب یک نام وارد کن.")
     user = User(
         phone=phone,
         display_name=display_name,
@@ -222,6 +228,9 @@ def admin_me() -> dict:
 @router.post("/api/auth/otp/request", response_model=OtpRequestOut)
 async def request_phone_otp(payload: OtpRequestIn, db: Session = Depends(get_db)) -> OtpRequestOut:
     phone = _normalize_phone(payload.phone)
+    requires_display_name = db.scalar(
+        select(User.id).where(User.phone == phone).limit(1)
+    ) is None
     try:
         result = await request_otp(db, phone)
     except OtpRateLimitError as exc:
@@ -236,6 +245,7 @@ async def request_phone_otp(payload: OtpRequestIn, db: Session = Depends(get_db)
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return OtpRequestOut(
         phone=result.phone,
+        requires_display_name=requires_display_name,
         expires_in_seconds=result.expires_in_seconds,
         resend_after_seconds=result.resend_after_seconds,
         provider=result.provider,
@@ -251,10 +261,11 @@ def verify_phone_otp(
     db: Session = Depends(get_db),
 ) -> PhoneLoginOut:
     phone = _normalize_phone(payload.phone)
-    display_name = payload.display_name.strip()
-    if not display_name:
-        raise HTTPException(status_code=422, detail="یک نام وارد کن.")
-    if not verify_otp(db, phone, payload.code):
+    display_name = payload.display_name.strip() if payload.display_name else None
+    has_existing_user = db.scalar(select(User.id).where(User.phone == phone).limit(1)) is not None
+    if not has_existing_user and not display_name:
+        raise HTTPException(status_code=422, detail="برای ساخت حساب یک نام وارد کن.")
+    if not verify_otp(db, phone, normalize_otp_code(payload.code)):
         raise HTTPException(status_code=401, detail="کد تایید اشتباه است یا منقضی شده.")
     user = _get_or_create_phone_user(db, phone, display_name)
     session_token = create_user_session(db, user, request)

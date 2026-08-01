@@ -1,17 +1,19 @@
 # Zito Database V2 - Canonical Design
 
-Status: canonical Sprint 1 identity/profile schema finalized through migration `20260728_0007`
-Date: 2026-07-28  
+Status: Sprint 1 canonical identity/profile and Sprint 2 sequential 20-stage runtime implemented
+Date: 2026-08-01
 Scope: identity, profile, course publishing, 20 learning templates, course-scoped KB/RAG, runtime AI supervision, progress, legacy migration and rollback  
 
-This document remains the database source of truth. Sprint 1 identity/profile cleanup is implemented; later learning-engine sections remain design contracts.
+This document remains the database source of truth. Sprint 1 identity/profile cleanup and the Sprint 2 deterministic learning engine are implemented; AI supervision, final assessment and CMS sections remain design contracts.
 
-Implementation status on 2026-07-28:
+Implementation status on 2026-08-01:
 
 - Implemented in `20260728_0006`: canonical `users` fields, one-to-one `user_profiles`, `user_sessions`, OTP purpose/indexes, profile backfill, HttpOnly user sessions, soft delete/restore, session-owned profile and enrollment APIs.
 - Implemented in `20260728_0007`: mandatory unique phone identity; removal of `users.full_name`, `users.username`, `users.profession`; removal of `user_profiles_v2`, `profile_builder_answers`, `questions`, `answers`, global `knowledge_documents`, and legacy `user_progress`.
-- Runtime compatibility now uses `user_course_enrollments` for progress and `course_kb_documents` for course-scoped retrieval. These temporary routes will be replaced by the full stage engine.
-- Not implemented yet: canonical 20-template runtime engine, versioned KB/tag joins, AI policy tables, runtime interaction/evaluation tables, and final exam/certificate workflow.
+- Implemented in Sprint 2 without a new migration: course selection, version-pinned enrollment, exactly 20 `user_stage_progress` rows, sequential locking, idempotent completion, percentage derivation, resume, approved content delivery, and media placeholders.
+- Removed from the active API: temporary `/api/training/{user_id}/*` routes and runtime AI-generated lessons. Sprint 2 reads only approved content from `course_stage_contents`.
+- Implemented as a UI preview only: the post-stage coaching checkpoint. It does not call AI or RAG yet.
+- Not implemented yet: versioned KB/tag joins, AI policy tables, runtime coaching/interaction/evaluation, final exam/certificate execution, and the real CMS workflow.
 
 ## 1. Confirmed Product Decisions
 
@@ -788,13 +790,12 @@ PATCH /api/me/profile
 
 GET  /api/courses
 POST /api/courses/{course_id}/enroll
-GET  /api/me/enrollments
+GET  /api/learning/enrollments/current
+GET  /api/learning/enrollments/{enrollment_id}
+GET  /api/learning/enrollments/{enrollment_id}/stages/current
+POST /api/learning/enrollments/{enrollment_id}/stages/{stage_number}/complete
 
-GET  /api/me/learning/current
-POST /api/me/learning/current/interactions
-POST /api/me/learning/current/evaluate
-
-POST /api/admin/users/{user_id}/soft-delete
+DELETE /api/admin/users/{user_id}
 POST /api/admin/users/{user_id}/restore
 ```
 
@@ -802,7 +803,7 @@ Rules:
 
 - User-owned endpoints do not accept `user_id` from the browser.
 - Admin-owned endpoints require the admin session and authorization policy.
-- Legacy `/api/onboarding/*` and `/api/training/{user_id}/*` are deprecated after the new engine is active.
+- Legacy `/api/training/{user_id}/*` routes are removed; there is only one active progress engine.
 
 ## 13. Legacy-to-Canonical Mapping
 
@@ -1019,7 +1020,7 @@ Implementation may begin only in this order:
 4. Add PostgreSQL migration tests.
 5. Implement user sessions and soft delete.
 6. Switch user/profile APIs.
-7. Implement the canonical 20-stage engine.
+7. Implement the canonical 20-stage engine. **Completed in Sprint 2.**
 8. Replace global RAG with course-version-scoped RAG.
 9. Observe and verify.
 10. Perform legacy cleanup in a separate migration.

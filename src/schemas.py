@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -80,6 +81,65 @@ class EnrollmentOut(BaseModel):
     progress_percentage: int
 
 
+class LearningStageSummaryOut(BaseModel):
+    stage_number: int
+    stage_type: str
+    title: str
+    status: str
+    is_current: bool
+
+
+class LearningPathOut(BaseModel):
+    enrollment_id: int
+    course_id: int
+    course_title: str
+    course_slug: str
+    course_domain: str
+    course_version_id: int
+    course_version_number: int
+    status: str
+    current_stage_number: int
+    completed_stage_count: int
+    total_stage_count: int
+    progress_percentage: int
+    stages: list[LearningStageSummaryOut]
+
+
+class CoachingCheckpointOut(BaseModel):
+    prompt: str
+    enabled: bool = False
+    mode: str = "preview"
+
+
+class LearningStageOut(BaseModel):
+    enrollment_id: int
+    course_id: int
+    course_title: str
+    stage_number: int
+    stage_type: str
+    title: str
+    progress_status: str
+    progress_percentage: int
+    total_stage_count: int
+    course_completed: bool
+    content: dict[str, Any]
+    coaching: CoachingCheckpointOut
+
+
+class StageCompleteIn(BaseModel):
+    response: dict[str, Any] | None = None
+
+
+class StageCompleteOut(BaseModel):
+    enrollment_id: int
+    completed_stage_number: int
+    next_stage_number: int | None
+    course_completed: bool
+    progress_percentage: int
+    coaching: CoachingCheckpointOut
+    path: LearningPathOut
+
+
 class UserOut(BaseModel):
     id: int
     phone: str
@@ -104,28 +164,3 @@ class AdminLoginIn(BaseModel):
 class AdminLoginOut(BaseModel):
     ok: bool = True
     username: str
-
-
-class TrainingQuestionIn(BaseModel):
-    question: str = Field(min_length=2, max_length=2000)
-
-
-class TrainingAnswerIn(BaseModel):
-    lesson: str = Field(min_length=2)
-    check_question: str = Field(min_length=2)
-    answer_text: str = Field(min_length=1, max_length=2000)
-
-
-class TrainingMessageIn(BaseModel):
-    lesson: str = Field(min_length=2)
-    check_question: str = Field(min_length=2)
-    message: str = Field(min_length=1, max_length=2000)
-
-
-class TrainingLessonOut(BaseModel):
-    title: str
-    lesson: str
-    key_points: list[str]
-    exercise: str
-    check_question: str
-    percentage: int

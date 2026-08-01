@@ -743,6 +743,170 @@
     .modal-form { background: rgba(242, 246, 255, .84); }
     .profile-form { background: rgba(245, 248, 255, .78); }
     .profile-field label { color: #706782; }
+
+    /* Sprint 2 learning engine: course catalog, persistent coach and 20-stage views. */
+    .course-coach {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 0 auto 22px;
+      text-align: right;
+    }
+    .course-coach img {
+      flex: none;
+      width: 92px;
+      height: 112px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 22px rgba(153, 104, 190, .36));
+      animation: hover 4.4s ease-in-out infinite;
+    }
+    .coach-bubble {
+      min-width: 0;
+      flex: 1;
+      padding: 13px 15px;
+      border: 1px solid rgba(142, 109, 181, .18);
+      border-radius: 18px 18px 6px 18px;
+      background: rgba(255, 253, 250, .86);
+      box-shadow: 0 12px 32px rgba(128, 94, 131, .10);
+    }
+    .coach-bubble strong { display: block; color: #655080; font-size: 13px; }
+    .coach-bubble p { margin: 5px 0 0; color: var(--soft); font-size: 12px; line-height: 1.8; }
+    .section-kicker {
+      display: inline-flex;
+      margin-bottom: 7px;
+      color: #7b5bad;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .course-list { display: grid; gap: 10px; margin-top: 18px; }
+    .course-option {
+      width: 100%;
+      height: auto;
+      min-height: 74px;
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+      text-align: right;
+      color: var(--text);
+      border: 1px solid rgba(142, 109, 181, .18);
+      border-radius: 17px;
+      background: rgba(255, 253, 250, .84);
+      box-shadow: 0 12px 30px rgba(128, 94, 131, .09);
+    }
+    .course-option:hover { border-color: rgba(115, 95, 202, .42); }
+    .course-orb-mini {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #a875d4, #5f86cf 60%, #76bdc1);
+      box-shadow: inset -6px -5px 12px rgba(63, 48, 89, .22), 0 0 18px rgba(126, 98, 184, .24);
+    }
+    .course-option-copy { min-width: 0; }
+    .course-option-copy strong { display: block; font-size: 14px; }
+    .course-option-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .course-option-arrow { color: #785db8; font-size: 22px; }
+    .course-empty { padding: 18px; color: var(--muted); border: 1px dashed var(--line); border-radius: 16px; }
+    .learning-path { text-align: right; }
+    .path-course-head h2 { margin: 0; font-size: 17px; }
+    .path-progress-text { margin-top: 7px; color: var(--muted); font-size: 11px; }
+    .stage-path-list { display: grid; gap: 7px; margin-top: 16px; }
+    .path-stage {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 9px;
+      color: #716a7e;
+      border: 1px solid rgba(142, 109, 181, .11);
+      border-radius: 12px;
+      background: rgba(255, 253, 250, .58);
+      font-size: 11px;
+    }
+    .path-stage.current { color: #4c3d69; border-color: rgba(112, 84, 193, .36); background: rgba(238, 229, 249, .86); }
+    .path-stage.completed { color: #32775e; background: rgba(229, 247, 238, .80); }
+    .path-stage.locked { opacity: .58; }
+    .path-stage-number { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: rgba(126, 96, 174, .10); font-weight: 900; }
+    .path-stage-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .path-stage-state { font-size: 12px; }
+    .phone-shell.mode-lesson .planet-stage { place-items: start stretch; padding: 16px; overflow-y: auto; }
+    .phone-shell.mode-lesson .planet-card { width: 100%; }
+    .phone-shell.mode-lesson .course-catalog { display: none; }
+    .phone-shell.mode-planet .learning-path { display: none; }
+    .phone-shell.mode-lesson .course-coach { margin-bottom: 12px; }
+    .phone-shell.mode-lesson .course-coach img { width: 70px; height: 84px; }
+    .phone-shell.mode-lesson .coach-bubble { padding: 10px 12px; }
+
+    .stage-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+    .stage-number { color: #7b5bad; font-size: 11px; font-weight: 900; }
+    .stage-header h2 { margin: 4px 0 3px; font-size: 22px; }
+    .stage-type { color: var(--muted); font-size: 11px; }
+    .stage-progress-badge { flex: none; min-width: 66px; padding: 8px 10px; text-align: center; color: #655080; border-radius: 14px; background: rgba(235, 226, 248, .82); font-size: 12px; font-weight: 900; }
+    .stage-intro { margin: 0 0 16px; color: #615a70; line-height: 2; }
+    .stage-content { display: grid; gap: 12px; }
+    .content-block {
+      padding: 14px;
+      border: 1px solid rgba(142, 109, 181, .14);
+      border-radius: 16px;
+      background: rgba(255, 253, 250, .70);
+    }
+    .content-block h3 { margin: 0 0 9px; color: #5c496f; font-size: 14px; }
+    .content-block p { margin: 0; color: #686173; }
+    .content-block ul, .content-block ol { margin: 8px 0 0; padding-right: 22px; color: #625b70; }
+    .block-cards, .block-qa, .block-mistakes, .block-dialog { display: grid; gap: 8px; }
+    .content-card, .qa-item, .mistake-item, .dialog-item {
+      padding: 11px 12px;
+      border-radius: 13px;
+      background: rgba(238, 231, 247, .68);
+    }
+    .content-card strong, .qa-item strong, .mistake-item strong, .dialog-item strong { display: block; margin-bottom: 4px; color: #5a4475; }
+    .quiz-item { padding: 11px 0; border-top: 1px solid rgba(142, 109, 181, .12); }
+    .quiz-item:first-child { padding-top: 0; border-top: 0; }
+    .quiz-question { margin-bottom: 8px; font-weight: 900; }
+    .choice-list { display: grid; gap: 6px; }
+    .choice-option, .check-option { display: flex; align-items: center; gap: 8px; color: #665e72; font-size: 12px; cursor: pointer; }
+    .choice-option input, .check-option input { flex: none; width: 17px; height: 17px; accent-color: #775ec5; }
+    .media-slots { display: grid; gap: 10px; margin-top: 14px; }
+    .media-slot {
+      min-height: 108px;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      text-align: center;
+      color: #7e7489;
+      border: 1px dashed rgba(118, 91, 163, .30);
+      border-radius: 16px;
+      background: rgba(245, 239, 249, .64);
+    }
+    .media-slot-icon { display: block; margin-bottom: 5px; font-size: 23px; }
+    .media-slot small { display: block; margin-top: 4px; color: #9a90a3; }
+    .stage-activity { margin-top: 14px; padding: 14px; border-radius: 16px; background: linear-gradient(135deg, rgba(236, 225, 248, .86), rgba(229, 241, 247, .86)); }
+    .stage-activity strong { display: block; color: #5f4978; }
+    .stage-activity p { margin: 5px 0 0; color: #696174; }
+    .stage-complete-button { width: auto; min-width: 185px; padding: 0 18px; font-size: 13px; }
+    .stage-complete-button.done { color: #39775f; background: rgba(222, 244, 233, .90); box-shadow: none; cursor: default; }
+    .coaching-form-placeholder { display: none; }
+    .coaching-messages { min-height: 190px; place-content: center; text-align: center; }
+    .coaching-messages .msg { align-self: center; text-align: center; }
+    .checkpoint-avatar { width: 82px; height: 102px; margin: 0 auto 2px; object-fit: contain; filter: drop-shadow(0 0 20px rgba(153, 104, 190, .36)); animation: hover 4.4s ease-in-out infinite; }
+    .coaching-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-top: 1px solid rgba(142, 109, 181, .14); background: rgba(245, 240, 249, .82); }
+    .coaching-actions span { color: var(--muted); font-size: 11px; }
+    .coaching-actions button { width: auto; min-width: 130px; padding: 0 16px; font-size: 13px; }
+
+    @media (max-width: 900px) {
+      .phone-shell.mode-lesson .planet-stage { max-height: 340px; }
+      .stage-path-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 520px) {
+      .course-coach { align-items: flex-start; }
+      .course-coach img { width: 76px; height: 94px; }
+      .stage-header { gap: 8px; }
+      .stage-header h2 { font-size: 19px; }
+      .stage-path-list { grid-template-columns: 1fr; }
+      .coaching-actions { flex-direction: column; align-items: stretch; text-align: center; }
+      .coaching-actions button { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -781,22 +945,37 @@
 
     <section id="planetStage" class="planet-stage" aria-live="polite">
       <div class="planet-card">
-        <button id="planetButton" class="planet-orb" type="button" aria-label="شروع آموزش">
-          <span id="planetName" class="planet-name">سیاره آموزش</span>
-        </button>
-        <h2 id="planetTitle" class="planet-title">سیاره اختصاصی تو آماده است</h2>
-        <p id="planetCopy" class="planet-copy">روی سیاره کلیک کن تا آموزش همان حوزه شروع شود.</p>
-        <button id="planetStart" class="planet-cta" type="button">شروع آموزش</button>
+        <div class="course-coach">
+          <img src="/landing-static/zito-mascot.svg" alt="زیتو، همراه مسیر یادگیری">
+          <div class="coach-bubble">
+            <strong>زیتو کنار توست</strong>
+            <p id="coachMessage">چه دوره‌ای می‌خواهی انتخاب کنی؟</p>
+          </div>
+        </div>
+
+        <section id="courseCatalog" class="course-catalog">
+          <span class="section-kicker">انتخاب مسیر</span>
+          <h2 class="planet-title">کدام دوره را شروع کنیم؟</h2>
+          <p class="planet-copy">محتوای هر دوره از نسخه منتشرشده و تاییدشده خوانده می‌شود.</p>
+          <div id="courseList" class="course-list"></div>
+        </section>
+
+        <section id="learningPath" class="learning-path" hidden>
+          <div class="path-course-head">
+            <span class="section-kicker">دوره فعال</span>
+            <h2 id="activeCourseTitle">مسیر آموزشی</h2>
+            <div id="pathProgressText" class="path-progress-text">۰ از ۲۰ مرحله</div>
+            <div class="meter"><div id="pathProgressBar" class="bar" style="width: 0%"></div></div>
+          </div>
+          <div id="stagePathList" class="stage-path-list" aria-label="مراحل دوره"></div>
+        </section>
       </div>
     </section>
 
     <aside id="lessonPanel" class="lesson-dock empty">
       <div>
-        <div class="lesson-avatar" aria-hidden="true">
-          <img src="/landing-static/zito-mascot.svg" alt="">
-        </div>
         <div class="lesson-empty-title">پنل آموزش زیتو</div>
-        <p class="lesson-empty-copy">بعد از انتخاب مسیر، درس و تمرین اینجا نمایش داده می‌شود تا چت فقط برای پاسخ و سوال‌های تو بماند.</p>
+        <p class="lesson-empty-copy">بعد از انتخاب دوره، محتوای ۲۰ مرحله‌ای همین‌جا نمایش داده می‌شود.</p>
       </div>
     </aside>
   </main>
@@ -805,61 +984,16 @@
     <section class="modal-chat" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-head">
         <div>
-          <div id="modalTitle" class="modal-title">پاسخ تمرین</div>
-          <div class="subtitle">اینجا فقط جواب یا سوال همین مرحله را بنویس.</div>
+          <div id="modalTitle" class="modal-title">ایستگاه کوچینگ زیتو</div>
+          <div class="subtitle">زیتو بعد از هر مرحله برای پرسش و مرور کنار تو می‌ماند.</div>
         </div>
         <button id="modalClose" class="modal-close" type="button" aria-label="بستن">×</button>
       </div>
-      <div id="modalMessages" class="modal-messages"></div>
-      <form id="modalForm" class="modal-form">
-        <input id="modalInput" autocomplete="off" placeholder="جواب تمرین را بنویس..." />
-        <button id="modalSend" type="submit" aria-label="ارسال">›</button>
-      </form>
-    </section>
-  </div>
-
-  <div id="profileModal" class="answer-modal" aria-hidden="true">
-    <section class="modal-chat" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
-      <div class="modal-head">
-        <div>
-          <div id="profileTitle" class="modal-title">ساخت پروفایل یادگیری</div>
-          <div class="subtitle">این اطلاعات بدون بررسی AI ذخیره می‌شود و مسیر آموزشی تو را آماده می‌کند.</div>
-        </div>
+      <div id="modalMessages" class="modal-messages coaching-messages"></div>
+      <div class="coaching-actions">
+        <span>کوچینگ هوشمند در اسپرینت بعدی فعال می‌شود.</span>
+        <button id="coachContinue" type="button">ادامه مسیر</button>
       </div>
-      <form id="profileForm" class="profile-form">
-        <div class="profile-grid">
-          <div class="profile-field">
-            <label for="profileName">نام و نام خانوادگی</label>
-            <input id="profileName" autocomplete="name" required placeholder="مثلا امیر مسعود" />
-          </div>
-          <div class="profile-field">
-            <label for="profileDomain">حوزه کاری</label>
-            <input id="profileDomain" required placeholder="مثلا توسعه فردی" />
-          </div>
-          <div class="profile-field">
-            <label for="profileReferral">از کجا با زیتو آشنا شدی؟</label>
-            <input id="profileReferral" placeholder="مثلا اینستاگرام" />
-          </div>
-          <div class="profile-field">
-            <label for="profileMinutes">زمان مطالعه روزانه</label>
-            <input id="profileMinutes" type="number" min="5" max="600" required placeholder="30" />
-          </div>
-          <div class="profile-field full">
-            <label for="profileGoal">هدف یادگیری</label>
-            <input id="profileGoal" placeholder="مثلا استفاده بهتر از AI در کارم" />
-          </div>
-          <div class="profile-field">
-            <label for="profileLevel">سطح تجربه</label>
-            <input id="profileLevel" placeholder="مبتدی، متوسط، حرفه‌ای" />
-          </div>
-          <div class="profile-field">
-            <label for="profileStyle">سبک یادگیری ترجیحی</label>
-            <input id="profileStyle" placeholder="ویدیو، تمرین عملی، مطالعه" />
-          </div>
-        </div>
-        <div id="profileError" class="profile-error"></div>
-        <button id="profileSubmit" class="profile-submit" type="submit">ذخیره و شروع مسیر</button>
-      </form>
     </section>
   </div>
 
@@ -869,8 +1003,9 @@
     let profileBuilder = null;
     let stage = "onboarding";
     let selectedTrack = localStorage.getItem("zito_track") || "accounting";
+    let currentEnrollmentId = null;
+    let pendingNextStage = false;
     const savedDisplayName = localStorage.getItem("zito_display_name") || "";
-    let sessionUserId = null;
 
     const appShell = document.querySelector("#appShell");
     const welcomeTitle = document.querySelector("#welcomeTitle");
@@ -884,52 +1019,30 @@
     const typing = document.querySelector("#typing");
     const lessonPanel = document.querySelector("#lessonPanel");
     const planetStage = document.querySelector("#planetStage");
-    const planetButton = document.querySelector("#planetButton");
-    const planetStart = document.querySelector("#planetStart");
-    const planetName = document.querySelector("#planetName");
-    const planetTitle = document.querySelector("#planetTitle");
-    const planetCopy = document.querySelector("#planetCopy");
+    const coachMessage = document.querySelector("#coachMessage");
+    const courseCatalog = document.querySelector("#courseCatalog");
+    const courseList = document.querySelector("#courseList");
+    const learningPath = document.querySelector("#learningPath");
+    const activeCourseTitle = document.querySelector("#activeCourseTitle");
+    const pathProgressText = document.querySelector("#pathProgressText");
+    const pathProgressBar = document.querySelector("#pathProgressBar");
+    const stagePathList = document.querySelector("#stagePathList");
     const answerModal = document.querySelector("#answerModal");
     const modalMessages = document.querySelector("#modalMessages");
-    const modalForm = document.querySelector("#modalForm");
-    const modalInput = document.querySelector("#modalInput");
-    const modalSend = document.querySelector("#modalSend");
     const modalClose = document.querySelector("#modalClose");
-    const profileModal = document.querySelector("#profileModal");
-    const profileForm = document.querySelector("#profileForm");
-    const profileName = document.querySelector("#profileName");
-    const profileDomain = document.querySelector("#profileDomain");
-    const profileReferral = document.querySelector("#profileReferral");
-    const profileMinutes = document.querySelector("#profileMinutes");
-    const profileGoal = document.querySelector("#profileGoal");
-    const profileLevel = document.querySelector("#profileLevel");
-    const profileStyle = document.querySelector("#profileStyle");
-    const profileError = document.querySelector("#profileError");
-    const profileSubmit = document.querySelector("#profileSubmit");
+    const coachContinue = document.querySelector("#coachContinue");
 
     const TRACKS = {
       accounting: {
-        planet: "سیاره حسابداری",
-        title: "سیاره حسابداری آماده است",
-        copy: "اینجا مسیر هوش مصنوعی در حسابداری شروع می‌شود. روی سیاره کلیک کن تا وارد آموزش شوی.",
         colors: ["#8b5cff", "#236dff", "#38dfff"],
       },
       psychology: {
-        planet: "سیاره روانشناسی",
-        title: "سیاره روانشناسی آماده است",
-        copy: "اینجا مسیر هوش مصنوعی در روانشناسی شروع می‌شود. روی سیاره کلیک کن تا آموزش باز شود.",
         colors: ["#b45cff", "#6d4dff", "#37d6ff"],
       },
       law: {
-        planet: "سیاره حقوق",
-        title: "سیاره حقوق آماده است",
-        copy: "اینجا مسیر هوش مصنوعی در حقوق شروع می‌شود. روی سیاره کلیک کن تا آموزش را ببینی.",
         colors: ["#6b5cff", "#255fff", "#8dd6ff"],
       },
       personal_development: {
-        planet: "سیاره توسعه فردی",
-        title: "سیاره توسعه فردی آماده است",
-        copy: "مسیر اختصاصی تو آماده است. روی سیاره کلیک کن تا آموزش مرحله‌ای زیتو شروع شود.",
         colors: ["#9a5cff", "#2471ff", "#37e6ff"],
       },
     };
@@ -941,15 +1054,15 @@
       localStorage.removeItem("zito_track");
       localStorage.removeItem("zito_full_name");
       localStorage.removeItem("zito_display_name");
-      sessionUserId = null;
       userId = null;
       currentLesson = null;
+      currentEnrollmentId = null;
       profileBuilder = null;
       selectedTrack = "accounting";
       window.history.replaceState({}, "", "/app/");
     }
     function handleMissingUser(error) {
-      if (![401, 403, 404].includes(error.status)) return false;
+      if (![401, 403].includes(error.status)) return false;
       clearSavedSession();
       addMessage("نشست ورودت معتبر نیست یا حساب غیرفعال شده است. به صفحه ورود برمی‌گردی.");
       setTimeout(() => { window.location.href = "/"; }, 900);
@@ -991,7 +1104,7 @@
       return NaN;
     }
     function trackInfo() { return TRACKS[selectedTrack] || TRACKS.accounting; }
-    function applyPlanetTheme() {
+    function applyCourseTheme() {
       const info = trackInfo();
       const [a, b, c] = info.colors;
       planetStage.style.setProperty("--planet-a", a);
@@ -1000,30 +1113,86 @@
       lessonPanel.style.setProperty("--planet-a", a);
       lessonPanel.style.setProperty("--planet-b", b);
       lessonPanel.style.setProperty("--planet-c", c);
-      planetName.textContent = info.planet;
-      planetTitle.textContent = info.title;
-      planetCopy.textContent = info.copy;
     }
-    function showPlanet() {
-      stage = "planet";
-      setStatus("انتخاب سیاره");
-      applyPlanetTheme();
+    function renderCourseCatalog(courses) {
+      courseList.innerHTML = "";
+      if (!courses.length) {
+        courseList.innerHTML = '<div class="course-empty">فعلاً دوره منتشرشده و کامل برای شروع وجود ندارد.</div>';
+        return;
+      }
+      courses.forEach((course) => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "course-option";
+        option.innerHTML = `
+          <span class="course-orb-mini" aria-hidden="true"></span>
+          <span class="course-option-copy">
+            <strong>${escapeHtml(course.title)}</strong>
+            <span>${course.stage_count} مرحله · نسخه ${course.version_number}</span>
+          </span>
+          <span class="course-option-arrow" aria-hidden="true">‹</span>`;
+        option.addEventListener("click", () => selectCourse(course, option));
+        courseList.appendChild(option);
+      });
+    }
+    async function showCourseCatalog() {
+      stage = "course-selection";
+      currentLesson = null;
+      currentEnrollmentId = null;
+      courseCatalog.hidden = false;
+      learningPath.hidden = true;
+      coachMessage.textContent = "چه دوره‌ای می‌خواهی انتخاب کنی؟";
+      setStatus("انتخاب دوره");
       setMode("planet");
+      const courses = await api("/api/courses");
+      renderCourseCatalog(courses);
     }
-    function openAnswerModal() {
-      if (!currentLesson) return;
-      modalMessages.innerHTML = "";
-      addModalMessage(`تمرین این مرحله:\n${currentLesson.exercise}\n\n${currentLesson.check_question}`);
+    function renderLearningPath(path) {
+      currentEnrollmentId = path.enrollment_id;
+      selectedTrack = path.course_domain || "personal_development";
+      localStorage.setItem("zito_track", selectedTrack);
+      localStorage.setItem("zito_course_id", String(path.course_id));
+      localStorage.setItem("zito_course_version_id", String(path.course_version_id));
+      applyCourseTheme();
+      courseCatalog.hidden = true;
+      learningPath.hidden = false;
+      activeCourseTitle.textContent = path.course_title;
+      pathProgressText.textContent = `${path.completed_stage_count} از ${path.total_stage_count} مرحله · ${path.progress_percentage}٪`;
+      pathProgressBar.style.width = `${path.progress_percentage}%`;
+      stagePathList.innerHTML = path.stages.map((item) => {
+        const stateIcon = item.status === "completed" ? "✓" : item.is_current ? "●" : "○";
+        const stateClass = item.status === "completed" ? "completed" : item.is_current ? "current" : "locked";
+        return `<div class="path-stage ${stateClass}">
+          <span class="path-stage-number">${item.stage_number}</span>
+          <span class="path-stage-title">${escapeHtml(item.title)}</span>
+          <span class="path-stage-state" aria-hidden="true">${stateIcon}</span>
+        </div>`;
+      }).join("");
+      coachMessage.textContent = path.status === "completed"
+        ? "آفرین! این مسیر را کامل کردی. من برای مرور هم کنارت می‌مانم."
+        : `مرحله ${path.current_stage_number} آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`;
+    }
+    function showCoachingCheckpoint(result) {
+      pendingNextStage = true;
+      modalMessages.innerHTML = '<img class="checkpoint-avatar" src="/landing-static/zito-mascot.svg" alt="زیتو">';
+      const closing = result.course_completed
+        ? "مسیر ۲۰ مرحله‌ای را کامل کردی. آزمون نهایی و مدرک در اسپرینت مربوط به خودشان فعال می‌شوند."
+        : "فعلاً این ایستگاه نمایشی است؛ در اسپرینت بعدی پاسخ زنده با RAG دوره فعال می‌شود.";
+      addModalMessage(`${result.coaching.prompt}\n\n${closing}`);
+      coachContinue.textContent = result.course_completed ? "دیدن جمع‌بندی" : "ادامه مسیر";
       answerModal.classList.add("show");
       answerModal.setAttribute("aria-hidden", "false");
-      setTimeout(() => modalInput.focus(), 80);
     }
     function closeAnswerModal() {
       answerModal.classList.remove("show");
       answerModal.setAttribute("aria-hidden", "true");
-      modalInput.value = "";
     }
-    function setModalBusy(isBusy) { modalSend.disabled = isBusy; modalInput.disabled = isBusy; }
+    async function continueAfterCoaching() {
+      closeAnswerModal();
+      if (!pendingNextStage) return;
+      pendingNextStage = false;
+      await loadLearningStage();
+    }
     const PROFILE_STEPS = [
       {
         key: "work_or_study_field",
@@ -1120,12 +1289,12 @@
       setStatus("ذخیره پروفایل");
       const profile = await api("/api/me/profile");
       if (!profile.completed) throw new Error("پروفایل هنوز کامل نشده است.");
-      await enrollDefaultCourse();
       const firstName = firstNameOf(profile.display_name);
-      addMessage(`${firstName} عزیز، پروفایلت ذخیره شد و مسیر یادگیری اختصاصی‌ات آماده است. حالا سیاره آموزشی تو ظاهر می‌شود.`);
+      addMessage(`${firstName} عزیز، پروفایلت ذخیره شد. حالا دوره‌ای را که می‌خواهی شروع کنی انتخاب کن.`);
       localStorage.removeItem("zito_display_name");
       profileBuilder = null;
-      setTimeout(showPlanet, 650);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await showCourseCatalog();
     }
     async function submitProfileAnswer(value) {
       const step = PROFILE_STEPS[profileBuilder.stepIndex];
@@ -1146,51 +1315,108 @@
       }
       askCurrentProfileStep();
     }
-    function openProfileModal(profile = {}) {
-      profileName.value = profile.display_name || "";
-      profileDomain.value = profile.work_or_study_field || "";
-      profileReferral.value = profile.referral_source || "";
-      profileMinutes.value = profile.daily_learning_minutes || "";
-      profileGoal.value = profile.learning_goal_interests || "";
-      profileLevel.value = profile.ai_familiarity_level || "";
-      profileStyle.value = profile.preferred_career_path || "";
-      profileError.textContent = "";
-      profileModal.classList.add("show");
-      profileModal.setAttribute("aria-hidden", "false");
-      setTimeout(() => profileName.focus(), 80);
+    function renderContentBlock(block, blockIndex) {
+      const kind = block.kind || "paragraph";
+      const title = block.title ? `<h3>${escapeHtml(block.title)}</h3>` : "";
+      if (kind === "highlight" || kind === "paragraph") {
+        return `<section class="content-block block-${kind}">${title}<p>${escapeHtml(block.body || "")}</p></section>`;
+      }
+      if (["bullets", "steps", "timeline", "tips"].includes(kind)) {
+        const tag = kind === "steps" || kind === "timeline" ? "ol" : "ul";
+        return `<section class="content-block block-${kind}">${title}<${tag}>${(block.items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</${tag}></section>`;
+      }
+      if (kind === "cards") {
+        return `<section class="content-block">${title}<div class="block-cards">${(block.items || []).map((item) => `<article class="content-card"><strong>${escapeHtml(item.title || "نکته")}</strong><span>${escapeHtml(item.body || "")}</span></article>`).join("")}</div></section>`;
+      }
+      if (kind === "qa") {
+        return `<section class="content-block">${title}<div class="block-qa">${(block.items || []).map((item) => `<article class="qa-item"><strong>${escapeHtml(item.question || "")}</strong><span>${escapeHtml(item.answer || "")}</span></article>`).join("")}</div></section>`;
+      }
+      if (kind === "quiz") {
+        return `<section class="content-block">${title}${(block.items || []).map((item, questionIndex) => `<div class="quiz-item"><div class="quiz-question">${escapeHtml(item.question || "")}</div><div class="choice-list">${(item.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-choice-${blockIndex}-${questionIndex}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></div>`).join("")}</section>`;
+      }
+      if (kind === "scenario") {
+        return `<section class="content-block block-scenario">${title}<p>${escapeHtml(block.body || "")}</p><div class="choice-list">${(block.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-scenario-${blockIndex}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></section>`;
+      }
+      if (kind === "checklist") {
+        return `<section class="content-block">${title}<div class="choice-list">${(block.items || []).map((item) => `<label class="check-option"><input type="checkbox" value="${escapeHtml(item)}"><span>${escapeHtml(item)}</span></label>`).join("")}</div></section>`;
+      }
+      if (kind === "dialog") {
+        return `<section class="content-block">${title}<div class="block-dialog">${(block.items || []).map((item) => `<article class="dialog-item"><strong>${escapeHtml(item.speaker || "")}</strong><span>${escapeHtml(item.body || "")}</span></article>`).join("")}</div></section>`;
+      }
+      if (kind === "mistakes") {
+        return `<section class="content-block">${title}<div class="block-mistakes">${(block.items || []).map((item) => `<article class="mistake-item"><strong>${escapeHtml(item.mistake || "")}</strong><span>راه اصلاح: ${escapeHtml(item.correction || "")}</span></article>`).join("")}</div></section>`;
+      }
+      if (kind === "mind_map") {
+        return `<section class="content-block block-mind-map">${title}<div class="content-card"><strong>${escapeHtml(block.center || "موضوع مرکزی")}</strong><span>${(block.items || []).map((item) => escapeHtml(item)).join(" · ")}</span></div></section>`;
+      }
+      return `<section class="content-block">${title}<p>${escapeHtml(block.body || "محتوای این بخش در CMS تکمیل می‌شود.")}</p></section>`;
     }
-    function closeProfileModal() {
-      profileModal.classList.remove("show");
-      profileModal.setAttribute("aria-hidden", "true");
-    }
-    function setProfileBusy(isBusy) {
-      profileSubmit.disabled = isBusy;
-      [profileName, profileDomain, profileReferral, profileMinutes, profileGoal, profileLevel, profileStyle]
-        .forEach((field) => { field.disabled = isBusy; });
+
+    function renderMediaSlots(slots) {
+      if (!Array.isArray(slots) || !slots.length) return "";
+      const icons = { image: "▧", video: "▷", audio: "◖" };
+      return `<div class="media-slots">${slots.map((slot) => `<div class="media-slot" data-media-kind="${escapeHtml(slot.kind || "file")}"><div><span class="media-slot-icon" aria-hidden="true">${icons[slot.kind] || "□"}</span><strong>${escapeHtml(slot.label || "رسانه مرحله")}</strong><small>جایگاه آماده است؛ فایل بعداً از CMS منتشر می‌شود.</small></div></div>`).join("")}</div>`;
     }
 
     function renderLesson(lesson) {
       currentLesson = lesson;
       lessonPanel.classList.remove("empty");
-      const info = trackInfo();
+      const content = lesson.content || {};
+      const activity = content.activity || {};
+      const blocks = Array.isArray(content.blocks) ? content.blocks : [];
+      const completeLabel = lesson.course_completed ? "مسیر کامل شده است" : "تکمیل مرحله و ادامه";
       lessonPanel.innerHTML = `
-        <div class="lesson-head">
+        <header class="stage-header">
           <div>
+            <div class="stage-number">مرحله ${lesson.stage_number} از ${lesson.total_stage_count}</div>
             <h2>${escapeHtml(lesson.title)}</h2>
-            <div class="subtitle">درس فعال در ${escapeHtml(info.planet)}</div>
+            <div class="stage-type">قالب: ${escapeHtml(lesson.stage_type)}</div>
           </div>
-          <div class="lesson-planet-mini" aria-hidden="true">${escapeHtml(info.planet.replace("سیاره ", ""))}</div>
-        </div>
-        <div>${escapeHtml(lesson.lesson)}</div>
-        <ul>${lesson.key_points.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
-        <div class="label">تمرین مرحله</div><div>${escapeHtml(lesson.exercise)}</div>
-        <div class="label">راهنمای پاسخ</div><div>${escapeHtml(lesson.check_question)}</div>
-        <div class="meter"><div class="bar" style="width: ${lesson.percentage}%"></div></div>
+          <div class="stage-progress-badge">${lesson.progress_percentage}٪</div>
+        </header>
+        <p class="stage-intro">${escapeHtml(content.intro || "محتوای تاییدشده این مرحله آماده است.")}</p>
+        <div class="stage-content">${blocks.map(renderContentBlock).join("")}</div>
+        ${renderMediaSlots(content.media_slots)}
+        <section class="stage-activity">
+          <strong>${escapeHtml(activity.title || "خروجی مرحله")}</strong>
+          <p>${escapeHtml(activity.prompt || "وقتی مرور این مرحله تمام شد، مسیر را ادامه بده.")}</p>
+        </section>
+        <div class="meter"><div class="bar" style="width: ${lesson.progress_percentage}%"></div></div>
         <div class="lesson-actions">
-          <button class="lesson-action" type="button" data-open-answer>پاسخ به تمرین</button>
+          <button class="stage-complete-button ${lesson.course_completed ? "done" : ""}" type="button" data-complete-stage ${lesson.course_completed ? "disabled" : ""}>${completeLabel}</button>
         </div>`;
-      lessonPanel.querySelector("[data-open-answer]").addEventListener("click", openAnswerModal);
+      const completeButton = lessonPanel.querySelector("[data-complete-stage]");
+      if (!lesson.course_completed) completeButton.addEventListener("click", completeCurrentStage);
+      coachMessage.textContent = lesson.course_completed
+        ? "این دوره کامل شده؛ هر زمان خواستی می‌توانی مرحله‌ها را مرور کنی."
+        : `من در تمام مرحله ${lesson.stage_number} کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`;
       lessonPanel.scrollTop = 0;
+    }
+
+    function collectStageResponse() {
+      const selected = Array.from(lessonPanel.querySelectorAll("input:checked")).map((item) => item.value);
+      return selected.length ? { selected_items: selected } : null;
+    }
+
+    async function completeCurrentStage() {
+      if (!currentLesson || currentLesson.course_completed) return;
+      const completeButton = lessonPanel.querySelector("[data-complete-stage]");
+      completeButton.disabled = true;
+      completeButton.textContent = "در حال ثبت...";
+      try {
+        const response = collectStageResponse();
+        const result = await api(`/api/learning/enrollments/${currentEnrollmentId}/stages/${currentLesson.stage_number}/complete`, {
+          method: "POST",
+          body: JSON.stringify({ response }),
+        });
+        renderLearningPath(result.path);
+        setStatus(result.course_completed ? "مسیر کامل شد" : `مرحله ${result.next_stage_number} آماده است`);
+        showCoachingCheckpoint(result);
+      } catch (error) {
+        completeButton.disabled = false;
+        completeButton.textContent = "تکمیل مرحله و ادامه";
+        coachMessage.textContent = error.message;
+      }
     }
 
     async function api(url, options = {}) {
@@ -1222,7 +1448,6 @@
       try {
         const me = await api("/api/me");
         userId = me.id;
-        sessionUserId = String(me.id);
         localStorage.setItem("zito_display_name", me.display_name);
         personalizeWelcome(me.display_name);
         await startPhase2();
@@ -1247,48 +1472,51 @@
         startProfileChat(profile);
         return;
       }
-      selectedTrack = "personal_development";
-      localStorage.setItem("zito_track", selectedTrack);
-      await enrollDefaultCourse();
-      showPlanet();
+      const resumed = await restoreLearningPath();
+      if (!resumed) await showCourseCatalog();
     }
 
-    async function enrollDefaultCourse() {
-      const courses = await api("/api/courses");
-      if (!courses.length) throw new Error("فعلا دوره منتشرشده‌ای برای شروع پیدا نشد.");
-      const course = courses[0];
-      selectedTrack = course.domain || "personal_development";
-      localStorage.setItem("zito_track", selectedTrack);
-      localStorage.setItem("zito_course_id", String(course.id));
-      localStorage.setItem("zito_course_version_id", String(course.version_id));
-      await api(`/api/courses/${course.id}/enroll`, { method: "POST" });
+    async function restoreLearningPath() {
+      try {
+        const path = await api("/api/learning/enrollments/current");
+        renderLearningPath(path);
+        await loadLearningStage();
+        return true;
+      } catch (error) {
+        if (error.status === 404) return false;
+        throw error;
+      }
     }
 
-    async function loadLesson() {
+    async function selectCourse(course, option) {
+      courseList.querySelectorAll("button").forEach((buttonItem) => { buttonItem.disabled = true; });
+      option.querySelector(".course-option-arrow").textContent = "…";
+      try {
+        selectedTrack = course.domain || "personal_development";
+        localStorage.setItem("zito_track", selectedTrack);
+        const enrollment = await api(`/api/courses/${course.id}/enroll`, { method: "POST" });
+        currentEnrollmentId = enrollment.id;
+        const path = await api(`/api/learning/enrollments/${enrollment.id}`);
+        renderLearningPath(path);
+        await loadLearningStage();
+      } catch (error) {
+        coachMessage.textContent = error.message;
+        courseList.querySelectorAll("button").forEach((buttonItem) => { buttonItem.disabled = false; });
+        option.querySelector(".course-option-arrow").textContent = "‹";
+      }
+    }
+
+    async function loadLearningStage() {
+      if (!currentEnrollmentId) {
+        const path = await api("/api/learning/enrollments/current");
+        renderLearningPath(path);
+      }
       stage = "training";
       setMode("lesson");
-      applyPlanetTheme();
+      applyCourseTheme();
       setStatus("آموزش فعال");
-      const lesson = await api(`/api/training/${userId}/lesson`, { method: "POST" });
+      const lesson = await api(`/api/learning/enrollments/${currentEnrollmentId}/stages/current`);
       renderLesson(lesson);
-    }
-
-    async function submitTrainingMessage(value) {
-      if (!currentLesson) { await loadLesson(); return; }
-      const data = await api(`/api/training/${userId}/message`, { method: "POST", body: JSON.stringify({ lesson: currentLesson.lesson, check_question: currentLesson.check_question, message: value }) });
-      if (data.kind === "next_lesson") {
-        addModalMessage(data.message);
-        renderLesson(data.lesson);
-        setTimeout(closeAnswerModal, 720);
-        return;
-      }
-      if (data.kind === "complete") {
-        setStatus("مسیر کامل شد");
-        addModalMessage(data.message);
-        setTimeout(closeAnswerModal, 900);
-        return;
-      }
-      addModalMessage(data.message);
     }
 
     form.addEventListener("submit", async (event) => {
@@ -1306,63 +1534,10 @@
       finally { setBusy(false); input.focus(); }
     });
 
-    async function beginLesson() {
-      if (stage === "training" && currentLesson) {
-        setMode("lesson");
-        return;
-      }
-      planetStart.disabled = true;
-      planetButton.disabled = true;
-      try { await loadLesson(); }
-      catch (error) {
-        if (!handleMissingUser(error)) {
-          showPlanet();
-          planetCopy.textContent = error.message;
-        }
-      }
-      finally { planetStart.disabled = false; planetButton.disabled = false; }
-    }
-
-    planetButton.addEventListener("click", beginLesson);
-    planetStart.addEventListener("click", beginLesson);
-    modalClose.addEventListener("click", closeAnswerModal);
-    answerModal.addEventListener("click", (event) => { if (event.target === answerModal) closeAnswerModal(); });
-    profileForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      profileError.textContent = "";
-      setProfileBusy(true);
-      try {
-        await api("/api/me/profile", {
-          method: "PATCH",
-          body: JSON.stringify({
-            work_or_study_field: profileDomain.value.trim(),
-            referral_source: profileReferral.value.trim() || null,
-            daily_learning_minutes: Number(profileMinutes.value),
-            learning_goal_interests: profileGoal.value.trim() || null,
-            ai_familiarity_level: profileLevel.value.trim() || null,
-            preferred_career_path: profileStyle.value.trim() || null,
-          }),
-        });
-        await enrollDefaultCourse();
-        closeProfileModal();
-        addMessage("پروفایل ذخیره شد و مسیر یادگیریت آماده است. حالا سیاره اختصاصی تو ظاهر می‌شود.");
-        showPlanet();
-      } catch (error) {
-        if (!handleMissingUser(error)) profileError.textContent = error.message;
-      } finally {
-        setProfileBusy(false);
-      }
-    });
-    modalForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const value = modalInput.value.trim();
-      if (!value) return;
-      addModalMessage(value, "user");
-      modalInput.value = "";
-      setModalBusy(true);
-      try { await submitTrainingMessage(value); }
-      catch (error) { if (!handleMissingUser(error)) addModalMessage(error.message); }
-      finally { setModalBusy(false); modalInput.focus(); }
+    modalClose.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
+    coachContinue.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
+    answerModal.addEventListener("click", (event) => {
+      if (event.target === answerModal) continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; });
     });
 
     start().catch((error) => addMessage(error.message));

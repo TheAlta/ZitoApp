@@ -3,11 +3,10 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session, selectinload
 
 from src.db import get_db
-from src.lib.arvan_client import ArvanAIError
 from src.models import (
     Course,
     CourseStageContent,
@@ -15,22 +14,25 @@ from src.models import (
     User,
     UserCourseEnrollment,
     UserProfile,
+    UserStageProgress,
 )
 from src.schemas import (
     AdminLoginIn,
     AdminLoginOut,
+    CoachingCheckpointOut,
     CourseOut,
     EnrollmentOut,
+    LearningPathOut,
+    LearningStageOut,
+    LearningStageSummaryOut,
     OtpRequestIn,
     OtpRequestOut,
     OtpVerifyIn,
     PhoneLoginOut,
     ProfileOut,
     ProfilePatchIn,
-    TrainingAnswerIn,
-    TrainingLessonOut,
-    TrainingMessageIn,
-    TrainingQuestionIn,
+    StageCompleteIn,
+    StageCompleteOut,
     UserMeOut,
     UserOut,
 )
@@ -47,12 +49,10 @@ from src.security import (
     set_admin_cookie,
     set_user_cookie,
 )
-from src.services.rag import build_user_context
 from src.services.otp import OtpError, OtpRateLimitError, normalize_otp_code, request_otp, verify_otp
-from src.services.training import answer_training_question, generate_lesson, looks_like_question
-from src.services.validation import evaluate_training_answer, validate_training_question
 
 router = APIRouter()
+LEARNING_STAGE_COUNT = 20
 
 _PHONE_DIGIT_TRANSLATION = str.maketrans(
     "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩",
@@ -157,6 +157,16 @@ def _course_out(course: Course) -> CourseOut | None:
     version = _published_version_for(course)
     if not version:
         return None
+    approved_stages = sorted(
+        (
+            stage
+            for stage in version.stages
+            if stage.status == "approved" and stage.review_status == "approved"
+        ),
+        key=lambda stage: stage.stage_number,
+    )
+    if [stage.stage_number for stage in approved_stages] != list(range(1, LEARNING_STAGE_COUNT + 1)):
+        return None
     return CourseOut(
         id=course.id,
         title=course.title,
@@ -164,39 +174,178 @@ def _course_out(course: Course) -> CourseOut | None:
         domain=course.domain,
         version_id=version.id,
         version_number=version.version_number,
-        stage_count=len([stage for stage in version.stages if stage.status == "approved"]),
+        stage_count=len(approved_stages),
     )
 
 
-def _active_enrollment(db: Session, user_id: int) -> UserCourseEnrollment:
+def _approved_stages(db: Session, course_version_id: int) -> list[CourseStageContent]:
+    stages = db.scalars(
+        select(CourseStageContent)
+        .where(
+            CourseStageContent.course_version_id == course_version_id,
+            CourseStageContent.status == "approved",
+            CourseStageContent.review_status == "approved",
+        )
+        .order_by(CourseStageContent.stage_number)
+    ).all()
+    if [stage.stage_number for stage in stages] != list(range(1, LEARNING_STAGE_COUNT + 1)):
+        raise HTTPException(
+            status_code=409,
+            detail="نسخه منتشرشده دوره باید دقیقاً ۲۰ مرحله تاییدشده و پیوسته داشته باشد.",
+        )
+    return list(stages)
+
+
+def _validate_enrollment_version(db: Session, enrollment: UserCourseEnrollment) -> None:
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not version or version.course_id != enrollment.course_id:
+        raise HTTPException(status_code=409, detail="نسخه دوره با ثبت‌نام کاربر همخوانی ندارد.")
+
+
+def _owned_enrollment(
+    db: Session,
+    enrollment_id: int,
+    user_id: int,
+    *,
+    for_update: bool = False,
+) -> UserCourseEnrollment:
+    statement = select(UserCourseEnrollment).where(
+        UserCourseEnrollment.id == enrollment_id,
+        UserCourseEnrollment.user_id == user_id,
+    )
+    if for_update:
+        statement = statement.with_for_update()
+    enrollment = db.scalars(statement).first()
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="مسیر آموزشی پیدا نشد.")
+    _validate_enrollment_version(db, enrollment)
+    return enrollment
+
+
+def _current_enrollment(db: Session, user_id: int) -> UserCourseEnrollment:
     enrollment = db.scalars(
         select(UserCourseEnrollment)
         .where(
             UserCourseEnrollment.user_id == user_id,
             UserCourseEnrollment.status.in_(("active", "completed")),
         )
-        .order_by(UserCourseEnrollment.id.desc())
+        .order_by(UserCourseEnrollment.updated_at.desc(), UserCourseEnrollment.id.desc())
         .limit(1)
     ).first()
     if not enrollment:
-        raise HTTPException(status_code=409, detail="Enroll in a published course before starting training.")
+        raise HTTPException(status_code=404, detail="هنوز دوره‌ای انتخاب نکرده‌ای.")
+    _validate_enrollment_version(db, enrollment)
     return enrollment
 
 
-def _advance_enrollment(db: Session, enrollment: UserCourseEnrollment) -> None:
-    stage_count = db.scalar(
-        select(func.count(CourseStageContent.id)).where(
-            CourseStageContent.course_version_id == enrollment.course_version_id,
-            CourseStageContent.status == "approved",
+def _ensure_stage_progress(
+    db: Session,
+    enrollment: UserCourseEnrollment,
+    stages: list[CourseStageContent],
+) -> list[UserStageProgress]:
+    progress_by_number = {
+        progress.stage_number: progress
+        for progress in db.scalars(
+            select(UserStageProgress)
+            .where(UserStageProgress.enrollment_id == enrollment.id)
+            .order_by(UserStageProgress.stage_number)
+        ).all()
+    }
+    legacy_completed_through = (
+        LEARNING_STAGE_COUNT
+        if enrollment.status == "completed"
+        else max(0, min(enrollment.current_stage_number - 1, LEARNING_STAGE_COUNT))
+    )
+    for stage in stages:
+        if stage.stage_number in progress_by_number:
+            continue
+        if stage.stage_number <= legacy_completed_through:
+            status = "completed"
+        elif stage.stage_number == legacy_completed_through + 1:
+            status = "available"
+        else:
+            status = "locked"
+        progress = UserStageProgress(
+            enrollment_id=enrollment.id,
+            stage_number=stage.stage_number,
+            status=status,
+            completed_at=enrollment.updated_at if status == "completed" else None,
         )
-    ) or 1
-    completed_stage = min(enrollment.current_stage_number, stage_count)
-    enrollment.progress_percentage = min(100, round(completed_stage * 100 / stage_count))
-    if completed_stage >= stage_count:
+        db.add(progress)
+        progress_by_number[stage.stage_number] = progress
+    db.flush()
+    return [progress_by_number[stage.stage_number] for stage in stages]
+
+
+def _sync_enrollment_progress(
+    enrollment: UserCourseEnrollment,
+    progress_rows: list[UserStageProgress],
+) -> None:
+    completed_count = len([row for row in progress_rows if row.status == "completed"])
+    enrollment.progress_percentage = round(completed_count * 100 / LEARNING_STAGE_COUNT)
+    if completed_count == LEARNING_STAGE_COUNT:
         enrollment.status = "completed"
-        enrollment.completed_at = datetime.now(timezone.utc)
-    else:
-        enrollment.current_stage_number = completed_stage + 1
+        enrollment.current_stage_number = LEARNING_STAGE_COUNT
+        enrollment.completed_at = enrollment.completed_at or datetime.now(timezone.utc)
+        return
+
+    next_row = next(row for row in progress_rows if row.status != "completed")
+    enrollment.status = "active"
+    enrollment.current_stage_number = next_row.stage_number
+    enrollment.completed_at = None
+    if next_row.status in ("locked", "not_started"):
+        next_row.status = "available"
+
+
+def _learning_path_out(
+    db: Session,
+    enrollment: UserCourseEnrollment,
+    stages: list[CourseStageContent],
+    progress_rows: list[UserStageProgress],
+) -> LearningPathOut:
+    course = db.get(Course, enrollment.course_id)
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not course or not version:
+        raise HTTPException(status_code=409, detail="اطلاعات دوره این ثبت‌نام ناقص است.")
+    if version.course_id != course.id:
+        raise HTTPException(status_code=409, detail="نسخه دوره با ثبت‌نام کاربر همخوانی ندارد.")
+    progress_by_number = {row.stage_number: row for row in progress_rows}
+    completed_count = len([row for row in progress_rows if row.status == "completed"])
+    return LearningPathOut(
+        enrollment_id=enrollment.id,
+        course_id=course.id,
+        course_title=course.title,
+        course_slug=course.slug,
+        course_domain=course.domain,
+        course_version_id=version.id,
+        course_version_number=version.version_number,
+        status=enrollment.status,
+        current_stage_number=enrollment.current_stage_number,
+        completed_stage_count=completed_count,
+        total_stage_count=LEARNING_STAGE_COUNT,
+        progress_percentage=enrollment.progress_percentage,
+        stages=[
+            LearningStageSummaryOut(
+                stage_number=stage.stage_number,
+                stage_type=stage.stage_type,
+                title=stage.title,
+                status=progress_by_number[stage.stage_number].status,
+                is_current=(
+                    enrollment.status != "completed"
+                    and stage.stage_number == enrollment.current_stage_number
+                ),
+            )
+            for stage in stages
+        ],
+    )
+
+
+def _coaching_checkpoint(content: dict, course_completed: bool = False) -> CoachingCheckpointOut:
+    checkpoint = content.get("coaching_checkpoint") if isinstance(content, dict) else None
+    prompt = "مسیر را کامل کردی؛ درباره جمع‌بندی سوالی داری؟" if course_completed else "درباره این مرحله سوالی داری؟"
+    if isinstance(checkpoint, dict) and checkpoint.get("prompt"):
+        prompt = str(checkpoint["prompt"])
+    return CoachingCheckpointOut(prompt=prompt, enabled=False, mode="preview")
 
 
 @router.get("/health")
@@ -376,6 +525,7 @@ def enroll_course(
     version = _published_version_for(course)
     if not version:
         raise HTTPException(status_code=409, detail="Course does not have a published version.")
+    stages = _approved_stages(db, version.id)
 
     enrollment = db.scalars(
         select(UserCourseEnrollment).where(
@@ -393,8 +543,12 @@ def enroll_course(
             progress_percentage=0,
         )
         db.add(enrollment)
-        db.commit()
-        db.refresh(enrollment)
+        db.flush()
+
+    progress_rows = _ensure_stage_progress(db, enrollment, stages)
+    _sync_enrollment_progress(enrollment, progress_rows)
+    db.commit()
+    db.refresh(enrollment)
 
     return EnrollmentOut(
         id=enrollment.id,
@@ -404,6 +558,125 @@ def enroll_course(
         status=enrollment.status,
         current_stage_number=enrollment.current_stage_number,
         progress_percentage=enrollment.progress_percentage,
+    )
+
+
+@router.get("/api/learning/enrollments/current", response_model=LearningPathOut)
+def get_current_learning_path(
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> LearningPathOut:
+    enrollment = _current_enrollment(db, user.id)
+    stages = _approved_stages(db, enrollment.course_version_id)
+    progress_rows = _ensure_stage_progress(db, enrollment, stages)
+    _sync_enrollment_progress(enrollment, progress_rows)
+    db.commit()
+    return _learning_path_out(db, enrollment, stages, progress_rows)
+
+
+@router.get("/api/learning/enrollments/{enrollment_id}", response_model=LearningPathOut)
+def get_learning_path(
+    enrollment_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> LearningPathOut:
+    enrollment = _owned_enrollment(db, enrollment_id, user.id)
+    stages = _approved_stages(db, enrollment.course_version_id)
+    progress_rows = _ensure_stage_progress(db, enrollment, stages)
+    _sync_enrollment_progress(enrollment, progress_rows)
+    db.commit()
+    return _learning_path_out(db, enrollment, stages, progress_rows)
+
+
+@router.get(
+    "/api/learning/enrollments/{enrollment_id}/stages/current",
+    response_model=LearningStageOut,
+)
+def get_current_learning_stage(
+    enrollment_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> LearningStageOut:
+    enrollment = _owned_enrollment(db, enrollment_id, user.id)
+    stages = _approved_stages(db, enrollment.course_version_id)
+    progress_rows = _ensure_stage_progress(db, enrollment, stages)
+    _sync_enrollment_progress(enrollment, progress_rows)
+    db.commit()
+
+    stage_number = LEARNING_STAGE_COUNT if enrollment.status == "completed" else enrollment.current_stage_number
+    stage = next(stage for stage in stages if stage.stage_number == stage_number)
+    progress = next(row for row in progress_rows if row.stage_number == stage_number)
+    course = db.get(Course, enrollment.course_id)
+    if not course:
+        raise HTTPException(status_code=409, detail="دوره این مسیر آموزشی پیدا نشد.")
+    content = stage.content_json if isinstance(stage.content_json, dict) else {}
+    return LearningStageOut(
+        enrollment_id=enrollment.id,
+        course_id=course.id,
+        course_title=course.title,
+        stage_number=stage.stage_number,
+        stage_type=stage.stage_type,
+        title=stage.title,
+        progress_status=progress.status,
+        progress_percentage=enrollment.progress_percentage,
+        total_stage_count=LEARNING_STAGE_COUNT,
+        course_completed=enrollment.status == "completed",
+        content=content,
+        coaching=_coaching_checkpoint(content, enrollment.status == "completed"),
+    )
+
+
+@router.post(
+    "/api/learning/enrollments/{enrollment_id}/stages/{stage_number}/complete",
+    response_model=StageCompleteOut,
+)
+def complete_learning_stage(
+    enrollment_id: int,
+    stage_number: int,
+    payload: StageCompleteIn | None = None,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> StageCompleteOut:
+    enrollment = _owned_enrollment(db, enrollment_id, user.id, for_update=True)
+    stages = _approved_stages(db, enrollment.course_version_id)
+    stage = next((item for item in stages if item.stage_number == stage_number), None)
+    if not stage:
+        raise HTTPException(status_code=404, detail="مرحله آموزشی پیدا نشد.")
+
+    progress_rows = _ensure_stage_progress(db, enrollment, stages)
+    _sync_enrollment_progress(enrollment, progress_rows)
+    progress = next(row for row in progress_rows if row.stage_number == stage_number)
+
+    if progress.status != "completed" and stage_number != enrollment.current_stage_number:
+        raise HTTPException(
+            status_code=409,
+            detail=f"ابتدا مرحله {enrollment.current_stage_number} را کامل کن.",
+        )
+
+    if progress.status != "completed":
+        progress.status = "completed"
+        progress.completed_at = datetime.now(timezone.utc)
+        if payload and payload.response is not None:
+            progress.response_json = payload.response
+        if stage_number < LEARNING_STAGE_COUNT:
+            next_progress = next(row for row in progress_rows if row.stage_number == stage_number + 1)
+            if next_progress.status in ("locked", "not_started"):
+                next_progress.status = "available"
+        _sync_enrollment_progress(enrollment, progress_rows)
+        db.commit()
+        db.refresh(enrollment)
+
+    path = _learning_path_out(db, enrollment, stages, progress_rows)
+    course_completed = enrollment.status == "completed"
+    content = stage.content_json if isinstance(stage.content_json, dict) else {}
+    return StageCompleteOut(
+        enrollment_id=enrollment.id,
+        completed_stage_number=stage_number,
+        next_stage_number=None if course_completed else enrollment.current_stage_number,
+        course_completed=course_completed,
+        progress_percentage=enrollment.progress_percentage,
+        coaching=_coaching_checkpoint(content, course_completed),
+        path=path,
     )
 
 
@@ -453,188 +726,4 @@ def restore_user(user_id: int, db: Session = Depends(get_db)) -> dict:
     user.deleted_at = None
     db.commit()
     return {"restored": True}
-
-
-@router.post("/api/training/{user_id}/lesson", response_model=TrainingLessonOut)
-async def create_lesson(
-    user_id: int,
-    current_user: User = Depends(require_user),
-    db: Session = Depends(get_db),
-) -> TrainingLessonOut:
-    if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="You cannot access another user.")
-    user = db.get(
-        User,
-        user_id,
-        options=[selectinload(User.profile)],
-    )
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    enrollment = _active_enrollment(db, user.id)
-
-    try:
-        lesson = await generate_lesson(db, user, enrollment)
-    except (ArvanAIError, ValueError) as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    return TrainingLessonOut(
-        title=str(lesson.get("title") or "درس Zito"),
-        lesson=str(lesson.get("lesson") or ""),
-        key_points=[str(item) for item in lesson.get("key_points", [])],
-        exercise=str(lesson.get("exercise") or ""),
-        check_question=str(lesson.get("check_question") or ""),
-        percentage=enrollment.progress_percentage,
-    )
-
-
-@router.post("/api/training/{user_id}/question")
-async def ask_training_question(
-    user_id: int,
-    payload: TrainingQuestionIn,
-    current_user: User = Depends(require_user),
-    db: Session = Depends(get_db),
-) -> dict:
-    if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="You cannot access another user.")
-    user = db.get(User, user_id, options=[selectinload(User.profile)])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    enrollment = _active_enrollment(db, user.id)
-
-    user_context = build_user_context(user)
-    try:
-        validation = await validate_training_question(payload.question, user_context)
-    except (ArvanAIError, ValueError) as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    if not validation["valid"]:
-        return {
-            "valid": False,
-            "reason": validation["reason"],
-            "guidance": "سوالت را واضح تر و مرتبط با مسیر آموزشی یا حرفه ات بپرس.",
-        }
-
-    try:
-        answer = await answer_training_question(db, user, enrollment, payload.question)
-    except ArvanAIError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return {"valid": True, "answer": answer}
-
-
-@router.post("/api/training/{user_id}/answer")
-async def submit_training_answer(
-    user_id: int,
-    payload: TrainingAnswerIn,
-    current_user: User = Depends(require_user),
-    db: Session = Depends(get_db),
-) -> dict:
-    if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="You cannot access another user.")
-    user = db.get(User, user_id, options=[selectinload(User.profile)])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    enrollment = _active_enrollment(db, user.id)
-
-    try:
-        evaluation = await evaluate_training_answer(payload.lesson, payload.check_question, payload.answer_text)
-    except (ArvanAIError, ValueError) as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    if evaluation["passed"]:
-        _advance_enrollment(db, enrollment)
-        db.commit()
-
-    return {
-        "passed": evaluation["passed"],
-        "feedback": evaluation["feedback"],
-        "score": evaluation["score"],
-        "percentage": enrollment.progress_percentage,
-        "current_step": enrollment.current_stage_number,
-    }
-
-
-@router.post("/api/training/{user_id}/message")
-async def submit_training_message(
-    user_id: int,
-    payload: TrainingMessageIn,
-    current_user: User = Depends(require_user),
-    db: Session = Depends(get_db),
-) -> dict:
-    if current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="You cannot access another user.")
-    user = db.get(
-        User,
-        user_id,
-        options=[selectinload(User.profile)],
-    )
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    enrollment = _active_enrollment(db, user.id)
-
-    if looks_like_question(payload.message):
-        user_context = build_user_context(user)
-        try:
-            validation = await validate_training_question(payload.message, user_context)
-        except (ArvanAIError, ValueError) as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-        if not validation["valid"]:
-            return {
-                "kind": "retry",
-                "message": "سوالت را کمی روشن تر و مرتبط با حسابداری، روانشناسی یا حقوق در کاربرد هوش مصنوعی بپرس.",
-                "percentage": enrollment.progress_percentage,
-            }
-
-        try:
-            answer = await answer_training_question(db, user, enrollment, payload.message)
-        except ArvanAIError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-        return {
-            "kind": "answer",
-            "message": f"{answer}\n\nهر وقت آماده بودی، جواب تمرین همین درس را بنویس.",
-            "percentage": enrollment.progress_percentage,
-        }
-
-    try:
-        evaluation = await evaluate_training_answer(payload.lesson, payload.check_question, payload.message)
-    except (ArvanAIError, ValueError) as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    if not evaluation["passed"]:
-        return {
-            "kind": "retry",
-            "message": evaluation["feedback"] or "جوابت را با یک مثال کوتاه و اشاره به محدودیت های هوش مصنوعی کامل تر کن.",
-            "percentage": enrollment.progress_percentage,
-        }
-
-    _advance_enrollment(db, enrollment)
-    db.commit()
-    db.refresh(enrollment)
-
-    if enrollment.progress_percentage >= 100:
-        return {
-            "kind": "complete",
-            "message": "عالیه. این مسیر آموزشی کامل شد و می توانی برای مرور یا سوال های تکمیلی ادامه بدهی.",
-            "percentage": enrollment.progress_percentage,
-        }
-
-    try:
-        next_lesson = await generate_lesson(db, user, enrollment)
-    except (ArvanAIError, ValueError) as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    return {
-        "kind": "next_lesson",
-        "message": "می رویم سراغ مرحله بعد.",
-        "lesson": {
-            "title": str(next_lesson.get("title") or "درس Zito"),
-            "lesson": str(next_lesson.get("lesson") or ""),
-            "key_points": [str(item) for item in next_lesson.get("key_points", [])],
-            "exercise": str(next_lesson.get("exercise") or ""),
-            "check_question": str(next_lesson.get("check_question") or ""),
-            "percentage": enrollment.progress_percentage,
-        },
-        "percentage": enrollment.progress_percentage,
-    }
 

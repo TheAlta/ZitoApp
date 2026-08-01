@@ -10,7 +10,7 @@ setup_test_environment()
 from src.config import get_settings
 from src.db import Base, SessionLocal, engine
 from src.main import app
-from src.models import User, UserCourseEnrollment, UserProfile
+from src.models import User, UserCourseEnrollment, UserProfile, UserStageProgress
 from src.seed import seed_defaults
 
 
@@ -118,7 +118,7 @@ class ProfileAndCourseTests(unittest.TestCase):
         self.assertEqual(len(enrollments), 1)
         self.assertEqual(enrollments[0].current_stage_number, 1)
 
-    def test_temporary_training_uses_course_enrollment_progress(self) -> None:
+    def test_learning_engine_starts_from_published_stage_and_advances_sequentially(self) -> None:
         with TestClient(app) as client:
             user_id = login(client, "09120000003", "Training learner")
             self.assertEqual(
@@ -134,24 +134,32 @@ class ProfileAndCourseTests(unittest.TestCase):
                 client.post(f"/api/courses/{course['id']}/enroll").status_code,
                 200,
             )
-            lesson = client.post(f"/api/training/{user_id}/lesson")
-            self.assertEqual(lesson.status_code, 200)
-            evaluation = client.post(
-                f"/api/training/{user_id}/answer",
-                json={
-                    "lesson": lesson.json()["lesson"],
-                    "check_question": lesson.json()["check_question"],
-                    "answer_text": (
-                        "خروجی هوش مصنوعی را با منبع معتبر و بررسی انسانی کنترل می‌کنم "
-                        "تا خطاهای احتمالی وارد تصمیم نهایی نشوند."
-                    ),
-                },
+            path = client.get("/api/learning/enrollments/current")
+            enrollment_id = path.json()["enrollment_id"]
+            lesson = client.get(
+                f"/api/learning/enrollments/{enrollment_id}/stages/current"
+            )
+            blocked = client.post(
+                f"/api/learning/enrollments/{enrollment_id}/stages/2/complete",
+                json={"response": None},
+            )
+            completion = client.post(
+                f"/api/learning/enrollments/{enrollment_id}/stages/1/complete",
+                json={"response": {"selected_items": ["هدف روشن"]}},
             )
 
-        self.assertEqual(evaluation.status_code, 200)
-        self.assertTrue(evaluation.json()["passed"])
-        self.assertEqual(evaluation.json()["percentage"], 5)
-        self.assertEqual(evaluation.json()["current_step"], 2)
+        self.assertEqual(path.status_code, 200)
+        self.assertEqual(path.json()["total_stage_count"], 20)
+        self.assertEqual(len(path.json()["stages"]), 20)
+        self.assertEqual(lesson.status_code, 200)
+        self.assertEqual(lesson.json()["stage_number"], 1)
+        self.assertEqual(lesson.json()["stage_type"], "lesson_summary")
+        self.assertTrue(lesson.json()["content"]["ui_hint"]["avatar_visible"])
+        self.assertEqual(blocked.status_code, 409)
+        self.assertEqual(completion.status_code, 200)
+        self.assertEqual(completion.json()["progress_percentage"], 5)
+        self.assertEqual(completion.json()["next_stage_number"], 2)
+        self.assertFalse(completion.json()["coaching"]["enabled"])
 
         with SessionLocal() as db:
             enrollment = db.scalars(
@@ -159,5 +167,15 @@ class ProfileAndCourseTests(unittest.TestCase):
                     UserCourseEnrollment.user_id == user_id
                 )
             ).one()
+            progress_rows = db.scalars(
+                select(UserStageProgress)
+                .where(UserStageProgress.enrollment_id == enrollment.id)
+                .order_by(UserStageProgress.stage_number)
+            ).all()
         self.assertEqual(enrollment.progress_percentage, 5)
         self.assertEqual(enrollment.current_stage_number, 2)
+        self.assertEqual(len(progress_rows), 20)
+        self.assertEqual(progress_rows[0].status, "completed")
+        self.assertEqual(progress_rows[0].response_json["selected_items"], ["هدف روشن"])
+        self.assertEqual(progress_rows[1].status, "available")
+        self.assertTrue(all(row.status == "locked" for row in progress_rows[2:]))

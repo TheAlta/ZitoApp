@@ -53,6 +53,13 @@ class Phase2SeedTests(unittest.TestCase):
         self.assertEqual(len(stages), 20)
         self.assertEqual([stage.stage_number for stage in stages], list(range(1, 21)))
         self.assertTrue(all(stage.review_status == "approved" for stage in stages))
+        self.assertTrue(all(stage.content_json["contract_version"] == 1 for stage in stages))
+        self.assertTrue(all(stage.content_json["ui_hint"]["avatar_visible"] for stage in stages))
+        self.assertTrue(all("blocks" in stage.content_json for stage in stages))
+        audio_slot = stages[13].content_json["media_slots"][0]
+        self.assertEqual(audio_slot["kind"], "audio")
+        self.assertEqual(audio_slot["status"], "empty")
+        self.assertIsNone(audio_slot["url"])
         self.assertEqual(len(kb_docs), 3)
         self.assertEqual(exam.passing_score, 70)
         self.assertEqual(len(exam.questions_json), 2)

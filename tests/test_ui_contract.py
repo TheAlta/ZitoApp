@@ -7,10 +7,15 @@ from tests._env import setup_test_environment
 
 setup_test_environment()
 
+from src.db import engine
 from src.main import app
 
 
 class UiContractTests(unittest.TestCase):
+    @classmethod
+    def tearDownClass(cls) -> None:
+        engine.dispose()
+
     def test_zito_mascot_is_shared_by_landing_and_chat(self) -> None:
         with TestClient(app) as client:
             landing_response = client.get("/")
@@ -40,7 +45,7 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("/landing-static/zito-logo.svg", chat_response.text)
         self.assertNotIn("/landing-static/logo-z-transparent.png", landing_response.text)
         self.assertNotIn("/landing-static/logo-z-transparent.png", chat_response.text)
-        self.assertEqual(chat_response.text.count("/landing-static/zito-mascot.svg"), 2)
+        self.assertEqual(chat_response.text.count("/landing-static/zito-mascot.svg"), 3)
         self.assertIn("object-fit: contain", landing_response.text)
         self.assertIn("object-fit: contain", chat_response.text)
         self.assertIn("height: 188px", landing_response.text)
@@ -89,6 +94,12 @@ class UiContractTests(unittest.TestCase):
         self.assertIn('key: "education_level"', html)
         self.assertIn('key: "preferred_career_path"', html)
         self.assertIn('api("/api/me/profile"', html)
+        self.assertIn('id="courseList"', html)
+        self.assertIn('id="stagePathList"', html)
+        self.assertIn("/api/learning/enrollments/current", html)
+        self.assertIn("data-complete-stage", html)
+        self.assertIn("کوچینگ هوشمند در اسپرینت بعدی فعال می‌شود", html)
+        self.assertNotIn("/api/training/", html)
         self.assertNotIn("${firstNameOf(profile.full_name)} سلام", html)
         self.assertNotIn("/api/onboarding/${userId}/answer", html)
 

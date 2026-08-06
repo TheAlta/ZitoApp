@@ -809,6 +809,7 @@
     .course-option-arrow { color: #785db8; font-size: 22px; }
     .course-empty { padding: 18px; color: var(--muted); border: 1px dashed var(--line); border-radius: 16px; }
     .learning-path { text-align: right; }
+    .path-switch-course { width: auto; min-width: 0; height: 31px; margin-top: 11px; padding: 0 12px; font-size: 11px; box-shadow: none; }
     .path-course-head h2 { margin: 0; font-size: 17px; }
     .path-progress-text { margin-top: 7px; color: var(--muted); font-size: 11px; }
     .stage-path-list { display: grid; gap: 7px; margin-top: 16px; }
@@ -827,6 +828,25 @@
     .path-stage.current { color: #4c3d69; border-color: rgba(112, 84, 193, .36); background: rgba(238, 229, 249, .86); }
     .path-stage.completed { color: #32775e; background: rgba(229, 247, 238, .80); }
     .path-stage.locked { opacity: .58; }
+    .module-path-list { gap: 9px; }
+    .path-module {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      padding: 10px;
+      color: #716a7e;
+      border: 1px solid rgba(142, 109, 181, .13);
+      border-radius: 13px;
+      background: rgba(255, 253, 250, .64);
+    }
+    .path-module.active { color: #4c3d69; border-color: rgba(112, 84, 193, .36); background: rgba(238, 229, 249, .86); }
+    .path-module.completed { color: #32775e; background: rgba(229, 247, 238, .80); }
+    .path-module.locked { opacity: .62; }
+    .path-module-copy { min-width: 0; }
+    .path-module-copy strong, .path-module-copy small { display: block; }
+    .path-module-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .path-module-copy small { margin-top: 3px; color: var(--muted); font-size: 10px; }
     .path-stage-number { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: rgba(126, 96, 174, .10); font-weight: 900; }
     .path-stage-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .path-stage-state { font-size: 12px; }
@@ -966,6 +986,7 @@
             <h2 id="activeCourseTitle">مسیر آموزشی</h2>
             <div id="pathProgressText" class="path-progress-text">۰ از ۲۰ مرحله</div>
             <div class="meter"><div id="pathProgressBar" class="bar" style="width: 0%"></div></div>
+            <button id="changeCourse" class="path-switch-course" type="button">انتخاب دوره یا نسخه دیگر</button>
           </div>
           <div id="stagePathList" class="stage-path-list" aria-label="مراحل دوره"></div>
         </section>
@@ -1027,6 +1048,7 @@
     const pathProgressText = document.querySelector("#pathProgressText");
     const pathProgressBar = document.querySelector("#pathProgressBar");
     const stagePathList = document.querySelector("#stagePathList");
+    const changeCourse = document.querySelector("#changeCourse");
     const answerModal = document.querySelector("#answerModal");
     const modalMessages = document.querySelector("#modalMessages");
     const modalClose = document.querySelector("#modalClose");
@@ -1128,7 +1150,7 @@
           <span class="course-orb-mini" aria-hidden="true"></span>
           <span class="course-option-copy">
             <strong>${escapeHtml(course.title)}</strong>
-            <span>${course.stage_count} مرحله · نسخه ${course.version_number}</span>
+            <span>${course.module_count ? `${course.module_count} سرفصل · ${course.stage_count} بخش` : `${course.stage_count} مرحله`} · نسخه ${course.version_number}</span>
           </span>
           <span class="course-option-arrow" aria-hidden="true">‹</span>`;
         option.addEventListener("click", () => selectCourse(course, option));
@@ -1157,26 +1179,42 @@
       courseCatalog.hidden = true;
       learningPath.hidden = false;
       activeCourseTitle.textContent = path.course_title;
-      pathProgressText.textContent = `${path.completed_stage_count} از ${path.total_stage_count} مرحله · ${path.progress_percentage}٪`;
+      const unitLabel = path.module_count ? "بخش آموزشی" : "مرحله";
+      pathProgressText.textContent = `${path.completed_stage_count} از ${path.total_stage_count} ${unitLabel} · ${path.progress_percentage}٪`;
       pathProgressBar.style.width = `${path.progress_percentage}%`;
-      stagePathList.innerHTML = path.stages.map((item) => {
-        const stateIcon = item.status === "completed" ? "✓" : item.is_current ? "●" : "○";
-        const stateClass = item.status === "completed" ? "completed" : item.is_current ? "current" : "locked";
-        return `<div class="path-stage ${stateClass}">
-          <span class="path-stage-number">${item.stage_number}</span>
-          <span class="path-stage-title">${escapeHtml(item.title)}</span>
-          <span class="path-stage-state" aria-hidden="true">${stateIcon}</span>
-        </div>`;
-      }).join("");
+      if (Array.isArray(path.modules) && path.modules.length) {
+        stagePathList.classList.add("module-path-list");
+        stagePathList.innerHTML = path.modules.map((module) => {
+          const stateIcon = module.status === "completed" ? "✓" : module.is_current ? "●" : "○";
+          return `<div class="path-module ${module.status}">
+            <span class="path-stage-number">${module.module_number}</span>
+            <span class="path-module-copy"><strong>${escapeHtml(module.title)}</strong><small>${module.completed_stage_count} از ${module.total_stage_count} بخش</small></span>
+            <span class="path-stage-state" aria-hidden="true">${stateIcon}</span>
+          </div>`;
+        }).join("");
+      } else {
+        stagePathList.classList.remove("module-path-list");
+        stagePathList.innerHTML = path.stages.map((item) => {
+          const stateIcon = item.status === "completed" ? "✓" : item.is_current ? "●" : "○";
+          const stateClass = item.status === "completed" ? "completed" : item.is_current ? "current" : "locked";
+          return `<div class="path-stage ${stateClass}">
+            <span class="path-stage-number">${item.stage_number}</span>
+            <span class="path-stage-title">${escapeHtml(item.title)}</span>
+            <span class="path-stage-state" aria-hidden="true">${stateIcon}</span>
+          </div>`;
+        }).join("");
+      }
       coachMessage.textContent = path.status === "completed"
         ? "آفرین! این مسیر را کامل کردی. من برای مرور هم کنارت می‌مانم."
-        : `مرحله ${path.current_stage_number} آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`;
+        : path.modules?.find((module) => module.is_current)
+          ? `سرفصل «${path.modules.find((module) => module.is_current).title}» آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`
+          : `مرحله ${path.current_stage_number} آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`;
     }
     function showCoachingCheckpoint(result) {
       pendingNextStage = true;
       modalMessages.innerHTML = '<img class="checkpoint-avatar" src="/landing-static/zito-mascot.svg" alt="زیتو">';
       const closing = result.course_completed
-        ? "مسیر ۲۰ مرحله‌ای را کامل کردی. آزمون نهایی و مدرک در اسپرینت مربوط به خودشان فعال می‌شوند."
+        ? "مسیر این دوره را کامل کردی. آزمون نهایی و مدرک در اسپرینت مربوط به خودشان فعال می‌شوند."
         : "فعلاً این ایستگاه نمایشی است؛ در اسپرینت بعدی پاسخ زنده با RAG دوره فعال می‌شود.";
       addModalMessage(`${result.coaching.prompt}\n\n${closing}`);
       coachContinue.textContent = result.course_completed ? "دیدن جمع‌بندی" : "ادامه مسیر";
@@ -1223,14 +1261,11 @@
         isValid: (value) => value.trim().length >= 1,
       },
       {
-        key: "daily_learning_minutes",
+        key: "daily_learning_time_text",
         question: "روزانه حدودا چقدر زمان برای مطالعه و تمرین داری؟",
-        retry: "زمان مطالعه روزانه را با عدد یا عبارت ساده بنویس؛ مثلا ۳۰ دقیقه، نیم ساعت یا ۶۰ دقیقه.",
-        parse: studyMinutesFrom,
-        isValid: (value) => {
-          const minutes = studyMinutesFrom(value);
-          return Number.isFinite(minutes) && minutes >= 0 && minutes <= 1440;
-        },
+        retry: "زمانی که در ذهن داری را کوتاه بنویس.",
+        parse: (value) => value.trim(),
+        isValid: (value) => value.trim().length >= 1,
       },
       {
         key: "preferred_career_path",
@@ -1262,7 +1297,8 @@
           education_level: profile.education_level || "",
           learning_goal_interests: profile.learning_goal_interests || "",
           ai_familiarity_level: profile.ai_familiarity_level || "",
-          daily_learning_minutes: profile.daily_learning_minutes ?? "",
+          daily_learning_time_text: profile.daily_learning_time_text || (profile.daily_learning_minutes ?? ""),
+          daily_learning_minutes: profile.daily_learning_minutes ?? null,
           preferred_career_path: profile.preferred_career_path || "",
           referral_source: profile.referral_source || "",
         },
@@ -1281,14 +1317,13 @@
       const step = PROFILE_STEPS[profileBuilder.stepIndex];
       const question = typeof step.question === "function" ? step.question(profileBuilder.data) : step.question;
       addMessage(question);
-      input.placeholder = step.key === "daily_learning_minutes" ? "مثلا ۳۰ دقیقه..." : "پاسخت را بنویس...";
+      input.placeholder = step.key === "daily_learning_time_text" ? "مثلا ۳۰ دقیقه..." : "پاسخت را بنویس...";
       hint.textContent = "پاسخ‌ها همین‌جا در چت گرفته می‌شوند و بعد از تکمیل، مسیر آموزشی آماده می‌شود.";
       setStatus("ساخت پروفایل");
     }
     async function submitProfileBuilder() {
       setStatus("ذخیره پروفایل");
       const profile = await api("/api/me/profile");
-      if (!profile.completed) throw new Error("پروفایل هنوز کامل نشده است.");
       const firstName = firstNameOf(profile.display_name);
       addMessage(`${firstName} عزیز، پروفایلت ذخیره شد. حالا دوره‌ای را که می‌خواهی شروع کنی انتخاب کن.`);
       localStorage.removeItem("zito_display_name");
@@ -1303,11 +1338,21 @@
         return;
       }
       const parsedValue = step.parse(value);
+      const payload = { [step.key]: parsedValue };
+      if (step.key === "daily_learning_time_text") {
+        const minutes = studyMinutesFrom(parsedValue);
+        if (Number.isFinite(minutes) && minutes >= 0 && minutes <= 1440) {
+          payload.daily_learning_minutes = minutes;
+        }
+      }
       await api("/api/me/profile", {
         method: "PATCH",
-        body: JSON.stringify({ [step.key]: parsedValue }),
+        body: JSON.stringify(payload),
       });
       profileBuilder.data[step.key] = parsedValue;
+      if (payload.daily_learning_minutes !== undefined) {
+        profileBuilder.data.daily_learning_minutes = payload.daily_learning_minutes;
+      }
       profileBuilder.stepIndex = nextProfileStepIndex(profileBuilder.data);
       if (profileBuilder.stepIndex < 0) {
         await submitProfileBuilder();
@@ -1368,7 +1413,7 @@
       lessonPanel.innerHTML = `
         <header class="stage-header">
           <div>
-            <div class="stage-number">مرحله ${lesson.stage_number} از ${lesson.total_stage_count}</div>
+            <div class="stage-number">${lesson.module_title ? `سرفصل ${lesson.module_number} از ${lesson.total_module_count} · بخش ${lesson.module_stage_number} از ۲۰` : `مرحله ${lesson.stage_number} از ${lesson.total_stage_count}`}</div>
             <h2>${escapeHtml(lesson.title)}</h2>
             <div class="stage-type">قالب: ${escapeHtml(lesson.stage_type)}</div>
           </div>
@@ -1389,7 +1434,9 @@
       if (!lesson.course_completed) completeButton.addEventListener("click", completeCurrentStage);
       coachMessage.textContent = lesson.course_completed
         ? "این دوره کامل شده؛ هر زمان خواستی می‌توانی مرحله‌ها را مرور کنی."
-        : `من در تمام مرحله ${lesson.stage_number} کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`;
+        : lesson.module_title
+          ? `من در سرفصل «${lesson.module_title}» کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`
+          : `من در تمام مرحله ${lesson.stage_number} کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`;
       lessonPanel.scrollTop = 0;
     }
 
@@ -1536,6 +1583,7 @@
 
     modalClose.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
     coachContinue.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
+    changeCourse.addEventListener("click", () => showCourseCatalog().catch((error) => { coachMessage.textContent = error.message; }));
     answerModal.addEventListener("click", (event) => {
       if (event.target === answerModal) continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; });
     });

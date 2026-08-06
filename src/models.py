@@ -27,6 +27,7 @@ class User(Base):
     phone_verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    blocked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -79,6 +80,8 @@ class UserProfile(Base):
     education_level: Mapped[str] = mapped_column(String(80), nullable=True)
     learning_goal_interests: Mapped[str] = mapped_column(Text, nullable=True)
     ai_familiarity_level: Mapped[str] = mapped_column(String(50), nullable=True)
+    # Keep the original answer for prompt construction even when it cannot be parsed as minutes.
+    daily_learning_time_text: Mapped[str] = mapped_column(String(120), nullable=True)
     daily_learning_minutes: Mapped[int] = mapped_column(Integer, nullable=True)
     preferred_career_path: Mapped[str] = mapped_column(String(255), nullable=True)
     referral_source: Mapped[str] = mapped_column(String(120), nullable=True)
@@ -135,6 +138,11 @@ class CourseVersion(Base):
 
     course: Mapped[Course] = relationship(back_populates="versions")
     stages: Mapped[list["CourseStageContent"]] = relationship(back_populates="course_version", cascade="all, delete-orphan")
+    modules: Mapped[list["CourseModule"]] = relationship(back_populates="course_version", cascade="all, delete-orphan")
+    kb_documents: Mapped[list["CourseKbDocument"]] = relationship(
+        back_populates="course_version",
+        foreign_keys="CourseKbDocument.course_version_id",
+    )
     exams: Mapped[list["Exam"]] = relationship(back_populates="course_version", cascade="all, delete-orphan")
 
 
@@ -161,11 +169,129 @@ class CourseStageContent(Base):
     course_version: Mapped[CourseVersion] = relationship(back_populates="stages")
 
 
+class LearningStageTemplate(Base):
+    """Reusable educational format; content remains specific to a course module."""
+
+    __tablename__ = "learning_stage_templates"
+    __table_args__ = (
+        CheckConstraint("default_order >= 1", name="ck_learning_stage_templates_default_order"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    default_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    module_stage_contents: Mapped[list["CourseModuleStageContent"]] = relationship(
+        back_populates="template",
+    )
+
+
+class CourseModule(Base):
+    """A versioned course heading/module. Published content belongs to a module, never directly to a user."""
+
+    __tablename__ = "course_modules"
+    __table_args__ = (
+        UniqueConstraint("course_version_id", "module_number", name="uq_course_modules_version_number"),
+        CheckConstraint("module_number >= 1", name="ck_course_modules_module_number"),
+        Index("ix_course_modules_version_status_number", "course_version_id", "status", "module_number"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    course_version_id: Mapped[int] = mapped_column(
+        ForeignKey("course_versions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    module_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    learning_objectives_json: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    tags_json: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(40), default="approved", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    course_version: Mapped[CourseVersion] = relationship(back_populates="modules")
+    stage_contents: Mapped[list["CourseModuleStageContent"]] = relationship(
+        back_populates="course_module",
+        cascade="all, delete-orphan",
+    )
+    kb_document_scopes: Mapped[list["CourseKbDocumentModule"]] = relationship(
+        back_populates="course_module",
+        cascade="all, delete-orphan",
+    )
+
+
+class CourseModuleStageContent(Base):
+    """Approved content for one reusable template inside one course module."""
+
+    __tablename__ = "course_module_stage_contents"
+    __table_args__ = (
+        UniqueConstraint("course_module_id", "stage_number", name="uq_course_module_stage_number"),
+        UniqueConstraint("course_module_id", "template_id", name="uq_course_module_template"),
+        CheckConstraint("stage_number >= 1", name="ck_course_module_stage_contents_stage_number"),
+        Index("ix_course_module_stage_contents_module_status_order", "course_module_id", "status", "stage_number"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    course_module_id: Mapped[int] = mapped_column(
+        ForeignKey("course_modules.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey("learning_stage_templates.id"),
+        nullable=False,
+    )
+    stage_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="approved", nullable=False)
+    ai_generation_status: Mapped[str] = mapped_column(String(40), default="seeded", nullable=False)
+    review_status: Mapped[str] = mapped_column(String(40), default="approved", nullable=False)
+    reviewed_by: Mapped[str] = mapped_column(String(100), nullable=True)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    content_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    course_module: Mapped[CourseModule] = relationship(back_populates="stage_contents")
+    template: Mapped[LearningStageTemplate] = relationship(back_populates="module_stage_contents")
+    progress_rows: Mapped[list["UserModuleStageProgress"]] = relationship(
+        back_populates="module_stage_content",
+        cascade="all, delete-orphan",
+    )
+
+
 class CourseKbDocument(Base):
     __tablename__ = "course_kb_documents"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
+    course_version_id: Mapped[int] = mapped_column(
+        ForeignKey("course_versions.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     tags: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -173,6 +299,34 @@ class CourseKbDocument(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     course: Mapped[Course] = relationship(back_populates="kb_documents")
+    course_version: Mapped[CourseVersion] = relationship(
+        back_populates="kb_documents",
+        foreign_keys=[course_version_id],
+    )
+    module_scopes: Mapped[list["CourseKbDocumentModule"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
+
+
+class CourseKbDocumentModule(Base):
+    """Optional module scopes for a course-version knowledge document."""
+
+    __tablename__ = "course_kb_document_modules"
+    __table_args__ = (Index("ix_course_kb_document_modules_module", "course_module_id"),)
+
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("course_kb_documents.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    course_module_id: Mapped[int] = mapped_column(
+        ForeignKey("course_modules.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    document: Mapped[CourseKbDocument] = relationship(back_populates="module_scopes")
+    course_module: Mapped[CourseModule] = relationship(back_populates="kb_document_scopes")
 
 
 class UserCourseEnrollment(Base):
@@ -192,6 +346,10 @@ class UserCourseEnrollment(Base):
 
     user: Mapped[User] = relationship(back_populates="enrollments")
     stage_progress: Mapped[list["UserStageProgress"]] = relationship(back_populates="enrollment", cascade="all, delete-orphan")
+    module_stage_progress: Mapped[list["UserModuleStageProgress"]] = relationship(
+        back_populates="enrollment",
+        cascade="all, delete-orphan",
+    )
 
 
 class UserStageProgress(Base):
@@ -208,6 +366,39 @@ class UserStageProgress(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     enrollment: Mapped[UserCourseEnrollment] = relationship(back_populates="stage_progress")
+
+
+class UserModuleStageProgress(Base):
+    """Canonical progress for module-scoped learning content in course versions using the new hierarchy."""
+
+    __tablename__ = "user_module_stage_progress"
+    __table_args__ = (
+        UniqueConstraint("enrollment_id", "module_stage_content_id", name="uq_user_module_stage_progress_item"),
+        Index("ix_user_module_stage_progress_enrollment_status", "enrollment_id", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    enrollment_id: Mapped[int] = mapped_column(
+        ForeignKey("user_course_enrollments.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    module_stage_content_id: Mapped[int] = mapped_column(
+        ForeignKey("course_module_stage_contents.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    status: Mapped[str] = mapped_column(String(40), default="locked", nullable=False)
+    response_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    enrollment: Mapped[UserCourseEnrollment] = relationship(back_populates="module_stage_progress")
+    module_stage_content: Mapped[CourseModuleStageContent] = relationship(back_populates="progress_rows")
 
 
 class Exam(Base):

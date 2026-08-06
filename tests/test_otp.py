@@ -169,7 +169,7 @@ class OtpFlowTests(unittest.TestCase):
 
         self.assertEqual(verify_response.status_code, 200)
 
-    def test_soft_delete_keeps_user_and_revokes_login(self) -> None:
+    def test_soft_delete_revokes_current_session_but_phone_login_restores_same_user(self) -> None:
         with TestClient(app) as user_client:
             login = request_and_verify(user_client, "09125556666", "Soft delete")
             user_id = login["user_id"]
@@ -194,6 +194,53 @@ class OtpFlowTests(unittest.TestCase):
             self.assertIsNotNone(user)
             self.assertIsNotNone(user.deleted_at)
             self.assertTrue(all(session.revoked_at is not None for session in sessions))
+
+        with TestClient(app) as restored_client:
+            request_response = restored_client.post("/api/auth/otp/request", json={"phone": "09125556666"})
+            self.assertEqual(request_response.status_code, 200)
+            self.assertFalse(request_response.json()["requires_display_name"])
+            restore_response = restored_client.post(
+                "/api/auth/otp/verify",
+                json={"phone": "09125556666", "code": request_response.json()["mock_code"], "display_name": None},
+            )
+
+        self.assertEqual(restore_response.status_code, 200)
+        self.assertEqual(restore_response.json()["user_id"], user_id)
+        with SessionLocal() as db:
+            restored_user = db.get(User, user_id)
+        self.assertIsNone(restored_user.deleted_at)
+
+    def test_admin_block_is_separate_from_delete_and_prevents_otp_until_unblocked(self) -> None:
+        phone = "09125557777"
+        with TestClient(app) as user_client:
+            user_id = request_and_verify(user_client, phone, "Blocked user")["user_id"]
+            with TestClient(app) as admin_client:
+                login_response = admin_client.post(
+                    "/api/admin/login",
+                    json={"username": "zito_admin", "password": "local-test-admin-password"},
+                )
+                self.assertEqual(login_response.status_code, 200)
+                self.assertEqual(admin_client.post(f"/api/admin/users/{user_id}/block").status_code, 200)
+
+                blocked_request = user_client.post("/api/auth/otp/request", json={"phone": phone})
+                self.assertEqual(blocked_request.status_code, 403)
+                self.assertEqual(user_client.get("/api/me").status_code, 401)
+
+                self.assertEqual(admin_client.post(f"/api/admin/users/{user_id}/unblock").status_code, 200)
+
+        with TestClient(app) as restored_client:
+            request_response = restored_client.post("/api/auth/otp/request", json={"phone": phone})
+            self.assertEqual(request_response.status_code, 200)
+            verify_response = restored_client.post(
+                "/api/auth/otp/verify",
+                json={"phone": phone, "code": request_response.json()["mock_code"], "display_name": None},
+            )
+
+        self.assertEqual(verify_response.status_code, 200)
+        with SessionLocal() as db:
+            user = db.get(User, user_id)
+        self.assertIsNone(user.blocked_at)
+        self.assertIsNone(user.deleted_at)
 
 
 class FakeSmsIrPost:

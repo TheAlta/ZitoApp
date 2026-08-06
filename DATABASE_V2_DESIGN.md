@@ -1,19 +1,22 @@
 # Zito Database V2 - Canonical Design
 
-Status: Sprint 1 canonical identity/profile and Sprint 2 sequential 20-stage runtime implemented
-Date: 2026-08-01
-Scope: identity, profile, course publishing, 20 learning templates, course-scoped KB/RAG, runtime AI supervision, progress, legacy migration and rollback  
+Status: Sprint 1 canonical identity/profile, Sprint 2 runtime, and Sprint 2.5 module-scoped course hierarchy implemented
+Date: 2026-08-05
+Scope: identity, profile, versioned course publishing, reusable learning templates, module-scoped progress, KB scoping, future RAG/AI supervision, legacy migration and rollback
 
-This document remains the database source of truth. Sprint 1 identity/profile cleanup and the Sprint 2 deterministic learning engine are implemented; AI supervision, final assessment and CMS sections remain design contracts.
+This document has two layers. The implementation status and named tables in this opening section describe the physical schema at migration head `20260806_0010`. The later CMS/RAG/AI-policy sections remain the target design for later sprints; they are not claims that those future tables or services already exist.
 
-Implementation status on 2026-08-01:
+Implementation status on 2026-08-05:
 
 - Implemented in `20260728_0006`: canonical `users` fields, one-to-one `user_profiles`, `user_sessions`, OTP purpose/indexes, profile backfill, HttpOnly user sessions, soft delete/restore, session-owned profile and enrollment APIs.
 - Implemented in `20260728_0007`: mandatory unique phone identity; removal of `users.full_name`, `users.username`, `users.profession`; removal of `user_profiles_v2`, `profile_builder_answers`, `questions`, `answers`, global `knowledge_documents`, and legacy `user_progress`.
 - Implemented in Sprint 2 without a new migration: course selection, version-pinned enrollment, exactly 20 `user_stage_progress` rows, sequential locking, idempotent completion, percentage derivation, resume, approved content delivery, and media placeholders.
 - Removed from the active API: temporary `/api/training/{user_id}/*` routes and runtime AI-generated lessons. Sprint 2 reads only approved content from `course_stage_contents`.
 - Implemented as a UI preview only: the post-stage coaching checkpoint. It does not call AI or RAG yet.
-- Not implemented yet: versioned KB/tag joins, AI policy tables, runtime coaching/interaction/evaluation, final exam/certificate execution, and the real CMS workflow.
+- Implemented in `20260805_0008`: `learning_stage_templates`, `course_modules`, `course_module_stage_contents`, `user_module_stage_progress`, `course_kb_document_modules`, and optional `course_kb_documents.course_version_id` scope.
+- Implemented in sample course version 2: five approved modules, 20 reusable templates in each module, 100 approved content rows, module-scoped KB documents and sequential progress. The first three templates in every module are `learning_path`, `lesson_summary`, then `flashcards`.
+- Intentional compatibility: version 1 data remains flat in `course_stage_contents` and `user_stage_progress`; it is not deleted or rewritten. New enrollments select version 2 and use `user_module_stage_progress`.
+- Not implemented yet: runtime RAG retrieval, AI policy tables, live coaching/interaction/evaluation, final exam/certificate execution, and the real CMS workflow.
 
 ## 1. Confirmed Product Decisions
 
@@ -23,10 +26,11 @@ Implementation status on 2026-08-01:
 4. PostgreSQL generates the user ID. No manual counter table is used.
 5. A user is created only after successful OTP verification.
 6. Removing a user from the admin panel is a soft delete: `users.deleted_at` is filled and the row remains.
-7. A soft-deleted phone cannot create a second user row. The account must be restored or permanently anonymized through an explicit operation.
+7. A soft-deleted phone cannot create a second user row. A successful OTP login restores that same user row automatically.
+8. Blocking is independent of deletion: `users.blocked_at` prevents OTP delivery and login until an admin unblocks the account.
 8. Profile information has a one-to-one relationship with `users`.
 9. `user_profiles.user_id` is both the primary key and a foreign key to `users.id`.
-10. The active learning engine uses the published course version and its 20 stored stage contents.
+10. The active learning engine pins a published course version. Version 1 uses its flat 20 stored stage contents; version 2 uses ordered modules, each with 20 stored template contents.
 11. The CMS content-generation AI and the runtime supervisor AI are separate use cases.
 12. Runtime RAG is restricted to the learner's enrolled course version and current stage tags.
 13. Legacy data was first preserved and backfilled by migration `0006`; after the explicit user reset decision, duplicate legacy structures were removed by migration `0007`.
@@ -40,15 +44,20 @@ Identity
   phone_otp_codes
   user_profiles
 
-Course publishing
+Course publishing (implemented)
   courses
   course_versions
-  learning_templates
-  course_stage_contents
+  learning_stage_templates
+  course_modules
+  course_module_stage_contents
+  course_stage_contents (legacy version 1 compatibility)
 
-Knowledge and tagging
+Knowledge scoping (implemented)
+  course_kb_documents
+  course_kb_document_modules
+
+Knowledge retrieval/tagging (future target)
   tags
-  knowledge_documents
   knowledge_document_versions
   course_version_knowledge_documents
   knowledge_chunks
@@ -97,6 +106,7 @@ last_login_at       TIMESTAMPTZ NULL
 created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 deleted_at          TIMESTAMPTZ NULL
+blocked_at          TIMESTAMPTZ NULL
 ```
 
 Constraints and indexes:
@@ -105,6 +115,7 @@ Constraints and indexes:
 PRIMARY KEY (id)
 UNIQUE (phone)
 INDEX ix_users_deleted_at (deleted_at)
+INDEX ix_users_blocked_at (blocked_at)
 INDEX ix_users_display_name (display_name) only if admin search requires it
 ```
 
@@ -116,8 +127,9 @@ Rules:
 - Phone normalization remains the current Iranian mobile format (`09xxxxxxxxx`) during this migration. International E.164 support is a separate product decision.
 - `display_name` can contain any non-empty name accepted by the product and is not used for authentication.
 - Normal application queries must include `deleted_at IS NULL`.
-- Soft-deleted users cannot log in automatically.
-- Restore is an explicit admin operation that sets `deleted_at = NULL`.
+- Soft-deleted users cannot use existing sessions, but a successful OTP login sets `deleted_at = NULL` and restores the same identity.
+- A non-null `blocked_at` prevents both OTP delivery and login; only an explicit admin unblock clears it.
+- Admin restore remains available for operational recovery and sets `deleted_at = NULL`.
 - Permanent deletion is a separate anonymization workflow, not the normal admin delete action.
 
 ### 3.2 User soft delete behavior
@@ -222,6 +234,7 @@ work_or_study_field        VARCHAR(255) NULL
 education_level            VARCHAR(80) NULL
 learning_goal_interests    TEXT NULL
 ai_familiarity_level       VARCHAR(50) NULL
+daily_learning_time_text   VARCHAR(120) NULL
 daily_learning_minutes     SMALLINT NULL
 preferred_career_path      VARCHAR(255) NULL
 referral_source            VARCHAR(120) NULL
@@ -252,7 +265,8 @@ Profile field ownership:
 | سطح تحصیلات | `education_level` |
 | هدف از یادگیری و علاقه‌مندی‌ها | `learning_goal_interests` |
 | میزان آشنایی با هوش مصنوعی | `ai_familiarity_level` |
-| زمان آزاد روزانه | `daily_learning_minutes` |
+| زمان آزاد روزانه (پاسخ خام) | `daily_learning_time_text` |
+| زمان آزاد روزانه (دقیقهٔ قابل‌تشخیص، اختیاری) | `daily_learning_minutes` |
 | مسیر شغلی مورد علاقه | `preferred_career_path` |
 | نحوه آشنایی با زیتو | `referral_source` |
 
@@ -797,12 +811,15 @@ POST /api/learning/enrollments/{enrollment_id}/stages/{stage_number}/complete
 
 DELETE /api/admin/users/{user_id}
 POST /api/admin/users/{user_id}/restore
+POST /api/admin/users/{user_id}/block
+POST /api/admin/users/{user_id}/unblock
 ```
 
 Rules:
 
 - User-owned endpoints do not accept `user_id` from the browser.
 - Admin-owned endpoints require the admin session and authorization policy.
+- Delete is a reversible soft delete; block is the separate access-denial operation.
 - Legacy `/api/training/{user_id}/*` routes are removed; there is only one active progress engine.
 
 ## 13. Legacy-to-Canonical Mapping

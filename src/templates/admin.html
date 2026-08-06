@@ -30,6 +30,7 @@
     button { border: 0; border-radius: 16px; min-height: 48px; padding: 0 15px; color: white; font: inherit; font-weight: 800; cursor: pointer; background: linear-gradient(135deg, var(--purple), var(--blue)); box-shadow: 0 13px 30px rgba(91, 83, 255, .30); transition: transform .16s ease, opacity .16s ease; }
     button:hover { transform: translateY(-1px); }
     button.danger { background: linear-gradient(135deg, #ff4f7b, #b4235a); box-shadow: 0 13px 30px rgba(255, 79, 123, .20); }
+    button.warning { background: linear-gradient(135deg, #d07a37, #a7562a); box-shadow: 0 13px 30px rgba(194, 111, 52, .20); }
     button.ghost { color: #746b83; background: rgba(255,253,250,.78); border: 1px solid var(--line); box-shadow: none; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
     .card { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 24px; padding: 16px; background: linear-gradient(180deg, rgba(255,253,250,.95), rgba(255,247,244,.90)); box-shadow: 0 24px 70px rgba(125,91,126,.13), inset 0 1px 0 rgba(255,255,255,.95); animation: pop .24s ease both; }
@@ -38,6 +39,7 @@
     .name { font-weight: 900; font-size: 17px; }
     .meta { color: var(--muted); font-size: 12px; margin-top: 5px; direction: ltr; text-align: right; }
     .track { color: #52727a; border: 1px solid rgba(82, 169, 177, .20); background: rgba(82, 169, 177, .08); border-radius: 999px; padding: 8px 10px; height: fit-content; font-size: 11px; }
+    .account-state { color: #934b2f; border: 1px solid rgba(188, 105, 48, .24); background: rgba(213, 131, 64, .10); border-radius: 999px; padding: 7px 9px; height: fit-content; font-size: 11px; }
     .answer { position: relative; margin-top: 9px; padding: 11px; border-radius: 17px; line-height: 1.8; background: rgba(255,248,245,.90); border: 1px solid rgba(151, 124, 169, .11); }
     .answer strong { display: block; color: #805fb7; margin-bottom: 5px; font-size: 12px; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
@@ -73,7 +75,7 @@
     let users = [];
 
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
-    function filteredUsers() { const term = search.value.trim().toLowerCase(); if (!term) return users; return users.filter((user) => [user.display_name, user.phone, user.work_or_study_field, user.education_level, user.learning_goal_interests, user.ai_familiarity_level, user.preferred_career_path, user.referral_source].filter(Boolean).join(" ").toLowerCase().includes(term)); }
+    function filteredUsers() { const term = search.value.trim().toLowerCase(); if (!term) return users; return users.filter((user) => [user.display_name, user.phone, user.work_or_study_field, user.education_level, user.learning_goal_interests, user.ai_familiarity_level, user.daily_learning_time_text, user.preferred_career_path, user.referral_source].filter(Boolean).join(" ").toLowerCase().includes(term)); }
     function profileRow(label, value) { return `<div class="answer"><strong>${escapeHtml(label)}</strong><div>${escapeHtml(value || "ثبت نشده")}</div></div>`; }
 
     function render() {
@@ -86,20 +88,28 @@
           <div class="card-head">
             <div><div class="name">${escapeHtml(user.display_name || "کاربر بدون نام")}</div><div class="meta">ID ${user.id} · ${escapeHtml(user.phone || "شماره ثبت نشده")}</div></div>
             <div class="track">${escapeHtml(user.work_or_study_field || "مسیر نامشخص")}</div>
+            ${user.blocked_at ? '<div class="account-state">مسدود شده</div>' : ''}
           </div>
           ${profileRow("حوزه کاری یا تحصیلی", user.work_or_study_field)}
           ${profileRow("سطح تحصیلات", user.education_level)}
           ${profileRow("هدف و علاقه‌مندی", user.learning_goal_interests)}
           ${profileRow("آشنایی با هوش مصنوعی", user.ai_familiarity_level)}
-          ${profileRow("زمان روزانه", user.daily_learning_minutes == null ? null : `${user.daily_learning_minutes} دقیقه`)}
+          ${profileRow("زمان روزانه", user.daily_learning_time_text || (user.daily_learning_minutes == null ? null : `${user.daily_learning_minutes} دقیقه`))}
           ${profileRow("مسیر شغلی مورد علاقه", user.preferred_career_path)}
           ${profileRow("نحوه آشنایی با زیتو", user.referral_source)}
-          <div class="actions"><button class="danger" onclick="deleteUser(${user.id})">حذف کاربر</button></div>
+          <div class="actions">
+            <button class="ghost" onclick="deleteUser(${user.id})">حذف کاربر</button>
+            ${user.blocked_at
+              ? `<button onclick="unblockUser(${user.id})">رفع مسدودیت</button>`
+              : `<button class="warning" onclick="blockUser(${user.id})">مسدود کردن</button>`}
+          </div>
         </article>`).join("");
     }
 
     async function loadUsers() { const res = await fetch("/api/admin/users"); if (res.status === 401) { window.location.href = "/admin/login"; return; } if (!res.ok) throw new Error("دسترسی ادمین تایید نشد یا دریافت اطلاعات ناموفق بود."); users = await res.json(); render(); }
-    async function deleteUser(id) { if (!confirm("این کاربر حذف شود؟")) return; const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" }); if (!res.ok) { alert("حذف انجام نشد."); return; } await loadUsers(); }
+    async function deleteUser(id) { if (!confirm("کاربر حذف نرم شود؟ نشست او بسته می‌شود، اما با ورود بعدی از طریق شماره دوباره فعال خواهد شد.")) return; const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" }); if (!res.ok) { alert("حذف انجام نشد."); return; } await loadUsers(); }
+    async function blockUser(id) { if (!confirm("این کاربر مسدود شود؟ دیگر نمی‌تواند کد ورود بگیرد یا وارد شود.")) return; const res = await fetch(`/api/admin/users/${id}/block`, { method: "POST" }); if (!res.ok) { alert("مسدودسازی انجام نشد."); return; } await loadUsers(); }
+    async function unblockUser(id) { if (!confirm("مسدودیت این کاربر برداشته شود؟")) return; const res = await fetch(`/api/admin/users/${id}/unblock`, { method: "POST" }); if (!res.ok) { alert("رفع مسدودیت انجام نشد."); return; } await loadUsers(); }
     async function logoutAdmin() { await fetch("/api/admin/logout", { method: "POST" }); window.location.href = "/admin/login"; }
 
     search.addEventListener("input", render);

@@ -172,7 +172,7 @@ def get_user_from_request(request: Request, db: Session) -> User | None:
     if not user_session:
         return None
     user = db.get(User, user_session.user_id)
-    if not user or user.deleted_at is not None:
+    if not user or user.deleted_at is not None or user.blocked_at is not None:
         return None
     return user
 

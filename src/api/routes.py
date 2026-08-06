@@ -9,10 +9,14 @@ from sqlalchemy.orm import Session, selectinload
 from src.db import get_db
 from src.models import (
     Course,
+    CourseModule,
+    CourseModuleStageContent,
     CourseStageContent,
     CourseVersion,
+    LearningStageTemplate,
     User,
     UserCourseEnrollment,
+    UserModuleStageProgress,
     UserProfile,
     UserStageProgress,
 )
@@ -23,6 +27,7 @@ from src.schemas import (
     CourseOut,
     EnrollmentOut,
     LearningPathOut,
+    LearningModuleOut,
     LearningStageOut,
     LearningStageSummaryOut,
     OtpRequestIn,
@@ -78,11 +83,13 @@ def _user_out(user: User) -> UserOut:
         phone=user.phone,
         display_name=user.display_name,
         deleted_at=user.deleted_at,
+        blocked_at=user.blocked_at,
         created_at=user.created_at,
         work_or_study_field=profile.work_or_study_field if profile else None,
         education_level=profile.education_level if profile else None,
         learning_goal_interests=profile.learning_goal_interests if profile else None,
         ai_familiarity_level=profile.ai_familiarity_level if profile else None,
+        daily_learning_time_text=profile.daily_learning_time_text if profile else None,
         daily_learning_minutes=profile.daily_learning_minutes if profile else None,
         preferred_career_path=profile.preferred_career_path if profile else None,
         referral_source=profile.referral_source if profile else None,
@@ -94,11 +101,13 @@ def _get_or_create_phone_user(db: Session, phone: str, display_name: str | None)
     now = datetime.now(timezone.utc)
     user = db.scalars(select(User).where(User.phone == phone).limit(1)).first()
     if user:
-        if user.deleted_at is not None:
+        if user.blocked_at is not None:
             raise HTTPException(
                 status_code=403,
-                detail="این حساب غیرفعال شده است. برای بازیابی با پشتیبانی تماس بگیر.",
+                detail="این حساب توسط مدیریت مسدود شده است.",
             )
+        # A normal admin delete is reversible. A verified phone restores its own identity.
+        user.deleted_at = None
         user.phone_verified_at = now
         user.last_login_at = now
         return user
@@ -120,14 +129,22 @@ PROFILE_FIELDS = (
     "education_level",
     "learning_goal_interests",
     "ai_familiarity_level",
-    "daily_learning_minutes",
+    "daily_learning_time_text",
     "preferred_career_path",
     "referral_source",
 )
 
 
 def _profile_is_complete(profile: UserProfile) -> bool:
-    return all(getattr(profile, field) not in (None, "") for field in PROFILE_FIELDS)
+    for field in PROFILE_FIELDS:
+        if field == "daily_learning_time_text":
+            # Existing profiles may predate the raw-answer column and only have a parsed value.
+            if profile.daily_learning_time_text not in (None, "") or profile.daily_learning_minutes is not None:
+                continue
+            return False
+        if getattr(profile, field) in (None, ""):
+            return False
+    return True
 
 
 def _profile_out(user: User, profile: UserProfile | None) -> ProfileOut:
@@ -141,6 +158,7 @@ def _profile_out(user: User, profile: UserProfile | None) -> ProfileOut:
         education_level=profile.education_level,
         learning_goal_interests=profile.learning_goal_interests,
         ai_familiarity_level=profile.ai_familiarity_level,
+        daily_learning_time_text=profile.daily_learning_time_text,
         daily_learning_minutes=profile.daily_learning_minutes,
         preferred_career_path=profile.preferred_career_path,
         referral_source=profile.referral_source,
@@ -153,10 +171,25 @@ def _published_version_for(course: Course) -> CourseVersion | None:
     return next((version for version in versions if version.status == "published"), None)
 
 
-def _course_out(course: Course) -> CourseOut | None:
+def _course_out(db: Session, course: Course) -> CourseOut | None:
     version = _published_version_for(course)
     if not version:
         return None
+    if _uses_module_structure(db, version.id):
+        try:
+            module_stages = _approved_module_stages(db, version.id)
+        except HTTPException:
+            return None
+        return CourseOut(
+            id=course.id,
+            title=course.title,
+            slug=course.slug,
+            domain=course.domain,
+            version_id=version.id,
+            version_number=version.version_number,
+            stage_count=len(module_stages),
+            module_count=len({stage.course_module_id for stage in module_stages}),
+        )
     approved_stages = sorted(
         (
             stage
@@ -175,6 +208,7 @@ def _course_out(course: Course) -> CourseOut | None:
         version_id=version.id,
         version_number=version.version_number,
         stage_count=len(approved_stages),
+        module_count=0,
     )
 
 
@@ -194,6 +228,288 @@ def _approved_stages(db: Session, course_version_id: int) -> list[CourseStageCon
             detail="نسخه منتشرشده دوره باید دقیقاً ۲۰ مرحله تاییدشده و پیوسته داشته باشد.",
         )
     return list(stages)
+
+
+def _uses_module_structure(db: Session, course_version_id: int) -> bool:
+    return db.scalar(
+        select(CourseModule.id)
+        .where(CourseModule.course_version_id == course_version_id)
+        .limit(1)
+    ) is not None
+
+
+def _approved_module_stages(db: Session, course_version_id: int) -> list[CourseModuleStageContent]:
+    modules = db.scalars(
+        select(CourseModule)
+        .where(
+            CourseModule.course_version_id == course_version_id,
+            CourseModule.status == "approved",
+        )
+        .order_by(CourseModule.module_number)
+    ).all()
+    if not modules:
+        raise HTTPException(status_code=409, detail="نسخه دوره سرفصل تاییدشده ندارد.")
+
+    stages = db.scalars(
+        select(CourseModuleStageContent)
+        .join(CourseModuleStageContent.course_module)
+        .join(CourseModuleStageContent.template)
+        .options(
+            selectinload(CourseModuleStageContent.course_module),
+            selectinload(CourseModuleStageContent.template),
+        )
+        .where(
+            CourseModule.course_version_id == course_version_id,
+            CourseModule.status == "approved",
+            CourseModuleStageContent.status == "approved",
+            CourseModuleStageContent.review_status == "approved",
+            LearningStageTemplate.is_active.is_(True),
+        )
+        .order_by(CourseModule.module_number, CourseModuleStageContent.stage_number)
+    ).all()
+    expected_numbers = list(range(1, LEARNING_STAGE_COUNT + 1))
+    if len(stages) != len(modules) * LEARNING_STAGE_COUNT:
+        raise HTTPException(
+            status_code=409,
+            detail="هر سرفصل نسخه منتشرشده باید دقیقاً ۲۰ قالب تاییدشده داشته باشد.",
+        )
+    for module in modules:
+        module_numbers = [
+            stage.stage_number
+            for stage in stages
+            if stage.course_module_id == module.id
+        ]
+        if module_numbers != expected_numbers:
+            raise HTTPException(
+                status_code=409,
+                detail=f"سرفصل «{module.title}» باید ۲۰ قالب پیوسته و تاییدشده داشته باشد.",
+            )
+    return list(stages)
+
+
+def _ensure_module_stage_progress(
+    db: Session,
+    enrollment: UserCourseEnrollment,
+    stages: list[CourseModuleStageContent],
+) -> list[UserModuleStageProgress]:
+    existing = {
+        progress.module_stage_content_id: progress
+        for progress in db.scalars(
+            select(UserModuleStageProgress)
+            .where(UserModuleStageProgress.enrollment_id == enrollment.id)
+            .order_by(UserModuleStageProgress.id)
+        ).all()
+    }
+    for ordinal, stage in enumerate(stages, start=1):
+        if stage.id in existing:
+            continue
+        progress = UserModuleStageProgress(
+            enrollment_id=enrollment.id,
+            module_stage_content_id=stage.id,
+            status="available" if ordinal == 1 else "locked",
+        )
+        db.add(progress)
+        existing[stage.id] = progress
+    db.flush()
+    return [existing[stage.id] for stage in stages]
+
+
+def _sync_module_enrollment_progress(
+    enrollment: UserCourseEnrollment,
+    progress_rows: list[UserModuleStageProgress],
+) -> None:
+    total = len(progress_rows)
+    completed_count = sum(row.status == "completed" for row in progress_rows)
+    enrollment.progress_percentage = round(completed_count * 100 / total) if total else 0
+    if total and completed_count == total:
+        enrollment.status = "completed"
+        enrollment.current_stage_number = total
+        enrollment.completed_at = enrollment.completed_at or datetime.now(timezone.utc)
+        return
+
+    next_index = next(index for index, row in enumerate(progress_rows, start=1) if row.status != "completed")
+    next_row = progress_rows[next_index - 1]
+    enrollment.status = "active"
+    enrollment.current_stage_number = next_index
+    enrollment.completed_at = None
+    if next_row.status in ("locked", "not_started"):
+        next_row.status = "available"
+
+
+def _module_learning_path_out(
+    db: Session,
+    enrollment: UserCourseEnrollment,
+    stages: list[CourseModuleStageContent],
+    progress_rows: list[UserModuleStageProgress],
+) -> LearningPathOut:
+    course = db.get(Course, enrollment.course_id)
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not course or not version or version.course_id != course.id:
+        raise HTTPException(status_code=409, detail="اطلاعات دوره این مسیر آموزشی ناقص است.")
+
+    module_rows: dict[int, dict] = {}
+    stage_summaries: list[LearningStageSummaryOut] = []
+    completed_count = 0
+    for ordinal, (stage, progress) in enumerate(zip(stages, progress_rows), start=1):
+        module = stage.course_module
+        if not module:
+            raise HTTPException(status_code=409, detail="رابطه سرفصل و محتوای آموزشی ناقص است.")
+        module_data = module_rows.setdefault(
+            module.id,
+            {
+                "module": module,
+                "rows": [],
+            },
+        )
+        module_data["rows"].append(progress)
+        if progress.status == "completed":
+            completed_count += 1
+        stage_summaries.append(
+            LearningStageSummaryOut(
+                stage_number=ordinal,
+                stage_type=stage.template.code,
+                title=stage.title,
+                status=progress.status,
+                is_current=(
+                    enrollment.status != "completed"
+                    and ordinal == enrollment.current_stage_number
+                ),
+                module_id=module.id,
+                module_number=module.module_number,
+                module_title=module.title,
+                module_stage_number=stage.stage_number,
+            )
+        )
+
+    modules: list[LearningModuleOut] = []
+    for module_data in module_rows.values():
+        module = module_data["module"]
+        rows = module_data["rows"]
+        module_completed = sum(row.status == "completed" for row in rows)
+        module_current = any(
+            summary.module_id == module.id and summary.is_current
+            for summary in stage_summaries
+        )
+        if module_completed == len(rows):
+            status = "completed"
+        elif module_current:
+            status = "active"
+        else:
+            status = "locked"
+        modules.append(
+            LearningModuleOut(
+                module_id=module.id,
+                module_number=module.module_number,
+                title=module.title,
+                description=module.description,
+                status=status,
+                is_current=module_current,
+                completed_stage_count=module_completed,
+                total_stage_count=len(rows),
+            )
+        )
+
+    return LearningPathOut(
+        enrollment_id=enrollment.id,
+        course_id=course.id,
+        course_title=course.title,
+        course_slug=course.slug,
+        course_domain=course.domain,
+        course_version_id=version.id,
+        course_version_number=version.version_number,
+        status=enrollment.status,
+        current_stage_number=enrollment.current_stage_number,
+        completed_stage_count=completed_count,
+        total_stage_count=len(stages),
+        progress_percentage=enrollment.progress_percentage,
+        stages=stage_summaries,
+        module_count=len(modules),
+        modules=modules,
+    )
+
+
+def _module_current_stage_out(
+    db: Session,
+    enrollment: UserCourseEnrollment,
+    stages: list[CourseModuleStageContent],
+    progress_rows: list[UserModuleStageProgress],
+) -> LearningStageOut:
+    ordinal = len(stages) if enrollment.status == "completed" else enrollment.current_stage_number
+    if ordinal < 1 or ordinal > len(stages):
+        raise HTTPException(status_code=409, detail="مرحله جاری این مسیر آموزشی معتبر نیست.")
+    stage = stages[ordinal - 1]
+    progress = progress_rows[ordinal - 1]
+    module = stage.course_module
+    course = db.get(Course, enrollment.course_id)
+    if not course or not module:
+        raise HTTPException(status_code=409, detail="محتوای سرفصل این مسیر پیدا نشد.")
+    content = stage.content_json if isinstance(stage.content_json, dict) else {}
+    return LearningStageOut(
+        enrollment_id=enrollment.id,
+        course_id=course.id,
+        course_title=course.title,
+        stage_number=ordinal,
+        stage_type=stage.template.code,
+        title=stage.title,
+        progress_status=progress.status,
+        progress_percentage=enrollment.progress_percentage,
+        total_stage_count=len(stages),
+        course_completed=enrollment.status == "completed",
+        content=content,
+        coaching=_coaching_checkpoint(content, enrollment.status == "completed"),
+        module_id=module.id,
+        module_number=module.module_number,
+        module_title=module.title,
+        module_stage_number=stage.stage_number,
+        total_module_count=len({item.course_module_id for item in stages}),
+    )
+
+
+def _complete_module_learning_stage(
+    db: Session,
+    enrollment: UserCourseEnrollment,
+    stage_number: int,
+    payload: StageCompleteIn | None,
+) -> StageCompleteOut:
+    stages = _approved_module_stages(db, enrollment.course_version_id)
+    if stage_number < 1 or stage_number > len(stages):
+        raise HTTPException(status_code=404, detail="مرحله آموزشی پیدا نشد.")
+    progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
+    _sync_module_enrollment_progress(enrollment, progress_rows)
+    stage = stages[stage_number - 1]
+    progress = progress_rows[stage_number - 1]
+
+    if progress.status != "completed" and stage_number != enrollment.current_stage_number:
+        raise HTTPException(
+            status_code=409,
+            detail=f"ابتدا مرحله {enrollment.current_stage_number} را کامل کن.",
+        )
+
+    if progress.status != "completed":
+        progress.status = "completed"
+        progress.completed_at = datetime.now(timezone.utc)
+        if payload and payload.response is not None:
+            progress.response_json = payload.response
+        if stage_number < len(progress_rows):
+            next_progress = progress_rows[stage_number]
+            if next_progress.status in ("locked", "not_started"):
+                next_progress.status = "available"
+        _sync_module_enrollment_progress(enrollment, progress_rows)
+        db.commit()
+        db.refresh(enrollment)
+
+    path = _module_learning_path_out(db, enrollment, stages, progress_rows)
+    course_completed = enrollment.status == "completed"
+    content = stage.content_json if isinstance(stage.content_json, dict) else {}
+    return StageCompleteOut(
+        enrollment_id=enrollment.id,
+        completed_stage_number=stage_number,
+        next_stage_number=None if course_completed else enrollment.current_stage_number,
+        course_completed=course_completed,
+        progress_percentage=enrollment.progress_percentage,
+        coaching=_coaching_checkpoint(content, course_completed),
+        path=path,
+    )
 
 
 def _validate_enrollment_version(db: Session, enrollment: UserCourseEnrollment) -> None:
@@ -377,9 +693,10 @@ def admin_me() -> dict:
 @router.post("/api/auth/otp/request", response_model=OtpRequestOut)
 async def request_phone_otp(payload: OtpRequestIn, db: Session = Depends(get_db)) -> OtpRequestOut:
     phone = _normalize_phone(payload.phone)
-    requires_display_name = db.scalar(
-        select(User.id).where(User.phone == phone).limit(1)
-    ) is None
+    existing_user = db.scalars(select(User).where(User.phone == phone).limit(1)).first()
+    if existing_user and existing_user.blocked_at is not None:
+        raise HTTPException(status_code=403, detail="این حساب توسط مدیریت مسدود شده است.")
+    requires_display_name = existing_user is None
     try:
         result = await request_otp(db, phone)
     except OtpRateLimitError as exc:
@@ -411,7 +728,10 @@ def verify_phone_otp(
 ) -> PhoneLoginOut:
     phone = _normalize_phone(payload.phone)
     display_name = payload.display_name.strip() if payload.display_name else None
-    has_existing_user = db.scalar(select(User.id).where(User.phone == phone).limit(1)) is not None
+    existing_user = db.scalars(select(User).where(User.phone == phone).limit(1)).first()
+    if existing_user and existing_user.blocked_at is not None:
+        raise HTTPException(status_code=403, detail="این حساب توسط مدیریت مسدود شده است.")
+    has_existing_user = existing_user is not None
     if not has_existing_user and not display_name:
         raise HTTPException(status_code=422, detail="برای ساخت حساب یک نام وارد کن.")
     if not verify_otp(db, phone, normalize_otp_code(payload.code)):
@@ -501,7 +821,7 @@ def list_published_courses(db: Session = Depends(get_db)) -> list[CourseOut]:
         )
         .order_by(Course.id)
     ).all()
-    output = [_course_out(course) for course in courses]
+    output = [_course_out(db, course) for course in courses]
     return [course for course in output if course]
 
 
@@ -525,7 +845,11 @@ def enroll_course(
     version = _published_version_for(course)
     if not version:
         raise HTTPException(status_code=409, detail="Course does not have a published version.")
-    stages = _approved_stages(db, version.id)
+    uses_modules = _uses_module_structure(db, version.id)
+    if uses_modules:
+        module_stages = _approved_module_stages(db, version.id)
+    else:
+        stages = _approved_stages(db, version.id)
 
     enrollment = db.scalars(
         select(UserCourseEnrollment).where(
@@ -545,8 +869,12 @@ def enroll_course(
         db.add(enrollment)
         db.flush()
 
-    progress_rows = _ensure_stage_progress(db, enrollment, stages)
-    _sync_enrollment_progress(enrollment, progress_rows)
+    if uses_modules:
+        module_progress_rows = _ensure_module_stage_progress(db, enrollment, module_stages)
+        _sync_module_enrollment_progress(enrollment, module_progress_rows)
+    else:
+        progress_rows = _ensure_stage_progress(db, enrollment, stages)
+        _sync_enrollment_progress(enrollment, progress_rows)
     db.commit()
     db.refresh(enrollment)
 
@@ -567,6 +895,12 @@ def get_current_learning_path(
     db: Session = Depends(get_db),
 ) -> LearningPathOut:
     enrollment = _current_enrollment(db, user.id)
+    if _uses_module_structure(db, enrollment.course_version_id):
+        stages = _approved_module_stages(db, enrollment.course_version_id)
+        progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
+        _sync_module_enrollment_progress(enrollment, progress_rows)
+        db.commit()
+        return _module_learning_path_out(db, enrollment, stages, progress_rows)
     stages = _approved_stages(db, enrollment.course_version_id)
     progress_rows = _ensure_stage_progress(db, enrollment, stages)
     _sync_enrollment_progress(enrollment, progress_rows)
@@ -581,6 +915,12 @@ def get_learning_path(
     db: Session = Depends(get_db),
 ) -> LearningPathOut:
     enrollment = _owned_enrollment(db, enrollment_id, user.id)
+    if _uses_module_structure(db, enrollment.course_version_id):
+        stages = _approved_module_stages(db, enrollment.course_version_id)
+        progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
+        _sync_module_enrollment_progress(enrollment, progress_rows)
+        db.commit()
+        return _module_learning_path_out(db, enrollment, stages, progress_rows)
     stages = _approved_stages(db, enrollment.course_version_id)
     progress_rows = _ensure_stage_progress(db, enrollment, stages)
     _sync_enrollment_progress(enrollment, progress_rows)
@@ -598,6 +938,12 @@ def get_current_learning_stage(
     db: Session = Depends(get_db),
 ) -> LearningStageOut:
     enrollment = _owned_enrollment(db, enrollment_id, user.id)
+    if _uses_module_structure(db, enrollment.course_version_id):
+        stages = _approved_module_stages(db, enrollment.course_version_id)
+        progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
+        _sync_module_enrollment_progress(enrollment, progress_rows)
+        db.commit()
+        return _module_current_stage_out(db, enrollment, stages, progress_rows)
     stages = _approved_stages(db, enrollment.course_version_id)
     progress_rows = _ensure_stage_progress(db, enrollment, stages)
     _sync_enrollment_progress(enrollment, progress_rows)
@@ -638,6 +984,8 @@ def complete_learning_stage(
     db: Session = Depends(get_db),
 ) -> StageCompleteOut:
     enrollment = _owned_enrollment(db, enrollment_id, user.id, for_update=True)
+    if _uses_module_structure(db, enrollment.course_version_id):
+        return _complete_module_learning_stage(db, enrollment, stage_number, payload)
     stages = _approved_stages(db, enrollment.course_version_id)
     stage = next((item for item in stages if item.stage_number == stage_number), None)
     if not stage:
@@ -715,7 +1063,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db)) -> dict:
         user.deleted_at = datetime.now(timezone.utc)
         revoke_user_sessions(db, user.id)
     db.commit()
-    return {"deleted": True, "soft_deleted": True}
+    return {"deleted": True, "soft_deleted": True, "reactivates_after_phone_otp": True}
 
 
 @router.post("/api/admin/users/{user_id}/restore", dependencies=[Depends(require_admin)])
@@ -726,4 +1074,26 @@ def restore_user(user_id: int, db: Session = Depends(get_db)) -> dict:
     user.deleted_at = None
     db.commit()
     return {"restored": True}
+
+
+@router.post("/api/admin/users/{user_id}/block", dependencies=[Depends(require_admin)])
+def block_user(user_id: int, db: Session = Depends(get_db)) -> dict:
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    if user.blocked_at is None:
+        user.blocked_at = datetime.now(timezone.utc)
+        revoke_user_sessions(db, user.id)
+    db.commit()
+    return {"blocked": True}
+
+
+@router.post("/api/admin/users/{user_id}/unblock", dependencies=[Depends(require_admin)])
+def unblock_user(user_id: int, db: Session = Depends(get_db)) -> dict:
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    user.blocked_at = None
+    db.commit()
+    return {"unblocked": True}
 

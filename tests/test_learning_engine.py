@@ -9,7 +9,7 @@ setup_test_environment()
 
 from src.db import Base, SessionLocal, engine
 from src.main import app
-from src.models import UserCourseEnrollment, UserStageProgress
+from src.models import Course, CourseVersion, UserCourseEnrollment, UserModuleStageProgress, UserStageProgress
 from src.seed import seed_defaults
 
 
@@ -54,18 +54,18 @@ class LearningEngineTests(unittest.TestCase):
     def tearDownClass(cls) -> None:
         engine.dispose()
 
-    def test_enrollment_creates_exactly_twenty_ordered_progress_rows(self) -> None:
+    def test_enrollment_creates_module_scoped_progress_rows(self) -> None:
         with TestClient(app) as client:
             _, enrollment_id = login_and_enroll(client, "09121110001")
 
         with SessionLocal() as db:
             rows = db.scalars(
-                select(UserStageProgress)
-                .where(UserStageProgress.enrollment_id == enrollment_id)
-                .order_by(UserStageProgress.stage_number)
+                select(UserModuleStageProgress)
+                .where(UserModuleStageProgress.enrollment_id == enrollment_id)
+                .order_by(UserModuleStageProgress.id)
             ).all()
 
-        self.assertEqual([row.stage_number for row in rows], list(range(1, 21)))
+        self.assertEqual(len(rows), 100)
         self.assertEqual(rows[0].status, "available")
         self.assertTrue(all(row.status == "locked" for row in rows[1:]))
 
@@ -85,8 +85,10 @@ class LearningEngineTests(unittest.TestCase):
             )
 
         self.assertEqual(resumed_path.json()["current_stage_number"], 14)
-        self.assertEqual(resumed_path.json()["progress_percentage"], 65)
+        self.assertEqual(resumed_path.json()["progress_percentage"], 13)
         self.assertEqual(current_stage.json()["stage_type"], "audio_summary")
+        self.assertEqual(current_stage.json()["module_number"], 1)
+        self.assertEqual(current_stage.json()["module_stage_number"], 14)
         media_slots = current_stage.json()["content"]["media_slots"]
         self.assertEqual(media_slots[0]["kind"], "audio")
         self.assertEqual(media_slots[0]["status"], "empty")
@@ -96,7 +98,7 @@ class LearningEngineTests(unittest.TestCase):
         with TestClient(app) as client:
             _, enrollment_id = login_and_enroll(client, "09121110003")
             last_response = None
-            for stage_number in range(1, 21):
+            for stage_number in range(1, 101):
                 last_response = client.post(
                     f"/api/learning/enrollments/{enrollment_id}/stages/{stage_number}/complete",
                     json={"response": None},
@@ -104,7 +106,7 @@ class LearningEngineTests(unittest.TestCase):
                 self.assertEqual(last_response.status_code, 200)
 
             repeated = client.post(
-                f"/api/learning/enrollments/{enrollment_id}/stages/20/complete",
+                f"/api/learning/enrollments/{enrollment_id}/stages/100/complete",
                 json={"response": None},
             )
             completed_stage = client.get(
@@ -117,19 +119,19 @@ class LearningEngineTests(unittest.TestCase):
         self.assertEqual(repeated.status_code, 200)
         self.assertEqual(repeated.json()["progress_percentage"], 100)
         self.assertTrue(completed_stage.json()["course_completed"])
-        self.assertEqual(completed_stage.json()["stage_number"], 20)
+        self.assertEqual(completed_stage.json()["stage_number"], 100)
 
         with SessionLocal() as db:
             enrollment = db.get(UserCourseEnrollment, enrollment_id)
             rows = db.scalars(
-                select(UserStageProgress).where(
-                    UserStageProgress.enrollment_id == enrollment_id,
-                    UserStageProgress.status == "completed",
+                select(UserModuleStageProgress).where(
+                    UserModuleStageProgress.enrollment_id == enrollment_id,
+                    UserModuleStageProgress.status == "completed",
                 )
             ).all()
         self.assertEqual(enrollment.status, "completed")
         self.assertEqual(enrollment.progress_percentage, 100)
-        self.assertEqual(len(rows), 20)
+        self.assertEqual(len(rows), 100)
 
     def test_another_user_cannot_read_or_complete_an_enrollment(self) -> None:
         with TestClient(app) as owner:
@@ -148,6 +150,55 @@ class LearningEngineTests(unittest.TestCase):
         self.assertEqual(path_response.status_code, 404)
         self.assertEqual(stage_response.status_code, 404)
         self.assertEqual(complete_response.status_code, 404)
+
+    def test_existing_flat_version_one_enrollment_remains_compatible(self) -> None:
+        with TestClient(app) as client:
+            otp_response = client.post("/api/auth/otp/request", json={"phone": "09121110006"})
+            login_response = client.post(
+                "/api/auth/otp/verify",
+                json={
+                    "phone": "09121110006",
+                    "code": otp_response.json()["mock_code"],
+                    "display_name": "Legacy learner",
+                },
+            )
+            user_id = login_response.json()["user_id"]
+            self.assertEqual(client.patch("/api/me/profile", json=PROFILE_PAYLOAD).status_code, 200)
+
+            with SessionLocal() as db:
+                course = db.scalars(select(Course).where(Course.slug == "personal-development-ai")).one()
+                version_one = db.scalars(
+                    select(CourseVersion).where(
+                        CourseVersion.course_id == course.id,
+                        CourseVersion.version_number == 1,
+                    )
+                ).one()
+                enrollment = UserCourseEnrollment(
+                    user_id=user_id,
+                    course_id=course.id,
+                    course_version_id=version_one.id,
+                    status="active",
+                    current_stage_number=1,
+                    progress_percentage=0,
+                )
+                db.add(enrollment)
+                db.commit()
+                enrollment_id = enrollment.id
+
+            path_response = client.get("/api/learning/enrollments/current")
+            stage_response = client.get(
+                f"/api/learning/enrollments/{enrollment_id}/stages/current"
+            )
+
+        self.assertEqual(path_response.status_code, 200)
+        self.assertEqual(path_response.json()["total_stage_count"], 20)
+        self.assertEqual(path_response.json()["module_count"], 0)
+        self.assertEqual(stage_response.json()["stage_type"], "lesson_summary")
+        with SessionLocal() as db:
+            legacy_rows = db.scalars(
+                select(UserStageProgress).where(UserStageProgress.enrollment_id == enrollment_id)
+            ).all()
+        self.assertEqual(len(legacy_rows), 20)
 
 
 if __name__ == "__main__":

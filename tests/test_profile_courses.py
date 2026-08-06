@@ -10,7 +10,7 @@ setup_test_environment()
 from src.config import get_settings
 from src.db import Base, SessionLocal, engine
 from src.main import app
-from src.models import User, UserCourseEnrollment, UserProfile, UserStageProgress
+from src.models import User, UserCourseEnrollment, UserModuleStageProgress, UserProfile
 from src.seed import seed_defaults
 
 
@@ -89,6 +89,31 @@ class ProfileAndCourseTests(unittest.TestCase):
         self.assertEqual(user.display_name, "Single name")
         self.assertEqual(user.phone, "09120000001")
 
+    def test_free_form_daily_time_is_persisted_and_does_not_block_enrollment(self) -> None:
+        payload = {
+            **PROFILE_PAYLOAD,
+            "daily_learning_time_text": "I will decide later",
+        }
+        payload.pop("daily_learning_minutes")
+
+        with TestClient(app) as client:
+            user_id = login(client, "09120000009", "Free form learner")
+            profile_response = client.patch("/api/me/profile", json=payload)
+            course = next(item for item in client.get("/api/courses").json() if item["slug"] == "personal-development-ai")
+            enrollment_response = client.post(f"/api/courses/{course['id']}/enroll")
+
+        self.assertEqual(profile_response.status_code, 200)
+        self.assertTrue(profile_response.json()["completed"])
+        self.assertEqual(profile_response.json()["daily_learning_time_text"], "I will decide later")
+        self.assertIsNone(profile_response.json()["daily_learning_minutes"])
+        self.assertEqual(enrollment_response.status_code, 200)
+
+        with SessionLocal() as db:
+            profile = db.get(UserProfile, user_id)
+
+        self.assertEqual(profile.daily_learning_time_text, "I will decide later")
+        self.assertIsNone(profile.daily_learning_minutes)
+
     def test_profile_and_enrollment_require_authenticated_owner(self) -> None:
         with TestClient(app) as anonymous:
             self.assertEqual(anonymous.get("/api/me/profile").status_code, 401)
@@ -149,15 +174,19 @@ class ProfileAndCourseTests(unittest.TestCase):
             )
 
         self.assertEqual(path.status_code, 200)
-        self.assertEqual(path.json()["total_stage_count"], 20)
-        self.assertEqual(len(path.json()["stages"]), 20)
+        self.assertEqual(path.json()["total_stage_count"], 100)
+        self.assertEqual(len(path.json()["stages"]), 100)
+        self.assertEqual(path.json()["module_count"], 5)
+        self.assertEqual(len(path.json()["modules"]), 5)
         self.assertEqual(lesson.status_code, 200)
         self.assertEqual(lesson.json()["stage_number"], 1)
-        self.assertEqual(lesson.json()["stage_type"], "lesson_summary")
+        self.assertEqual(lesson.json()["stage_type"], "learning_path")
+        self.assertEqual(lesson.json()["module_number"], 1)
+        self.assertEqual(lesson.json()["module_stage_number"], 1)
         self.assertTrue(lesson.json()["content"]["ui_hint"]["avatar_visible"])
         self.assertEqual(blocked.status_code, 409)
         self.assertEqual(completion.status_code, 200)
-        self.assertEqual(completion.json()["progress_percentage"], 5)
+        self.assertEqual(completion.json()["progress_percentage"], 1)
         self.assertEqual(completion.json()["next_stage_number"], 2)
         self.assertFalse(completion.json()["coaching"]["enabled"])
 
@@ -168,13 +197,13 @@ class ProfileAndCourseTests(unittest.TestCase):
                 )
             ).one()
             progress_rows = db.scalars(
-                select(UserStageProgress)
-                .where(UserStageProgress.enrollment_id == enrollment.id)
-                .order_by(UserStageProgress.stage_number)
+                select(UserModuleStageProgress)
+                .where(UserModuleStageProgress.enrollment_id == enrollment.id)
+                .order_by(UserModuleStageProgress.id)
             ).all()
-        self.assertEqual(enrollment.progress_percentage, 5)
+        self.assertEqual(enrollment.progress_percentage, 1)
         self.assertEqual(enrollment.current_stage_number, 2)
-        self.assertEqual(len(progress_rows), 20)
+        self.assertEqual(len(progress_rows), 100)
         self.assertEqual(progress_rows[0].status, "completed")
         self.assertEqual(progress_rows[0].response_json["selected_items"], ["هدف روشن"])
         self.assertEqual(progress_rows[1].status, "available")

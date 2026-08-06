@@ -6,6 +6,7 @@ from tests._env import setup_test_environment
 
 setup_test_environment()
 
+import src.models  # Ensure all SQLAlchemy tables are registered on Base.metadata.
 from src.db import Base
 
 
@@ -36,6 +37,7 @@ class CanonicalSchemaContractTests(unittest.TestCase):
         self.assertNotIn("profession", user_columns)
         self.assertFalse(user_columns["phone"]["nullable"])
         self.assertFalse(user_columns["display_name"]["nullable"])
+        self.assertTrue(user_columns["blocked_at"]["nullable"])
 
         self.assertEqual(
             set(profile_columns),
@@ -45,6 +47,7 @@ class CanonicalSchemaContractTests(unittest.TestCase):
                 "education_level",
                 "learning_goal_interests",
                 "ai_familiarity_level",
+                "daily_learning_time_text",
                 "daily_learning_minutes",
                 "preferred_career_path",
                 "referral_source",
@@ -64,3 +67,32 @@ class CanonicalSchemaContractTests(unittest.TestCase):
             "user_progress",
         }:
             self.assertNotIn(legacy_table, tables)
+
+    def test_module_scoped_learning_contract_is_present(self) -> None:
+        inspector = inspect(self.engine)
+        tables = set(inspector.get_table_names())
+        self.assertTrue(
+            {
+                "learning_stage_templates",
+                "course_modules",
+                "course_module_stage_contents",
+                "course_kb_document_modules",
+                "user_module_stage_progress",
+            }.issubset(tables)
+        )
+
+        module_columns = {column["name"] for column in inspector.get_columns("course_modules")}
+        module_stage_columns = {
+            column["name"]
+            for column in inspector.get_columns("course_module_stage_contents")
+        }
+        module_progress_columns = {
+            column["name"]
+            for column in inspector.get_columns("user_module_stage_progress")
+        }
+        kb_columns = {column["name"] for column in inspector.get_columns("course_kb_documents")}
+
+        self.assertTrue({"course_version_id", "module_number", "learning_objectives_json", "tags_json"}.issubset(module_columns))
+        self.assertTrue({"course_module_id", "template_id", "stage_number", "content_json"}.issubset(module_stage_columns))
+        self.assertTrue({"enrollment_id", "module_stage_content_id", "status"}.issubset(module_progress_columns))
+        self.assertIn("course_version_id", kb_columns)

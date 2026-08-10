@@ -1214,6 +1214,211 @@
       .choice-option,
       .check-option { transition: none; }
     }
+
+    /* Learning view refinement: preserve the visual identity, give the lesson room to breathe. */
+    .phone-shell.mode-lesson {
+      width: min(1320px, 100%);
+      grid-template-columns: minmax(0, 1fr) clamp(286px, 26vw, 348px);
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+    .phone-shell.mode-lesson .lesson-dock,
+    .phone-shell.mode-lesson .planet-stage {
+      min-width: 0;
+      height: 100%;
+    }
+    .phone-shell.mode-lesson .lesson-dock {
+      padding: clamp(20px, 2.5vw, 34px);
+    }
+    .phone-shell.mode-lesson .planet-stage {
+      display: block;
+      padding: 18px 16px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+    }
+    .phone-shell.mode-lesson .course-coach {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 16px;
+    }
+    .phone-shell.mode-lesson .course-coach img {
+      width: 58px;
+      height: 72px;
+    }
+    .phone-shell.mode-lesson .coach-bubble {
+      padding: 10px 11px;
+      border-radius: 16px 16px 5px 16px;
+    }
+    .phone-shell.mode-lesson .coach-bubble strong { font-size: 12px; }
+    .phone-shell.mode-lesson .coach-bubble p { font-size: 10px; line-height: 1.75; }
+    .learning-path { min-width: 0; }
+    .path-course-head { padding: 0 3px 14px; }
+    .path-course-head h2 { font-size: 16px; line-height: 1.65; }
+    .path-progress-text { margin-top: 5px; }
+    .path-switch-course { margin-top: 10px; }
+
+    .module-path-list {
+      gap: 4px;
+      margin-top: 12px;
+      padding: 2px 0;
+    }
+    .module-path-list::before {
+      top: 22px;
+      right: 15px;
+      bottom: 22px;
+    }
+    .path-module {
+      min-height: 62px;
+      grid-template-columns: 30px minmax(0, 1fr) 30px;
+      gap: 9px;
+      padding: 8px 2px 8px 0;
+    }
+    .path-module.selected {
+      padding-inline: 7px 5px;
+      border-radius: 12px;
+    }
+    .path-stage-number {
+      width: 30px;
+      height: 30px;
+      border-width: 2px;
+      font-size: 10px;
+    }
+    .path-module-copy > strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .path-module-copy > small { display: none; }
+    .path-module-kicker { font-size: 8px; }
+    .path-module-meter { height: 2px; margin-top: 5px; }
+    .path-module-count strong { font-size: 12px; }
+    .path-module-count small { margin-top: 2px; font-size: 8px; }
+
+    .module-stage-overview {
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px solid rgba(132, 103, 173, .13);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(255, 253, 250, .78), rgba(243, 249, 248, .58));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82);
+    }
+    .module-stage-heading h3 { font-size: 14px; }
+    .module-stage-description {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+    .module-stage-focus { margin-top: 11px; }
+    .module-stage-focus > div { padding: 9px 10px; }
+    .module-stage-focus strong { font-size: 9px; }
+    .module-stage-map {
+      margin-top: 12px;
+      border-top: 1px solid rgba(132, 103, 173, .12);
+    }
+    .module-stage-map > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 11px 0 1px;
+      color: #695379;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 900;
+      list-style: none;
+    }
+    .module-stage-map > summary::-webkit-details-marker { display: none; }
+    .module-stage-map > summary::after {
+      content: "+";
+      flex: none;
+      width: 21px;
+      height: 21px;
+      display: grid;
+      place-items: center;
+      color: #765ba0;
+      border-radius: 50%;
+      background: rgba(136, 105, 182, .10);
+      font-size: 15px;
+      font-weight: 400;
+    }
+    .module-stage-map[open] > summary::after { content: "−"; }
+    .module-stage-map > summary small {
+      margin-right: auto;
+      color: var(--muted);
+      font-size: 8px;
+      font-weight: 400;
+    }
+    .module-stage-rail {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 8px;
+      padding: 2px 0 1px;
+      overflow: visible;
+      scroll-snap-type: none;
+    }
+    .module-stage-item {
+      flex: initial;
+      min-width: 0;
+      min-height: 48px;
+      grid-template-columns: 22px minmax(0, 1fr) 8px;
+      gap: 5px;
+      padding: 6px;
+      border-radius: 10px;
+      scroll-snap-align: none;
+    }
+    .module-stage-index { width: 22px; height: 22px; font-size: 8px; }
+    .module-stage-copy strong {
+      font-size: 8px;
+      line-height: 1.5;
+      -webkit-line-clamp: 2;
+    }
+    .module-stage-copy small { display: none; }
+    .module-stage-state { font-size: 8px; }
+
+    .lesson-article { width: min(840px, 100%); }
+    .stage-header { padding: 22px 24px; }
+    .stage-header h2 { font-size: clamp(20px, 2vw, 26px); }
+    .stage-intro { max-width: 760px; }
+
+    @media (max-width: 1020px) {
+      .phone-shell.mode-lesson {
+        width: min(760px, 100%);
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto minmax(420px, 1fr);
+        grid-template-areas:
+          "topbar"
+          "planet"
+          "lesson";
+      }
+      .phone-shell.mode-lesson .planet-stage { max-height: min(43svh, 430px); }
+      .module-path-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+      .module-path-list::before { display: none; }
+      .path-module {
+        min-height: 66px;
+        padding: 8px;
+        border: 1px solid rgba(132, 103, 173, .10);
+        border-radius: 12px;
+        background: rgba(255, 253, 250, .44);
+      }
+      .path-module:last-child { border-bottom-color: rgba(132, 103, 173, .10); }
+      .path-module-count { display: none; }
+    }
+    @media (max-width: 600px) {
+      .phone-shell.mode-lesson { width: 100%; padding: 10px; }
+      .phone-shell.mode-lesson .planet-stage { max-height: min(48svh, 470px); padding: 14px 13px; }
+      .phone-shell.mode-lesson .lesson-dock { padding: 16px 14px; }
+      .module-path-list { grid-template-columns: 1fr; }
+      .module-stage-focus { grid-template-columns: 1fr; }
+      .module-stage-focus > div + div { border-top: 1px solid rgba(127, 102, 161, .10); border-right: 0; }
+      .module-stage-rail { grid-template-columns: 1fr; }
+      .stage-header { padding: 17px 15px; }
+    }
   </style>
 </head>
 <body>
@@ -1295,7 +1500,13 @@
                 <strong id="moduleNextStage">پس از شروع مسیر مشخص می‌شود</strong>
               </div>
             </div>
-            <div id="moduleStageRail" class="module-stage-rail" role="list" aria-label="۲۰ مرحله این سرفصل"></div>
+            <details id="moduleStageMap" class="module-stage-map">
+              <summary>
+                <span>نقشه ۲۰ مرحله‌ای این سرفصل</span>
+                <small>نمایش ترتیب کامل</small>
+              </summary>
+              <div id="moduleStageRail" class="module-stage-rail" role="list" aria-label="۲۰ مرحله این سرفصل"></div>
+            </details>
           </section>
         </section>
       </div>
@@ -1366,6 +1577,7 @@
     const moduleCurrentLabel = document.querySelector("#moduleCurrentLabel");
     const moduleCurrentStage = document.querySelector("#moduleCurrentStage");
     const moduleNextStage = document.querySelector("#moduleNextStage");
+    const moduleStageMap = document.querySelector("#moduleStageMap");
     const moduleStageRail = document.querySelector("#moduleStageRail");
     const changeCourse = document.querySelector("#changeCourse");
     const answerModal = document.querySelector("#answerModal");
@@ -1557,7 +1769,7 @@
 
       requestAnimationFrame(() => {
         const currentStage = moduleStageRail.querySelector(".module-stage-item.current");
-        if (currentStage) currentStage.scrollIntoView({ block: "nearest", inline: "center" });
+        if (currentStage && moduleStageMap.open) currentStage.scrollIntoView({ block: "nearest", inline: "center" });
       });
     }
 

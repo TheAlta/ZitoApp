@@ -808,11 +808,42 @@
     .course-option-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
     .course-option-arrow { color: #785db8; font-size: 22px; }
     .course-empty { padding: 18px; color: var(--muted); border: 1px dashed var(--line); border-radius: 16px; }
+    .phone-shell.mode-lesson { width: min(1180px, 100%); grid-template-columns: minmax(520px, 1fr) minmax(300px, 340px); }
     .learning-path { text-align: right; }
-    .path-switch-course { width: auto; min-width: 0; height: 31px; margin-top: 11px; padding: 0 12px; font-size: 11px; box-shadow: none; }
-    .path-course-head h2 { margin: 0; font-size: 17px; }
+    .path-course-head {
+      position: relative;
+      padding: 0 2px 17px;
+      border-bottom: 1px solid rgba(132, 103, 173, .13);
+    }
+    .path-course-head::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: -1px;
+      width: 42%;
+      height: 2px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(79, 153, 208, 0), rgba(75, 174, 181, .72), rgba(139, 103, 207, .72), rgba(207, 148, 215, 0));
+      background-size: 180% 100%;
+      animation: holoFlow 7s ease-in-out infinite alternate;
+    }
+    .path-switch-course {
+      width: auto;
+      min-width: 0;
+      height: 32px;
+      margin-top: 12px;
+      padding: 0 12px;
+      color: #725991;
+      border: 1px solid rgba(123, 91, 173, .16);
+      border-radius: 999px;
+      background: rgba(255, 253, 250, .64);
+      box-shadow: none;
+      font-size: 11px;
+    }
+    .path-switch-course:hover { background: rgba(244, 237, 249, .88); box-shadow: none; }
+    .path-course-head h2 { margin: 0; color: #443b5d; font-size: 18px; }
     .path-progress-text { margin-top: 7px; color: var(--muted); font-size: 11px; }
-    .stage-path-list { display: grid; gap: 7px; margin-top: 16px; }
+    .stage-path-list { display: grid; gap: 7px; margin-top: 18px; }
     .path-stage {
       display: grid;
       grid-template-columns: 28px minmax(0, 1fr) auto;
@@ -828,28 +859,185 @@
     .path-stage.current { color: #4c3d69; border-color: rgba(112, 84, 193, .36); background: rgba(238, 229, 249, .86); }
     .path-stage.completed { color: #32775e; background: rgba(229, 247, 238, .80); }
     .path-stage.locked { opacity: .58; }
-    .module-path-list { gap: 9px; }
-    .path-module {
-      display: grid;
-      grid-template-columns: 28px minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 9px;
-      padding: 10px;
-      color: #716a7e;
-      border: 1px solid rgba(142, 109, 181, .13);
-      border-radius: 13px;
-      background: rgba(255, 253, 250, .64);
+    .module-path-list {
+      position: relative;
+      gap: 0;
+      margin-top: 14px;
     }
-    .path-module.active { color: #4c3d69; border-color: rgba(112, 84, 193, .36); background: rgba(238, 229, 249, .86); }
-    .path-module.completed { color: #32775e; background: rgba(229, 247, 238, .80); }
-    .path-module.locked { opacity: .62; }
+    .module-path-list::before {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      top: 29px;
+      right: 18px;
+      bottom: 29px;
+      width: 1px;
+      background: linear-gradient(180deg, rgba(139, 103, 207, .38), rgba(75, 174, 181, .18), rgba(139, 103, 207, .08));
+    }
+    .path-module {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: auto;
+      min-height: 82px;
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr) 38px;
+      align-items: center;
+      gap: 11px;
+      padding: 11px 0 11px 4px;
+      text-align: right;
+      color: #716a7e;
+      border: 0;
+      border-bottom: 1px solid rgba(132, 103, 173, .10);
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      font: inherit;
+      transform: none;
+      overflow: hidden;
+    }
+    .path-module:last-child { border-bottom-color: transparent; }
+    .path-module:hover {
+      color: #4c3d69;
+      background: linear-gradient(90deg, rgba(245, 239, 249, .62), rgba(238, 248, 248, .28));
+      box-shadow: none;
+      transform: none;
+    }
+    .path-module:focus-visible { outline: 3px solid rgba(87, 158, 191, .24); outline-offset: 2px; }
+    .path-module.selected {
+      color: #4c3d69;
+      background:
+        linear-gradient(90deg, rgba(242, 233, 249, .76), rgba(239, 249, 248, .44)) padding-box,
+        linear-gradient(115deg, rgba(139, 103, 207, .48), rgba(75, 174, 181, .40), rgba(79, 153, 208, .35)) border-box;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      padding-inline: 8px 6px;
+      box-shadow: 0 10px 28px rgba(117, 91, 145, .08);
+    }
+    .path-module.active .path-stage-number { color: #fff; background: linear-gradient(145deg, #9a76d2, #5f95c9 72%, #60b5b3); box-shadow: 0 7px 18px rgba(113, 89, 179, .22); }
+    .path-module.completed { color: #477363; }
+    .path-module.completed .path-stage-number { color: #34725d; background: rgba(219, 241, 232, .92); }
+    .path-module.locked { opacity: .76; }
     .path-module-copy { min-width: 0; }
-    .path-module-copy strong, .path-module-copy small { display: block; }
-    .path-module-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-    .path-module-copy small { margin-top: 3px; color: var(--muted); font-size: 10px; }
-    .path-stage-number { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: rgba(126, 96, 174, .10); font-weight: 900; }
+    .path-module-copy strong, .path-module-copy small, .path-module-kicker, .path-module-meter { display: block; }
+    .path-module-copy > strong { margin-top: 2px; color: inherit; font-size: 13px; line-height: 1.65; }
+    .path-module-copy > small {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.65;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .path-module-kicker { color: #8d779e; font-size: 9px; font-weight: 900; }
+    .path-module-meter { height: 3px; margin-top: 8px; border-radius: 999px; background: rgba(145, 119, 171, .11); overflow: hidden; }
+    .path-module-meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #8e70cb, #5aa0c7, #5cafad); }
+    .path-module-count { align-self: center; color: #7f718c; text-align: center; line-height: 1.2; }
+    .path-module-count strong, .path-module-count small { display: block; }
+    .path-module-count strong { font-size: 14px; }
+    .path-module-count small { margin-top: 3px; font-size: 9px; }
+    .path-stage-number {
+      position: relative;
+      z-index: 1;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 3px solid rgba(255, 253, 250, .92);
+      border-radius: 50%;
+      background: #eee7f4;
+      box-shadow: 0 4px 12px rgba(108, 83, 133, .10);
+      font-size: 11px;
+      font-weight: 900;
+    }
     .path-stage-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .path-stage-state { font-size: 12px; }
+
+    .module-stage-overview {
+      position: relative;
+      margin-top: 18px;
+      padding: 18px 2px 2px;
+      border-top: 1px solid rgba(132, 103, 173, .13);
+      animation: rise .28s ease both;
+    }
+    .module-stage-overview[hidden] { display: none; }
+    .module-stage-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .module-stage-heading h3 { margin: 3px 0 0; color: #4b405f; font-size: 15px; line-height: 1.65; }
+    .module-stage-eyebrow { color: #8b67a5; font-size: 9px; font-weight: 900; }
+    .module-stage-progress {
+      flex: none;
+      padding: 5px 9px;
+      color: #6f568a;
+      border: 1px solid rgba(126, 93, 174, .14);
+      border-radius: 999px;
+      background: rgba(248, 242, 250, .72);
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .module-stage-description { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.8; }
+    .module-stage-focus {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      margin-top: 13px;
+      padding: 1px;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      background:
+        linear-gradient(110deg, rgba(248, 240, 250, .88), rgba(238, 248, 248, .82)) padding-box,
+        linear-gradient(110deg, rgba(162, 112, 191, .28), rgba(80, 174, 181, .24), rgba(95, 145, 205, .24)) border-box;
+      overflow: hidden;
+    }
+    .module-stage-focus > div { min-width: 0; padding: 10px 11px; }
+    .module-stage-focus > div + div { border-right: 1px solid rgba(127, 102, 161, .10); }
+    .module-stage-focus span, .module-stage-focus strong { display: block; }
+    .module-stage-focus span { color: #927f9d; font-size: 9px; }
+    .module-stage-focus strong { margin-top: 3px; color: #574768; font-size: 10px; line-height: 1.65; }
+    .module-stage-rail {
+      display: flex;
+      gap: 7px;
+      margin-top: 13px;
+      padding: 2px 1px 9px;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scroll-snap-type: inline proximity;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(126, 94, 174, .24) transparent;
+    }
+    .module-stage-item {
+      flex: 0 0 132px;
+      min-height: 72px;
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr) 10px;
+      align-items: center;
+      gap: 7px;
+      padding: 8px;
+      color: #716a7e;
+      border: 1px solid rgba(139, 109, 177, .10);
+      border-radius: 12px;
+      background: rgba(255, 253, 250, .48);
+      scroll-snap-align: center;
+    }
+    .module-stage-item.current {
+      color: #4c3d69;
+      border-color: transparent;
+      background:
+        linear-gradient(125deg, rgba(242, 232, 250, .94), rgba(232, 247, 248, .90)) padding-box,
+        linear-gradient(120deg, rgba(139, 103, 207, .66), rgba(75, 174, 181, .54), rgba(79, 153, 208, .48)) border-box;
+      box-shadow: 0 8px 24px rgba(115, 88, 147, .11);
+    }
+    .module-stage-item.completed { color: #3f7461; background: rgba(233, 246, 239, .60); }
+    .module-stage-item.locked { opacity: .60; }
+    .module-stage-index { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(126, 96, 174, .10); font-size: 9px; font-weight: 900; }
+    .module-stage-item.current .module-stage-index { color: #fff; background: linear-gradient(145deg, #9470ce, #579bc8 70%, #62b2b2); }
+    .module-stage-copy { min-width: 0; }
+    .module-stage-copy strong, .module-stage-copy small { display: block; }
+    .module-stage-copy strong { font-size: 9px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .module-stage-copy small { margin-top: 2px; color: var(--muted); font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .module-stage-state { font-size: 9px; }
+
     .phone-shell.mode-lesson .planet-stage { place-items: start stretch; padding: 16px; overflow-y: auto; }
     .phone-shell.mode-lesson .planet-card { width: 100%; }
     .phone-shell.mode-lesson .course-catalog { display: none; }
@@ -858,34 +1046,105 @@
     .phone-shell.mode-lesson .course-coach img { width: 70px; height: 84px; }
     .phone-shell.mode-lesson .coach-bubble { padding: 10px 12px; }
 
-    .stage-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+    .lesson-article { width: min(760px, 100%); margin: 0 auto; }
+    .stage-header {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 18px 20px;
+      border: 1px solid transparent;
+      border-radius: 18px;
+      background:
+        linear-gradient(125deg, rgba(249, 242, 249, .92), rgba(239, 248, 249, .88), rgba(248, 242, 247, .90)) padding-box,
+        linear-gradient(115deg, rgba(163, 113, 191, .30), rgba(80, 174, 181, .27), rgba(85, 145, 204, .25)) border-box;
+      background-size: 100% 100%, 180% 100%;
+      overflow: hidden;
+    }
+    .stage-header::after {
+      content: "";
+      position: absolute;
+      inset-inline: 20px;
+      bottom: 0;
+      height: 2px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(139, 103, 207, .58), rgba(75, 174, 181, .50), transparent);
+      background-size: 180% 100%;
+      animation: holoFlow 7s ease-in-out infinite alternate;
+    }
+    .stage-heading-copy { min-width: 0; }
     .stage-number { color: #7b5bad; font-size: 11px; font-weight: 900; }
-    .stage-header h2 { margin: 4px 0 3px; font-size: 22px; }
-    .stage-type { color: var(--muted); font-size: 11px; }
-    .stage-progress-badge { flex: none; min-width: 66px; padding: 8px 10px; text-align: center; color: #655080; border-radius: 14px; background: rgba(235, 226, 248, .82); font-size: 12px; font-weight: 900; }
-    .stage-intro { margin: 0 0 16px; color: #615a70; line-height: 2; }
-    .stage-content { display: grid; gap: 12px; }
+    .stage-header h2 { margin: 5px 0 7px; color: #3f3855; font-size: 23px; line-height: 1.55; }
+    .stage-type { display: inline-flex; align-items: center; gap: 6px; color: #766b82; font-size: 10px; }
+    .stage-type span { width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(145deg, #9872ce, #54a6b3); box-shadow: 0 0 10px rgba(98, 142, 186, .35); }
+    .stage-progress-badge { flex: none; min-width: 76px; padding: 9px 11px; text-align: center; color: #655080; border-radius: 14px; background: rgba(255, 253, 250, .62); }
+    .stage-progress-badge strong, .stage-progress-badge small { display: block; }
+    .stage-progress-badge strong { font-size: 17px; }
+    .stage-progress-badge small { margin-top: 2px; color: var(--muted); font-size: 8px; }
+    .stage-intro {
+      position: relative;
+      margin: 0 2px 8px;
+      padding: 4px 15px 4px 4px;
+      color: #5e576d;
+      font-size: 14px;
+      line-height: 2.05;
+    }
+    .stage-intro::before { content: ""; position: absolute; top: 7px; right: 0; bottom: 7px; width: 3px; border-radius: 999px; background: linear-gradient(180deg, #9872ce, #58a8b0); }
+    .stage-content { display: grid; gap: 0; }
     .content-block {
-      padding: 14px;
-      border: 1px solid rgba(142, 109, 181, .14);
+      padding: 21px 2px;
+      border: 0;
+      border-bottom: 1px solid rgba(132, 103, 173, .11);
+      border-radius: 0;
+      background: transparent;
+    }
+    .content-block:last-child { border-bottom: 0; }
+    .content-block-title { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; }
+    .content-block-title > span { width: 19px; height: 5px; border-radius: 999px; background: linear-gradient(90deg, #9572cc, #56a5b6); }
+    .content-block h3 { margin: 0; color: #554665; font-size: 15px; }
+    .content-block p { margin: 0; color: #686173; line-height: 2; }
+    .content-block ul, .content-block ol { margin: 9px 0 0; padding: 0; color: #625b70; list-style: none; counter-reset: lesson-step; }
+    .content-block li { position: relative; margin-top: 8px; padding: 4px 36px 4px 2px; line-height: 1.9; }
+    .content-block ul li::before, .content-block ol li::before { position: absolute; top: 4px; right: 0; width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; color: #745b91; background: rgba(235, 226, 244, .78); font-size: 9px; font-weight: 900; }
+    .content-block ul li::before { content: ""; width: 8px; height: 8px; top: 13px; right: 8px; background: linear-gradient(145deg, #9572cc, #54a7b2); box-shadow: 0 0 0 5px rgba(145, 110, 194, .09); }
+    .content-block ol li { counter-increment: lesson-step; }
+    .content-block ol li::before { content: counter(lesson-step); }
+    .block-highlight {
+      margin: 12px 0;
+      padding: 17px 18px;
+      border: 1px solid transparent;
       border-radius: 16px;
-      background: rgba(255, 253, 250, .70);
+      background:
+        linear-gradient(125deg, rgba(245, 235, 249, .76), rgba(235, 247, 247, .72)) padding-box,
+        linear-gradient(120deg, rgba(151, 103, 188, .24), rgba(72, 164, 177, .22)) border-box;
     }
-    .content-block h3 { margin: 0 0 9px; color: #5c496f; font-size: 14px; }
-    .content-block p { margin: 0; color: #686173; }
-    .content-block ul, .content-block ol { margin: 8px 0 0; padding-right: 22px; color: #625b70; }
-    .block-cards, .block-qa, .block-mistakes, .block-dialog { display: grid; gap: 8px; }
+    .block-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 9px; }
+    .block-qa, .block-mistakes, .block-dialog { display: grid; gap: 8px; }
     .content-card, .qa-item, .mistake-item, .dialog-item {
-      padding: 11px 12px;
-      border-radius: 13px;
-      background: rgba(238, 231, 247, .68);
+      padding: 12px 13px;
+      border: 1px solid rgba(137, 108, 174, .10);
+      border-radius: 12px;
+      background: rgba(248, 243, 249, .62);
     }
-    .content-card strong, .qa-item strong, .mistake-item strong, .dialog-item strong { display: block; margin-bottom: 4px; color: #5a4475; }
+    .content-card strong, .mistake-item strong, .dialog-item strong { display: block; margin-bottom: 4px; color: #5a4475; }
+    .content-card span, .mistake-item span, .dialog-item span { color: #6d6577; line-height: 1.85; }
+    .qa-item { padding: 0; overflow: hidden; }
+    .qa-item summary { position: relative; padding: 12px 38px 12px 13px; color: #5a4475; cursor: pointer; font-weight: 900; list-style: none; }
+    .qa-item summary::-webkit-details-marker { display: none; }
+    .qa-item summary::before { content: "+"; position: absolute; top: 11px; right: 13px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; color: #765995; background: rgba(224, 213, 239, .76); font-size: 13px; }
+    .qa-item[open] summary::before { content: "−"; }
+    .qa-item summary:focus-visible { outline: 3px solid rgba(87, 158, 191, .20); outline-offset: -3px; }
+    .qa-item p { padding: 0 13px 13px; color: #6c6477; }
+    .mistake-item { border-right: 3px solid rgba(205, 96, 126, .42); background: rgba(252, 241, 243, .66); }
+    .dialog-item:nth-child(even) { margin-right: 24px; background: rgba(237, 246, 247, .68); }
     .quiz-item { padding: 11px 0; border-top: 1px solid rgba(142, 109, 181, .12); }
     .quiz-item:first-child { padding-top: 0; border-top: 0; }
     .quiz-question { margin-bottom: 8px; font-weight: 900; }
-    .choice-list { display: grid; gap: 6px; }
-    .choice-option, .check-option { display: flex; align-items: center; gap: 8px; color: #665e72; font-size: 12px; cursor: pointer; }
+    .choice-list { display: grid; gap: 7px; }
+    .choice-option, .check-option { display: flex; align-items: center; gap: 9px; padding: 9px 10px; color: #665e72; border: 1px solid rgba(137, 108, 174, .09); border-radius: 11px; background: rgba(251, 247, 249, .56); font-size: 12px; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+    .choice-option:hover, .check-option:hover { border-color: rgba(113, 86, 177, .28); background: rgba(243, 237, 248, .72); transform: translateX(-2px); }
     .choice-option input, .check-option input { flex: none; width: 17px; height: 17px; accent-color: #775ec5; }
     .media-slots { display: grid; gap: 10px; margin-top: 14px; }
     .media-slot {
@@ -895,16 +1154,20 @@
       padding: 16px;
       text-align: center;
       color: #7e7489;
-      border: 1px dashed rgba(118, 91, 163, .30);
+      border: 1px dashed rgba(118, 91, 163, .24);
       border-radius: 16px;
-      background: rgba(245, 239, 249, .64);
+      background: linear-gradient(135deg, rgba(247, 240, 249, .64), rgba(238, 248, 248, .54));
     }
     .media-slot-icon { display: block; margin-bottom: 5px; font-size: 23px; }
     .media-slot small { display: block; margin-top: 4px; color: #9a90a3; }
-    .stage-activity { margin-top: 14px; padding: 14px; border-radius: 16px; background: linear-gradient(135deg, rgba(236, 225, 248, .86), rgba(229, 241, 247, .86)); }
-    .stage-activity strong { display: block; color: #5f4978; }
+    .stage-activity { position: relative; margin-top: 20px; padding: 17px 18px; border: 1px solid rgba(129, 99, 170, .12); border-radius: 16px; background: linear-gradient(135deg, rgba(237, 227, 248, .82), rgba(230, 243, 245, .82)); overflow: hidden; }
+    .stage-activity::after { content: ""; position: absolute; top: -28px; left: -18px; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, rgba(141, 105, 196, .13), transparent 70%); }
+    .stage-activity-label { display: block; margin-bottom: 4px; color: #8a7398; font-size: 9px; font-weight: 900; }
+    .stage-activity strong { display: block; color: #5f4978; font-size: 14px; }
     .stage-activity p { margin: 5px 0 0; color: #696174; }
-    .stage-complete-button { width: auto; min-width: 185px; padding: 0 18px; font-size: 13px; }
+    .stage-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; color: #8a8093; font-size: 10px; }
+    .stage-progress-footer strong { color: #695379; font-size: 12px; }
+    .stage-complete-button { width: auto; min-width: 190px; height: 46px; padding: 0 20px; border-radius: 14px; font-size: 13px; }
     .stage-complete-button.done { color: #39775f; background: rgba(222, 244, 233, .90); box-shadow: none; cursor: default; }
     .coaching-form-placeholder { display: none; }
     .coaching-messages { min-height: 190px; place-content: center; text-align: center; }
@@ -914,18 +1177,42 @@
     .coaching-actions span { color: var(--muted); font-size: 11px; }
     .coaching-actions button { width: auto; min-width: 130px; padding: 0 16px; font-size: 13px; }
 
+    @keyframes holoFlow {
+      from { background-position: 0% 50%; }
+      to { background-position: 100% 50%; }
+    }
     @media (max-width: 900px) {
-      .phone-shell.mode-lesson .planet-stage { max-height: 340px; }
-      .stage-path-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .phone-shell.mode-lesson { width: min(720px, 100%); grid-template-columns: 1fr; }
+      .phone-shell.mode-lesson .planet-stage { max-height: min(56svh, 520px); }
+      .stage-path-list:not(.module-path-list) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .module-path-list { grid-template-columns: 1fr; }
     }
     @media (max-width: 520px) {
       .course-coach { align-items: flex-start; }
       .course-coach img { width: 76px; height: 94px; }
-      .stage-header { gap: 8px; }
+      .phone-shell.mode-lesson .planet-stage { padding: 13px; }
+      .lesson-dock { padding: 14px; }
+      .stage-header { align-items: flex-start; gap: 10px; padding: 15px; }
       .stage-header h2 { font-size: 19px; }
-      .stage-path-list { grid-template-columns: 1fr; }
+      .stage-progress-badge { min-width: 64px; padding: 7px 8px; }
+      .stage-progress-badge strong { font-size: 14px; }
+      .stage-path-list:not(.module-path-list) { grid-template-columns: 1fr; }
+      .module-stage-focus { grid-template-columns: 1fr; }
+      .module-stage-focus > div + div { border-top: 1px solid rgba(127, 102, 161, .10); border-right: 0; }
+      .module-stage-item { flex-basis: 124px; }
+      .block-cards { grid-template-columns: 1fr; }
+      .stage-complete-button { width: 100%; }
       .coaching-actions { flex-direction: column; align-items: stretch; text-align: center; }
       .coaching-actions button { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .path-course-head::after,
+      .stage-header::after,
+      .course-coach img,
+      .checkpoint-avatar { animation: none; }
+      .module-stage-rail { scroll-behavior: auto; }
+      .choice-option,
+      .check-option { transition: none; }
     }
   </style>
 </head>
@@ -989,6 +1276,27 @@
             <button id="changeCourse" class="path-switch-course" type="button">انتخاب دوره یا نسخه دیگر</button>
           </div>
           <div id="stagePathList" class="stage-path-list" aria-label="مراحل دوره"></div>
+          <section id="activeModuleStages" class="module-stage-overview" aria-labelledby="activeModuleTitle" hidden>
+            <div class="module-stage-heading">
+              <div>
+                <span id="activeModuleEyebrow" class="module-stage-eyebrow">نمای سرفصل</span>
+                <h3 id="activeModuleTitle">مسیر ۲۰ مرحله‌ای</h3>
+              </div>
+              <span id="activeModuleProgress" class="module-stage-progress">۰ از ۲۰</span>
+            </div>
+            <p id="activeModuleDescription" class="module-stage-description"></p>
+            <div class="module-stage-focus" aria-live="polite">
+              <div>
+                <span id="moduleCurrentLabel">مرحله فعال</span>
+                <strong id="moduleCurrentStage">هنوز شروع نشده</strong>
+              </div>
+              <div>
+                <span>قدم بعدی</span>
+                <strong id="moduleNextStage">پس از شروع مسیر مشخص می‌شود</strong>
+              </div>
+            </div>
+            <div id="moduleStageRail" class="module-stage-rail" role="list" aria-label="۲۰ مرحله این سرفصل"></div>
+          </section>
         </section>
       </div>
     </section>
@@ -1026,6 +1334,8 @@
     let selectedTrack = localStorage.getItem("zito_track") || "accounting";
     let currentEnrollmentId = null;
     let pendingNextStage = false;
+    let currentLearningPath = null;
+    let inspectedModuleId = null;
     const savedDisplayName = localStorage.getItem("zito_display_name") || "";
 
     const appShell = document.querySelector("#appShell");
@@ -1048,6 +1358,15 @@
     const pathProgressText = document.querySelector("#pathProgressText");
     const pathProgressBar = document.querySelector("#pathProgressBar");
     const stagePathList = document.querySelector("#stagePathList");
+    const activeModuleStages = document.querySelector("#activeModuleStages");
+    const activeModuleEyebrow = document.querySelector("#activeModuleEyebrow");
+    const activeModuleTitle = document.querySelector("#activeModuleTitle");
+    const activeModuleProgress = document.querySelector("#activeModuleProgress");
+    const activeModuleDescription = document.querySelector("#activeModuleDescription");
+    const moduleCurrentLabel = document.querySelector("#moduleCurrentLabel");
+    const moduleCurrentStage = document.querySelector("#moduleCurrentStage");
+    const moduleNextStage = document.querySelector("#moduleNextStage");
+    const moduleStageRail = document.querySelector("#moduleStageRail");
     const changeCourse = document.querySelector("#changeCourse");
     const answerModal = document.querySelector("#answerModal");
     const modalMessages = document.querySelector("#modalMessages");
@@ -1069,6 +1388,29 @@
       },
     };
 
+    const STAGE_LABELS = {
+      learning_path: "مسیر یادگیری",
+      lesson_summary: "خلاصه درس",
+      flashcards: "فلش‌کارت‌ها",
+      qa: "پرسش و پاسخ",
+      mini_quiz: "آزمون کوچک",
+      multiple_choice: "سوال چهارگزینه‌ای",
+      real_examples: "مثال‌های واقعی",
+      interactive_scenario: "سناریوی تعاملی",
+      checklist: "چک‌لیست اجرایی",
+      practical_exercise: "تمرین عملی",
+      daily_mission: "ماموریت روزانه",
+      avatar_dialog: "گفت‌وگو با آواتار",
+      smart_review: "مرور هوشمند",
+      audio_summary: "خلاصه صوتی",
+      infographic: "اینفوگرافیک",
+      mind_map: "نقشه ذهنی",
+      golden_tips: "نکات طلایی",
+      common_mistakes: "اشتباهات رایج",
+      personalized_path: "مسیر شخصی‌سازی‌شده",
+      final_project: "پروژه نهایی",
+    };
+
     function setStatus(text) { statusBox.textContent = text; }
     function clearSavedSession() {
       localStorage.removeItem("zito_user_id");
@@ -1079,6 +1421,8 @@
       userId = null;
       currentLesson = null;
       currentEnrollmentId = null;
+      currentLearningPath = null;
+      inspectedModuleId = null;
       profileBuilder = null;
       selectedTrack = "accounting";
       window.history.replaceState({}, "", "/app/");
@@ -1161,6 +1505,8 @@
       stage = "course-selection";
       currentLesson = null;
       currentEnrollmentId = null;
+      currentLearningPath = null;
+      inspectedModuleId = null;
       courseCatalog.hidden = false;
       learningPath.hidden = true;
       coachMessage.textContent = "چه دوره‌ای می‌خواهی انتخاب کنی؟";
@@ -1169,7 +1515,65 @@
       const courses = await api("/api/courses");
       renderCourseCatalog(courses);
     }
+
+    function stageLabel(stageType) {
+      return STAGE_LABELS[stageType] || String(stageType || "مرحله آموزشی").replaceAll("_", " ");
+    }
+
+    function renderModuleStageOverview(path, moduleId) {
+      const modules = Array.isArray(path.modules) ? path.modules : [];
+      const module = modules.find((item) => String(item.module_id) === String(moduleId));
+      if (!module) {
+        activeModuleStages.hidden = true;
+        return;
+      }
+
+      const stages = (Array.isArray(path.stages) ? path.stages : [])
+        .filter((item) => String(item.module_id) === String(module.module_id))
+        .sort((a, b) => Number(a.module_stage_number) - Number(b.module_stage_number));
+      const currentIndex = stages.findIndex((item) => item.is_current);
+      const currentItem = currentIndex >= 0 ? stages[currentIndex] : module.status === "completed" ? stages.at(-1) : null;
+      const nextItem = currentIndex >= 0 ? stages[currentIndex + 1] : module.status === "locked" ? stages[0] : null;
+
+      activeModuleStages.hidden = false;
+      activeModuleEyebrow.textContent = `سرفصل ${module.module_number} از ${modules.length}`;
+      activeModuleTitle.textContent = module.title;
+      activeModuleProgress.textContent = `${module.completed_stage_count} از ${module.total_stage_count}`;
+      activeModuleDescription.textContent = module.description || "در این سرفصل، هر مفهوم را در ۲۰ قالب کوتاه و کاربردی مرور می‌کنی.";
+      moduleCurrentLabel.textContent = currentIndex >= 0 ? "الان اینجایی" : module.status === "completed" ? "آخرین قدم" : "وضعیت سرفصل";
+      moduleCurrentStage.textContent = currentItem ? currentItem.title : "هنوز شروع نشده";
+      moduleNextStage.textContent = nextItem ? nextItem.title : module.status === "completed" ? "این سرفصل کامل شده" : "پس از شروع مشخص می‌شود";
+
+      moduleStageRail.innerHTML = stages.map((item) => {
+        const stateClass = item.status === "completed" ? "completed" : item.is_current ? "current" : "locked";
+        const typeLabel = stageLabel(item.stage_type);
+        const detail = typeLabel !== item.title ? `<small>${escapeHtml(typeLabel)}</small>` : "";
+        return `<div class="module-stage-item ${stateClass}" role="listitem" ${item.is_current ? 'aria-current="step"' : ""} title="${escapeHtml(item.title)}">
+          <span class="module-stage-index">${item.module_stage_number}</span>
+          <span class="module-stage-copy"><strong>${escapeHtml(item.title)}</strong>${detail}</span>
+          <span class="module-stage-state" aria-hidden="true">${item.status === "completed" ? "✓" : item.is_current ? "●" : ""}</span>
+        </div>`;
+      }).join("");
+
+      requestAnimationFrame(() => {
+        const currentStage = moduleStageRail.querySelector(".module-stage-item.current");
+        if (currentStage) currentStage.scrollIntoView({ block: "nearest", inline: "center" });
+      });
+    }
+
+    function inspectModule(moduleId) {
+      if (!currentLearningPath) return;
+      inspectedModuleId = moduleId;
+      stagePathList.querySelectorAll("[data-module-id]").forEach((buttonItem) => {
+        const isSelected = String(buttonItem.dataset.moduleId) === String(moduleId);
+        buttonItem.classList.toggle("selected", isSelected);
+        buttonItem.setAttribute("aria-pressed", String(isSelected));
+      });
+      renderModuleStageOverview(currentLearningPath, moduleId);
+    }
+
     function renderLearningPath(path) {
+      currentLearningPath = path;
       currentEnrollmentId = path.enrollment_id;
       selectedTrack = path.course_domain || "personal_development";
       localStorage.setItem("zito_track", selectedTrack);
@@ -1184,16 +1588,33 @@
       pathProgressBar.style.width = `${path.progress_percentage}%`;
       if (Array.isArray(path.modules) && path.modules.length) {
         stagePathList.classList.add("module-path-list");
+        const activeModule = path.modules.find((module) => module.is_current)
+          || (path.status === "completed" ? path.modules.at(-1) : path.modules[0]);
+        inspectedModuleId = activeModule?.module_id ?? null;
         stagePathList.innerHTML = path.modules.map((module) => {
-          const stateIcon = module.status === "completed" ? "✓" : module.is_current ? "●" : "○";
-          return `<div class="path-module ${module.status}">
+          const total = Number(module.total_stage_count) || 20;
+          const completed = Number(module.completed_stage_count) || 0;
+          const modulePercentage = Math.max(0, Math.min(100, Math.round(completed * 100 / total)));
+          const statusLabel = module.status === "completed" ? "تکمیل‌شده" : module.is_current ? "در حال یادگیری" : "در ادامه مسیر";
+          const isSelected = String(module.module_id) === String(inspectedModuleId);
+          return `<button type="button" class="path-module ${module.status} ${isSelected ? "selected" : ""}" data-module-id="${module.module_id}" aria-pressed="${isSelected}">
             <span class="path-stage-number">${module.module_number}</span>
-            <span class="path-module-copy"><strong>${escapeHtml(module.title)}</strong><small>${module.completed_stage_count} از ${module.total_stage_count} بخش</small></span>
-            <span class="path-stage-state" aria-hidden="true">${stateIcon}</span>
-          </div>`;
+            <span class="path-module-copy">
+              <span class="path-module-kicker">سرفصل ${module.module_number} · ${statusLabel}</span>
+              <strong>${escapeHtml(module.title)}</strong>
+              <small>${escapeHtml(module.description || "۲۰ قدم کوتاه برای یادگیری و تمرین")}</small>
+              <span class="path-module-meter" aria-hidden="true"><i style="width:${modulePercentage}%"></i></span>
+            </span>
+            <span class="path-module-count"><strong>${completed}</strong><small>از ${total}</small></span>
+          </button>`;
         }).join("");
+        stagePathList.querySelectorAll("[data-module-id]").forEach((buttonItem) => {
+          buttonItem.addEventListener("click", () => inspectModule(buttonItem.dataset.moduleId));
+        });
+        renderModuleStageOverview(path, inspectedModuleId);
       } else {
         stagePathList.classList.remove("module-path-list");
+        activeModuleStages.hidden = true;
         stagePathList.innerHTML = path.stages.map((item) => {
           const stateIcon = item.status === "completed" ? "✓" : item.is_current ? "●" : "○";
           const stateClass = item.status === "completed" ? "completed" : item.is_current ? "current" : "locked";
@@ -1362,7 +1783,7 @@
     }
     function renderContentBlock(block, blockIndex) {
       const kind = block.kind || "paragraph";
-      const title = block.title ? `<h3>${escapeHtml(block.title)}</h3>` : "";
+      const title = block.title ? `<div class="content-block-title"><span aria-hidden="true"></span><h3>${escapeHtml(block.title)}</h3></div>` : "";
       if (kind === "highlight" || kind === "paragraph") {
         return `<section class="content-block block-${kind}">${title}<p>${escapeHtml(block.body || "")}</p></section>`;
       }
@@ -1371,30 +1792,30 @@
         return `<section class="content-block block-${kind}">${title}<${tag}>${(block.items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</${tag}></section>`;
       }
       if (kind === "cards") {
-        return `<section class="content-block">${title}<div class="block-cards">${(block.items || []).map((item) => `<article class="content-card"><strong>${escapeHtml(item.title || "نکته")}</strong><span>${escapeHtml(item.body || "")}</span></article>`).join("")}</div></section>`;
+        return `<section class="content-block block-${kind}">${title}<div class="block-cards">${(block.items || []).map((item) => `<article class="content-card"><strong>${escapeHtml(item.title || "نکته")}</strong><span>${escapeHtml(item.body || "")}</span></article>`).join("")}</div></section>`;
       }
       if (kind === "qa") {
-        return `<section class="content-block">${title}<div class="block-qa">${(block.items || []).map((item) => `<article class="qa-item"><strong>${escapeHtml(item.question || "")}</strong><span>${escapeHtml(item.answer || "")}</span></article>`).join("")}</div></section>`;
+        return `<section class="content-block block-${kind}">${title}<div class="block-qa">${(block.items || []).map((item, itemIndex) => `<details class="qa-item" ${itemIndex === 0 ? "open" : ""}><summary>${escapeHtml(item.question || "")}</summary><p>${escapeHtml(item.answer || "")}</p></details>`).join("")}</div></section>`;
       }
       if (kind === "quiz") {
-        return `<section class="content-block">${title}${(block.items || []).map((item, questionIndex) => `<div class="quiz-item"><div class="quiz-question">${escapeHtml(item.question || "")}</div><div class="choice-list">${(item.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-choice-${blockIndex}-${questionIndex}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></div>`).join("")}</section>`;
+        return `<section class="content-block block-${kind}">${title}${(block.items || []).map((item, questionIndex) => `<div class="quiz-item"><div class="quiz-question">${escapeHtml(item.question || "")}</div><div class="choice-list">${(item.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-choice-${blockIndex}-${questionIndex}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></div>`).join("")}</section>`;
       }
       if (kind === "scenario") {
         return `<section class="content-block block-scenario">${title}<p>${escapeHtml(block.body || "")}</p><div class="choice-list">${(block.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-scenario-${blockIndex}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></section>`;
       }
       if (kind === "checklist") {
-        return `<section class="content-block">${title}<div class="choice-list">${(block.items || []).map((item) => `<label class="check-option"><input type="checkbox" value="${escapeHtml(item)}"><span>${escapeHtml(item)}</span></label>`).join("")}</div></section>`;
+        return `<section class="content-block block-${kind}">${title}<div class="choice-list">${(block.items || []).map((item) => `<label class="check-option"><input type="checkbox" value="${escapeHtml(item)}"><span>${escapeHtml(item)}</span></label>`).join("")}</div></section>`;
       }
       if (kind === "dialog") {
-        return `<section class="content-block">${title}<div class="block-dialog">${(block.items || []).map((item) => `<article class="dialog-item"><strong>${escapeHtml(item.speaker || "")}</strong><span>${escapeHtml(item.body || "")}</span></article>`).join("")}</div></section>`;
+        return `<section class="content-block block-${kind}">${title}<div class="block-dialog">${(block.items || []).map((item) => `<article class="dialog-item"><strong>${escapeHtml(item.speaker || "")}</strong><span>${escapeHtml(item.body || "")}</span></article>`).join("")}</div></section>`;
       }
       if (kind === "mistakes") {
-        return `<section class="content-block">${title}<div class="block-mistakes">${(block.items || []).map((item) => `<article class="mistake-item"><strong>${escapeHtml(item.mistake || "")}</strong><span>راه اصلاح: ${escapeHtml(item.correction || "")}</span></article>`).join("")}</div></section>`;
+        return `<section class="content-block block-${kind}">${title}<div class="block-mistakes">${(block.items || []).map((item) => `<article class="mistake-item"><strong>${escapeHtml(item.mistake || "")}</strong><span>راه اصلاح: ${escapeHtml(item.correction || "")}</span></article>`).join("")}</div></section>`;
       }
       if (kind === "mind_map") {
         return `<section class="content-block block-mind-map">${title}<div class="content-card"><strong>${escapeHtml(block.center || "موضوع مرکزی")}</strong><span>${(block.items || []).map((item) => escapeHtml(item)).join(" · ")}</span></div></section>`;
       }
-      return `<section class="content-block">${title}<p>${escapeHtml(block.body || "محتوای این بخش در CMS تکمیل می‌شود.")}</p></section>`;
+      return `<section class="content-block block-${escapeHtml(kind)}">${title}<p>${escapeHtml(block.body || "محتوای این بخش در CMS تکمیل می‌شود.")}</p></section>`;
     }
 
     function renderMediaSlots(slots) {
@@ -1410,26 +1831,34 @@
       const activity = content.activity || {};
       const blocks = Array.isArray(content.blocks) ? content.blocks : [];
       const completeLabel = lesson.course_completed ? "مسیر کامل شده است" : "تکمیل مرحله و ادامه";
+      const templateLabel = stageLabel(lesson.stage_type);
       lessonPanel.innerHTML = `
-        <header class="stage-header">
-          <div>
-            <div class="stage-number">${lesson.module_title ? `سرفصل ${lesson.module_number} از ${lesson.total_module_count} · بخش ${lesson.module_stage_number} از ۲۰` : `مرحله ${lesson.stage_number} از ${lesson.total_stage_count}`}</div>
-            <h2>${escapeHtml(lesson.title)}</h2>
-            <div class="stage-type">قالب: ${escapeHtml(lesson.stage_type)}</div>
+        <article class="lesson-article" data-stage-type="${escapeHtml(lesson.stage_type)}">
+          <header class="stage-header">
+            <div class="stage-heading-copy">
+              <div class="stage-number">${lesson.module_title ? `سرفصل ${lesson.module_number} از ${lesson.total_module_count} · قدم ${lesson.module_stage_number} از ۲۰` : `مرحله ${lesson.stage_number} از ${lesson.total_stage_count}`}</div>
+              <h2>${escapeHtml(lesson.title)}</h2>
+              <div class="stage-type"><span aria-hidden="true"></span>${escapeHtml(templateLabel)}</div>
+            </div>
+            <div class="stage-progress-badge"><strong>${lesson.progress_percentage}٪</strong><small>پیشرفت دوره</small></div>
+          </header>
+          <p class="stage-intro">${escapeHtml(content.intro || "محتوای تاییدشده این مرحله آماده است.")}</p>
+          <div class="stage-content">${blocks.map(renderContentBlock).join("")}</div>
+          ${renderMediaSlots(content.media_slots)}
+          <section class="stage-activity">
+            <span class="stage-activity-label">قدم عملی</span>
+            <strong>${escapeHtml(activity.title || "خروجی مرحله")}</strong>
+            <p>${escapeHtml(activity.prompt || "وقتی مرور این مرحله تمام شد، مسیر را ادامه بده.")}</p>
+          </section>
+          <div class="stage-progress-footer">
+            <span>پیشرفت کل مسیر</span>
+            <strong>${lesson.progress_percentage}٪</strong>
           </div>
-          <div class="stage-progress-badge">${lesson.progress_percentage}٪</div>
-        </header>
-        <p class="stage-intro">${escapeHtml(content.intro || "محتوای تاییدشده این مرحله آماده است.")}</p>
-        <div class="stage-content">${blocks.map(renderContentBlock).join("")}</div>
-        ${renderMediaSlots(content.media_slots)}
-        <section class="stage-activity">
-          <strong>${escapeHtml(activity.title || "خروجی مرحله")}</strong>
-          <p>${escapeHtml(activity.prompt || "وقتی مرور این مرحله تمام شد، مسیر را ادامه بده.")}</p>
-        </section>
-        <div class="meter"><div class="bar" style="width: ${lesson.progress_percentage}%"></div></div>
-        <div class="lesson-actions">
-          <button class="stage-complete-button ${lesson.course_completed ? "done" : ""}" type="button" data-complete-stage ${lesson.course_completed ? "disabled" : ""}>${completeLabel}</button>
-        </div>`;
+          <div class="meter"><div class="bar" style="width: ${lesson.progress_percentage}%"></div></div>
+          <div class="lesson-actions">
+            <button class="stage-complete-button ${lesson.course_completed ? "done" : ""}" type="button" data-complete-stage ${lesson.course_completed ? "disabled" : ""}>${completeLabel}</button>
+          </div>
+        </article>`;
       const completeButton = lessonPanel.querySelector("[data-complete-stage]");
       if (!lesson.course_completed) completeButton.addEventListener("click", completeCurrentStage);
       coachMessage.textContent = lesson.course_completed

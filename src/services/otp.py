@@ -1,13 +1,11 @@
-import asyncio
 import hashlib
 import hmac
-import http.client
 import json
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlparse
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -108,14 +106,13 @@ async def _send_smsir_code(phone: str, code: str) -> None:
     }
     url = f"{settings.smsir_api_url.rstrip('/')}/send/verify"
     try:
-        status_code, response_text = await asyncio.to_thread(
-            _post_smsir_verify,
+        status_code, response_text = await _post_smsir_verify(
             url,
             payload,
             headers,
             settings.smsir_timeout_seconds,
         )
-    except (OSError, UnicodeError) as exc:
+    except (httpx.RequestError, UnicodeError, ValueError) as exc:
         raise OtpError(f"Could not call sms.ir: {exc}") from exc
 
     if status_code >= 400:
@@ -131,21 +128,15 @@ async def _send_smsir_code(phone: str, code: str) -> None:
         raise OtpError(f"sms.ir OTP failed: {message}")
 
 
-def _post_smsir_verify(url: str, payload: dict, headers: dict, timeout_seconds: int) -> tuple[int, str]:
-    parsed = urlparse(url)
-    path = parsed.path or "/"
-    if parsed.query:
-        path = f"{path}?{parsed.query}"
-
-    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    conn = http.client.HTTPSConnection(parsed.netloc, timeout=timeout_seconds)
-    try:
-        conn.request("POST", path, body=body, headers=headers)
-        response = conn.getresponse()
-        response_body = response.read().decode("utf-8")
-        return response.status, response_body
-    finally:
-        conn.close()
+async def _post_smsir_verify(
+    url: str,
+    payload: dict,
+    headers: dict,
+    timeout_seconds: int,
+) -> tuple[int, str]:
+    async with httpx.AsyncClient(timeout=timeout_seconds, trust_env=False) as client:
+        response = await client.post(url, json=payload, headers=headers)
+    return response.status_code, response.text
 
 
 async def request_otp(db: Session, phone: str) -> OtpRequestResult:

@@ -249,7 +249,7 @@ class FakeSmsIrPost:
     last_request: dict | None = None
 
     @classmethod
-    def post(cls, url: str, payload: dict, headers: dict, timeout_seconds: int):
+    async def post(cls, url: str, payload: dict, headers: dict, timeout_seconds: int):
         cls.last_request = {
             "url": url,
             "payload": payload,

@@ -33,4 +33,16 @@ After setup:
 - `src/api/routes.py`: authentication, canonical profile, course, legacy flat and module-scoped learning engines, and admin routes.
 
 ## Security
-Do not commit `.env` or real API keys. If an API key was shared in chat or logs, rotate it in the provider dashboard and put the new value only in `.env`.
+Do not commit `.env` or real API keys. If an API key was shared in chat or logs, rotate it in the provider dashboard.
+
+## Local secret vault
+Use the Windows-only DPAPI vault instead of manually editing local `.env` files or pasting keys into chat. The encrypted local file is `.secrets/zito-vault.local.json`, which is ignored by Git and can be decrypted only by the same Windows user on the same machine.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 set env.ARVAN_EMBEDDING_API_BASE_URL
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 set env.ARVAN_EMBEDDING_API_KEY
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 list
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 run-server -Port 8000 -Reload
+```
+
+The `set` prompt masks the pasted value. `list` prints only secret names, never values. Production keeps a separate protected runtime environment on the server; it is never committed to Git.

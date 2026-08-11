@@ -1,10 +1,15 @@
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet("init", "import-env", "set-server-password", "list", "reveal")]
+    [ValidateSet("init", "import-env", "set", "set-server-password", "list", "run-server")]
     [string]$Action,
 
     [Parameter(Position = 1)]
-    [string]$Key
+    [string]$Key,
+
+    [ValidateRange(1, 65535)]
+    [int]$Port = 8000,
+
+    [switch]$Reload
 )
 
 $ErrorActionPreference = "Stop"
@@ -82,6 +87,29 @@ function ConvertTo-PlainText([securestring]$SecureValue) {
     }
 }
 
+function Import-VaultEnvironment {
+    $vault = Read-Vault
+    $loaded = 0
+    foreach ($name in $vault.secrets.Keys) {
+        $nameText = [string]$name
+        if ([string]::IsNullOrWhiteSpace($nameText) -or !$nameText.StartsWith("env.")) { continue }
+
+        $environmentName = $nameText.Substring(4)
+        if ([string]::IsNullOrWhiteSpace($environmentName)) { continue }
+
+        $secure = $vault.secrets[$name] | ConvertTo-SecureString
+        $plain = ConvertTo-PlainText $secure
+        try {
+            Set-Item -Path "Env:$environmentName" -Value $plain
+            $loaded += 1
+        }
+        finally {
+            $plain = $null
+        }
+    }
+    return $loaded
+}
+
 function Write-Inventory {
     Ensure-SecretRoot
     if (Test-Path $InventoryPath) { return }
@@ -154,19 +182,30 @@ switch ($Action) {
         Set-SecretValue "server.ssh.password" $secure
         Write-Output "server-password-saved"
     }
+    "set" {
+        if ([string]::IsNullOrWhiteSpace($Key)) {
+            throw "Usage: .\tools\zito-secrets.ps1 set env.VARIABLE_NAME"
+        }
+        Ensure-SecretRoot
+        $secure = Read-Host "Paste the value for $Key (input is hidden)" -AsSecureString
+        Set-SecretValue $Key $secure
+        Write-Output "secret-saved=$Key"
+    }
     "list" {
         $vault = Read-Vault
         @($vault.secrets.Keys) | ForEach-Object { [string]$_ } | Sort-Object
     }
-    "reveal" {
-        if ([string]::IsNullOrWhiteSpace($Key)) {
-            throw "Usage: .\tools\zito-secrets.ps1 reveal <key>"
+    "run-server" {
+        $loaded = Import-VaultEnvironment
+        $python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+        if (!(Test-Path $python)) {
+            throw "Virtual environment was not found: $python"
         }
-        $vault = Read-Vault
-        if (!$vault.secrets.Contains($Key)) {
-            throw "Secret key not found: $Key"
-        }
-        $secure = $vault.secrets[$Key] | ConvertTo-SecureString
-        ConvertTo-PlainText $secure
+
+        $arguments = @("-m", "uvicorn", "src.main:app", "--host", "127.0.0.1", "--port", $Port.ToString())
+        if ($Reload) { $arguments += "--reload" }
+        Write-Output "vault-environment-loaded=$loaded"
+        & $python @arguments
+        exit $LASTEXITCODE
     }
 }

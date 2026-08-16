@@ -129,6 +129,7 @@ class CoachingCheckpointOut(BaseModel):
     prompt: str
     enabled: bool = False
     mode: str = "preview"
+    stage_number: int | None = None
 
 
 class LearningStageOut(BaseModel):
@@ -163,6 +164,42 @@ class StageCompleteOut(BaseModel):
     progress_percentage: int
     coaching: CoachingCheckpointOut
     path: LearningPathOut
+
+
+class CoachQuestionIn(BaseModel):
+    message: str = Field(min_length=2, max_length=1500)
+    # The server verifies that this is a current or completed stage in the
+    # learner's own pinned enrollment; it is never used to select a course.
+    stage_number: int | None = Field(default=None, ge=1)
+
+
+class CoachCitationOut(BaseModel):
+    source_number: int
+    title: str
+    scope: str
+
+
+class CoachMessageOut(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+    stage_number: int | None = None
+    citations: list[CoachCitationOut] = Field(default_factory=list)
+
+
+class CoachHistoryOut(BaseModel):
+    thread_id: int | None = None
+    messages: list[CoachMessageOut] = Field(default_factory=list)
+
+
+class CoachReplyOut(BaseModel):
+    thread_id: int
+    answer: str
+    grounded: bool
+    citations: list[CoachCitationOut] = Field(default_factory=list)
+    retrieval_method: str
+    suggested_action: str | None = None
 
 
 class UserOut(BaseModel):

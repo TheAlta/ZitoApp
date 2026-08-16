@@ -1169,10 +1169,15 @@
     .stage-progress-footer strong { color: #695379; font-size: 12px; }
     .stage-complete-button { width: auto; min-width: 190px; height: 46px; padding: 0 20px; border-radius: 14px; font-size: 13px; }
     .stage-complete-button.done { color: #39775f; background: rgba(222, 244, 233, .90); box-shadow: none; cursor: default; }
-    .coaching-form-placeholder { display: none; }
     .coaching-messages { min-height: 190px; place-content: center; text-align: center; }
     .coaching-messages .msg { align-self: center; text-align: center; }
     .checkpoint-avatar { width: 82px; height: 102px; margin: 0 auto 2px; object-fit: contain; filter: drop-shadow(0 0 20px rgba(153, 104, 190, .36)); animation: hover 4.4s ease-in-out infinite; }
+    .coach-input-row { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(142, 109, 181, .14); background: rgba(252, 249, 254, .88); }
+    .coach-input-row[hidden] { display: none; }
+    .coach-input-row input { flex: 1; min-width: 0; height: 40px; padding: 0 13px; color: #332847; background: rgba(255, 255, 255, .92); border: 1px solid rgba(125, 92, 169, .24); border-radius: 12px; outline: none; font: inherit; }
+    .coach-input-row input:focus { border-color: rgba(110, 70, 219, .72); box-shadow: 0 0 0 3px rgba(113, 75, 227, .10); }
+    .coach-input-row button { width: auto; min-width: 76px; height: 40px; padding: 0 13px; font-size: 12px; }
+    .coach-source-note { max-width: 84%; margin: -3px auto 8px; padding: 7px 10px; color: #6e6280; background: rgba(232, 224, 245, .55); border-radius: 10px; font-size: 10px; line-height: 1.7; }
     .coaching-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-top: 1px solid rgba(142, 109, 181, .14); background: rgba(245, 240, 249, .82); }
     .coaching-actions span { color: var(--muted); font-size: 11px; }
     .coaching-actions button { width: auto; min-width: 130px; padding: 0 16px; font-size: 13px; }
@@ -1530,8 +1535,12 @@
         <button id="modalClose" class="modal-close" type="button" aria-label="بستن">×</button>
       </div>
       <div id="modalMessages" class="modal-messages coaching-messages"></div>
+      <form id="coachForm" class="coach-input-row" hidden>
+        <input id="coachInput" type="text" maxlength="1500" autocomplete="off" placeholder="سؤالت درباره همین مرحله را بنویس...">
+        <button id="coachSend" type="submit">بپرس</button>
+      </form>
       <div class="coaching-actions">
-        <span>کوچینگ هوشمند در اسپرینت بعدی فعال می‌شود.</span>
+        <span id="coachAvailability">کوچینگ هوشمند در حال آماده‌سازی است.</span>
         <button id="coachContinue" type="button">ادامه مسیر</button>
       </div>
     </section>
@@ -1545,6 +1554,7 @@
     let selectedTrack = localStorage.getItem("zito_track") || "accounting";
     let currentEnrollmentId = null;
     let pendingNextStage = false;
+    let coachingStageNumber = null;
     let currentLearningPath = null;
     let inspectedModuleId = null;
     const savedDisplayName = localStorage.getItem("zito_display_name") || "";
@@ -1584,6 +1594,10 @@
     const modalMessages = document.querySelector("#modalMessages");
     const modalClose = document.querySelector("#modalClose");
     const coachContinue = document.querySelector("#coachContinue");
+    const coachForm = document.querySelector("#coachForm");
+    const coachInput = document.querySelector("#coachInput");
+    const coachSend = document.querySelector("#coachSend");
+    const coachAvailability = document.querySelector("#coachAvailability");
 
     const TRACKS = {
       accounting: {
@@ -1843,16 +1857,72 @@
           ? `سرفصل «${path.modules.find((module) => module.is_current).title}» آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`
           : `مرحله ${path.current_stage_number} آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`;
     }
-    function showCoachingCheckpoint(result) {
+    function addCoachCitations(citations) {
+      if (!Array.isArray(citations) || !citations.length) return;
+      const note = document.createElement("div");
+      note.className = "coach-source-note";
+      note.textContent = `منابع تاییدشده: ${citations.map((item) => item.title).filter(Boolean).join("، ")}`;
+      modalMessages.appendChild(note);
+      modalMessages.scrollTop = modalMessages.scrollHeight;
+    }
+    async function loadCoachHistory() {
+      if (!currentEnrollmentId) return;
+      const history = await api(`/api/learning/enrollments/${currentEnrollmentId}/coach/messages?limit=12`);
+      (history.messages || []).forEach((message) => {
+        addModalMessage(message.content, message.role === "user" ? "user" : "bot");
+        addCoachCitations(message.citations);
+      });
+    }
+    function setCoachBusy(isBusy) {
+      coachInput.disabled = isBusy;
+      coachSend.disabled = isBusy;
+      coachSend.textContent = isBusy ? "..." : "بپرس";
+    }
+    async function sendCoachQuestion(event) {
+      event.preventDefault();
+      const message = coachInput.value.trim();
+      if (!message || !currentEnrollmentId || !coachingStageNumber) return;
+      addModalMessage(message, "user");
+      coachInput.value = "";
+      setCoachBusy(true);
+      try {
+        const reply = await api(`/api/learning/enrollments/${currentEnrollmentId}/coach/messages`, {
+          method: "POST",
+          body: JSON.stringify({ message, stage_number: coachingStageNumber }),
+        });
+        addModalMessage(reply.answer, "bot");
+        addCoachCitations(reply.citations);
+        if (reply.suggested_action) addModalMessage(`قدم بعدی پیشنهادی: ${reply.suggested_action}`, "bot");
+      } catch (error) {
+        if (!handleMissingUser(error)) addModalMessage(error.message, "bot");
+      } finally {
+        setCoachBusy(false);
+        coachInput.focus();
+      }
+    }
+    async function showCoachingCheckpoint(result) {
       pendingNextStage = true;
       modalMessages.innerHTML = '<img class="checkpoint-avatar" src="/landing-static/zito-mascot.svg" alt="زیتو">';
-      const closing = result.course_completed
-        ? "مسیر این دوره را کامل کردی. آزمون نهایی و مدرک در اسپرینت مربوط به خودشان فعال می‌شوند."
-        : "فعلاً این ایستگاه نمایشی است؛ در اسپرینت بعدی پاسخ زنده با RAG دوره فعال می‌شود.";
-      addModalMessage(`${result.coaching.prompt}\n\n${closing}`);
+      const coaching = result.coaching || {};
+      coachingStageNumber = Number(coaching.stage_number || result.completed_stage_number || currentLesson?.stage_number || 0) || null;
+      coachForm.hidden = !coaching.enabled;
+      coachAvailability.textContent = coaching.enabled
+        ? "پاسخ‌ها فقط از منابع تاییدشده همین دوره ساخته می‌شوند."
+        : "کوچینگ این نسخه هنوز در حالت پیش‌نمایش است.";
+      addModalMessage(coaching.prompt || "درباره این مرحله سوالی داری؟");
+      if (coaching.enabled) {
+        try {
+          await loadCoachHistory();
+        } catch (error) {
+          if (!handleMissingUser(error)) addModalMessage("تاریخچه کوچینگ فعلاً در دسترس نیست.");
+        }
+      } else if (result.course_completed) {
+        addModalMessage("مسیر این دوره را کامل کردی. آزمون نهایی و مدرک در اسپرینت مربوط به خودشان فعال می‌شوند.");
+      }
       coachContinue.textContent = result.course_completed ? "دیدن جمع‌بندی" : "ادامه مسیر";
       answerModal.classList.add("show");
       answerModal.setAttribute("aria-hidden", "false");
+      if (coaching.enabled) coachInput.focus();
     }
     function closeAnswerModal() {
       answerModal.classList.remove("show");
@@ -2099,7 +2169,7 @@
         });
         renderLearningPath(result.path);
         setStatus(result.course_completed ? "مسیر کامل شد" : `مرحله ${result.next_stage_number} آماده است`);
-        showCoachingCheckpoint(result);
+        await showCoachingCheckpoint(result);
       } catch (error) {
         completeButton.disabled = false;
         completeButton.textContent = "تکمیل مرحله و ادامه";
@@ -2224,6 +2294,7 @@
 
     modalClose.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
     coachContinue.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
+    coachForm.addEventListener("submit", sendCoachQuestion);
     changeCourse.addEventListener("click", () => showCourseCatalog().catch((error) => { coachMessage.textContent = error.message; }));
     answerModal.addEventListener("click", (event) => {
       if (event.target === answerModal) continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; });

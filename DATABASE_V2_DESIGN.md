@@ -1,22 +1,22 @@
 # Zito Database V2 - Canonical Design
 
-Status: Sprint 1 canonical identity/profile, Sprint 2 runtime, and Sprint 2.5 module-scoped course hierarchy implemented
-Date: 2026-08-05
-Scope: identity, profile, versioned course publishing, reusable learning templates, module-scoped progress, KB scoping, future RAG/AI supervision, legacy migration and rollback
+Status: Sprint 1 canonical identity/profile, Sprint 2 runtime, Sprint 2.5 module-scoped hierarchy, and local RAG foundation implemented
+Date: 2026-08-16
+Scope: identity, profile, versioned course publishing, reusable learning templates, module-scoped progress, KB scoping, pgvector RAG, future CMS/AI supervision, legacy migration and rollback
 
-This document has two layers. The implementation status and named tables in this opening section describe the physical schema at migration head `20260806_0010`. The later CMS/RAG/AI-policy sections remain the target design for later sprints; they are not claims that those future tables or services already exist.
+This document has two layers. The implementation status and named tables in this opening section describe the physical schema at migration head `20260816_0012`. The later CMS/AI-policy sections remain the target design for later sprints; they are not claims that those future tables or services already exist.
 
-Implementation status on 2026-08-05:
+Implementation status on 2026-08-16:
 
 - Implemented in `20260728_0006`: canonical `users` fields, one-to-one `user_profiles`, `user_sessions`, OTP purpose/indexes, profile backfill, HttpOnly user sessions, soft delete/restore, session-owned profile and enrollment APIs.
 - Implemented in `20260728_0007`: mandatory unique phone identity; removal of `users.full_name`, `users.username`, `users.profession`; removal of `user_profiles_v2`, `profile_builder_answers`, `questions`, `answers`, global `knowledge_documents`, and legacy `user_progress`.
 - Implemented in Sprint 2 without a new migration: course selection, version-pinned enrollment, exactly 20 `user_stage_progress` rows, sequential locking, idempotent completion, percentage derivation, resume, approved content delivery, and media placeholders.
 - Removed from the active API: temporary `/api/training/{user_id}/*` routes and runtime AI-generated lessons. Sprint 2 reads only approved content from `course_stage_contents`.
-- Implemented as a UI preview only: the post-stage coaching checkpoint. It does not call AI or RAG yet.
+- Implemented locally in `20260808_0011` and `20260816_0012`: version-scoped RAG configuration, auditable coach threads/messages/retrieval events, native `halfvec(3072)` Bge-m3 embeddings, HNSW search, strict module or course-global KB scope, and durable index jobs. The production release is intentionally deferred until the worker service is deployed.
 - Implemented in `20260805_0008`: `learning_stage_templates`, `course_modules`, `course_module_stage_contents`, `user_module_stage_progress`, `course_kb_document_modules`, and optional `course_kb_documents.course_version_id` scope.
 - Implemented in sample course version 2: five approved modules, 20 reusable templates in each module, 100 approved content rows, module-scoped KB documents and sequential progress. The first three templates in every module are `learning_path`, `lesson_summary`, then `flashcards`.
 - Intentional compatibility: version 1 data remains flat in `course_stage_contents` and `user_stage_progress`; it is not deleted or rewritten. New enrollments select version 2 and use `user_module_stage_progress`.
-- Not implemented yet: runtime RAG retrieval, AI policy tables, live coaching/interaction/evaluation, final exam/certificate execution, and the real CMS workflow.
+- Not implemented yet: real CMS authoring/review workflow, AI policy tables, scored learning evaluation, final exam/certificate execution, and production deployment of the standalone RAG worker.
 
 ## 1. Confirmed Product Decisions
 
@@ -514,7 +514,7 @@ created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 UNIQUE (document_version_id, chunk_order)
 ```
 
-The embedding column/type is intentionally deferred until the vector provider and `pgvector` strategy are approved. Lexical retrieval can use PostgreSQL full-text search during the first implementation.
+Implementation note (2026-08-16): the active schema uses `course_kb_document_chunks.embedding` as native PostgreSQL `halfvec(3072)`, HNSW cosine search, and `course_kb_index_jobs` for asynchronous indexing. JSON embeddings and lexical fallback are not used by the active coach retrieval path.
 
 ### 7.4 Tag joins
 

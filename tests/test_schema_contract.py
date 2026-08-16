@@ -77,6 +77,12 @@ class CanonicalSchemaContractTests(unittest.TestCase):
                 "course_modules",
                 "course_module_stage_contents",
                 "course_kb_document_modules",
+                "course_rag_configs",
+                "course_kb_document_chunks",
+                "course_kb_index_jobs",
+                "coach_threads",
+                "coach_messages",
+                "coach_retrieval_events",
                 "user_module_stage_progress",
             }.issubset(tables)
         )
@@ -91,8 +97,27 @@ class CanonicalSchemaContractTests(unittest.TestCase):
             for column in inspector.get_columns("user_module_stage_progress")
         }
         kb_columns = {column["name"] for column in inspector.get_columns("course_kb_documents")}
+        kb_chunk_columns = {
+            column["name"]
+            for column in inspector.get_columns("course_kb_document_chunks")
+        }
+        coach_message_columns = {
+            column["name"]
+            for column in inspector.get_columns("coach_messages")
+        }
 
         self.assertTrue({"course_version_id", "module_number", "learning_objectives_json", "tags_json"}.issubset(module_columns))
         self.assertTrue({"course_module_id", "template_id", "stage_number", "content_json"}.issubset(module_stage_columns))
         self.assertTrue({"enrollment_id", "module_stage_content_id", "status"}.issubset(module_progress_columns))
-        self.assertIn("course_version_id", kb_columns)
+        self.assertTrue({"course_version_id", "content_checksum", "status"}.issubset(kb_columns))
+        self.assertTrue(
+            {
+                "document_id",
+                "course_version_id",
+                "content",
+                "embedding",
+                "embedding_input_checksum",
+                "embedding_status",
+            }.issubset(kb_chunk_columns)
+        )
+        self.assertTrue({"thread_id", "module_stage_content_id", "role", "content"}.issubset(coach_message_columns))

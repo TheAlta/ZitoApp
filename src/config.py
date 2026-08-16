@@ -18,6 +18,21 @@ class Settings(BaseSettings):
     arvan_timeout_seconds: int = Field(45, alias="ARVAN_TIMEOUT_SECONDS")
     arvan_mock_ai: bool = Field(False, alias="ARVAN_MOCK_AI")
 
+    # RAG keeps retrieval in Zito while delegating embeddings to Arvan when configured.
+    arvan_embedding_api_base_url: str = Field("", alias="ARVAN_EMBEDDING_API_BASE_URL")
+    arvan_embedding_api_key: str = Field("", alias="ARVAN_EMBEDDING_API_KEY")
+    arvan_embedding_model: str = Field("Bge-m3", alias="ARVAN_EMBEDDING_MODEL")
+    arvan_embedding_dimensions: int = Field(3072, alias="ARVAN_EMBEDDING_DIMENSIONS")
+    arvan_embedding_timeout_seconds: int = Field(30, alias="ARVAN_EMBEDDING_TIMEOUT_SECONDS")
+    rag_retrieval_top_k: int = Field(4, alias="RAG_RETRIEVAL_TOP_K")
+    rag_context_char_limit: int = Field(6000, alias="RAG_CONTEXT_CHAR_LIMIT")
+    rag_min_similarity: float = Field(0.20, alias="RAG_MIN_SIMILARITY")
+    rag_chunk_size_chars: int = Field(900, alias="RAG_CHUNK_SIZE_CHARS")
+    rag_chunk_overlap_chars: int = Field(120, alias="RAG_CHUNK_OVERLAP_CHARS")
+    rag_index_job_max_attempts: int = Field(5, alias="RAG_INDEX_JOB_MAX_ATTEMPTS")
+    rag_index_job_lease_seconds: int = Field(900, alias="RAG_INDEX_JOB_LEASE_SECONDS")
+    rag_index_worker_poll_seconds: int = Field(10, alias="RAG_INDEX_WORKER_POLL_SECONDS")
+
     admin_username: str = Field("zito_admin", alias="ADMIN_USERNAME")
     admin_password: str = Field("change-me", alias="ADMIN_PASSWORD")
     admin_session_secret: str = Field("change-me-admin-session-secret", alias="ADMIN_SESSION_SECRET")
@@ -54,6 +69,8 @@ class Settings(BaseSettings):
         if missing:
             joined = ", ".join(missing)
             raise ValueError(f"Unsafe production configuration. Set secure values for: {joined}")
+        if self.arvan_embedding_dimensions != 3072:
+            raise ValueError("ARVAN_EMBEDDING_DIMENSIONS must match the configured Bge-m3 endpoint (3072).")
         return self
 
     @property
@@ -63,6 +80,15 @@ class Settings(BaseSettings):
     @property
     def has_safe_admin_seed_password(self) -> bool:
         return self.admin_password not in {"", "change-me", "replace_with_strong_admin_password"}
+
+    @property
+    def effective_embedding_api_key(self) -> str:
+        """Allow one Arvan account key unless embeddings receive a dedicated key."""
+        return self.arvan_embedding_api_key or self.arvan_api_key
+
+    @property
+    def has_embedding_configuration(self) -> bool:
+        return bool(self.arvan_embedding_api_base_url and self.effective_embedding_api_key)
 
 
 @lru_cache

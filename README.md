@@ -12,8 +12,9 @@ Zito is a FastAPI-based authenticated learning platform with AI-assisted trainin
 - Serves the active Fake CMS course as five ordered course modules, each with the same 20 reusable educational templates (100 stored learning items in the sample version).
 - Persists one canonical module-stage progress row per item for version 2, blocks skipping, and resumes the latest course after login.
 - Keeps the Zito avatar visible during course selection and every learning stage.
-- Provides typed empty image, video and audio slots ready for future CMS media, plus course-version and module scopes for future RAG retrieval.
-- Shows a display-only coaching checkpoint after each stage; course RAG coaching is scheduled for Sprint 3.
+- Provides typed empty image, video and audio slots ready for future CMS media, plus strict course-version and module scopes for RAG retrieval.
+- Runs a grounded coaching API after each stage: only approved chunks from the learner's current module or explicit course-global KB sources may be cited.
+- Stores 3072-dimensional Bge-m3 embeddings in PostgreSQL `halfvec` with an HNSW index, and processes document indexing in a standalone worker rather than a learner request.
 - Shows canonical user identity and profile fields in a separate protected admin UI.
 - Soft-deletes users and revokes their active sessions without removing learning history; a later verified phone OTP restores the same account. Blocking is a separate admin operation.
 
@@ -25,10 +26,13 @@ After setup:
 - Health: `http://127.0.0.1:8000/health`
 
 ## Important files
-- `DATABASE_V2_DESIGN.md`: implemented Sprint 1/Sprint 2.5 schema status plus the remaining future database target.
+- `DATABASE_V2_DESIGN.md`: implemented Sprint 1/Sprint 2.5/RAG schema status plus the remaining future CMS database target.
 - `PROJECT_RAW_AUDIT.md`: code-derived snapshot of the project before the database V2 migration.
 - `SETUP.md`: PostgreSQL, environment, migration and Git setup.
-- `src/lib/arvan_client.py`: the only place that calls Arvancloud AIaaS.
+- `src/lib/arvan_client.py`: OpenAI-compatible Arvan chat client used for validation and coaching responses.
+- `src/lib/arvan_embeddings.py`: Arvan Bge-m3 embedding client with dimension validation.
+- `src/services/rag.py`: version-safe retrieval, chunk synchronization and durable RAG index jobs.
+- `src/cli/rag_indexer.py`: standalone RAG worker command for local batches or a supervised production worker.
 - `src/prompts/`: editable system prompts.
 - `src/api/routes.py`: authentication, canonical profile, course, legacy flat and module-scoped learning engines, and admin routes.
 

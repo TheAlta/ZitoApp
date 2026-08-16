@@ -5,6 +5,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     JSON,
@@ -15,7 +16,15 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from pgvector.sqlalchemy import HALFVEC
+
 from src.db import Base
+
+
+# Bge-m3 from the configured Arvan gateway returns 3072 dimensions. PostgreSQL
+# stores it as halfvec so an HNSW index remains available above vector's 2000-D
+# limit. SQLite keeps JSON only for isolated unit tests.
+RAG_EMBEDDING_TYPE = HALFVEC(3072).with_variant(JSON(), "sqlite")
 
 
 class User(Base):
@@ -38,6 +47,10 @@ class User(Base):
     )
     sessions: Mapped[list["UserSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     enrollments: Mapped[list["UserCourseEnrollment"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    coach_threads: Mapped[list["CoachThread"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )
@@ -125,7 +138,10 @@ class Course(Base):
 
 class CourseVersion(Base):
     __tablename__ = "course_versions"
-    __table_args__ = (UniqueConstraint("course_id", "version_number", name="uq_course_versions_course_version"),)
+    __table_args__ = (
+        UniqueConstraint("course_id", "version_number", name="uq_course_versions_course_version"),
+        UniqueConstraint("id", "course_id", name="uq_course_versions_id_course"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
@@ -144,6 +160,11 @@ class CourseVersion(Base):
         foreign_keys="CourseKbDocument.course_version_id",
     )
     exams: Mapped[list["Exam"]] = relationship(back_populates="course_version", cascade="all, delete-orphan")
+    rag_config: Mapped["CourseRagConfig"] = relationship(
+        back_populates="course_version",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
 
 class CourseStageContent(Base):
@@ -202,6 +223,7 @@ class CourseModule(Base):
     __tablename__ = "course_modules"
     __table_args__ = (
         UniqueConstraint("course_version_id", "module_number", name="uq_course_modules_version_number"),
+        UniqueConstraint("id", "course_version_id", name="uq_course_modules_id_version"),
         CheckConstraint("module_number >= 1", name="ck_course_modules_module_number"),
         Index("ix_course_modules_version_status_number", "course_version_id", "status", "module_number"),
     )
@@ -233,6 +255,7 @@ class CourseModule(Base):
     kb_document_scopes: Mapped[list["CourseKbDocumentModule"]] = relationship(
         back_populates="course_module",
         cascade="all, delete-orphan",
+        foreign_keys="CourseKbDocumentModule.course_module_id",
     )
 
 
@@ -280,23 +303,75 @@ class CourseModuleStageContent(Base):
         back_populates="module_stage_content",
         cascade="all, delete-orphan",
     )
+    coach_messages: Mapped[list["CoachMessage"]] = relationship(back_populates="module_stage_content")
+
+
+class CourseRagConfig(Base):
+    """Non-secret RAG routing configuration pinned to a published course version."""
+
+    __tablename__ = "course_rag_configs"
+    __table_args__ = (Index("ix_course_rag_configs_status", "status"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    course_version_id: Mapped[int] = mapped_column(
+        ForeignKey("course_versions.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    provider: Mapped[str] = mapped_column(String(50), default="zito_embedding", nullable=False)
+    endpoint_config_ref: Mapped[str] = mapped_column(String(120), nullable=True)
+    knowledge_base_ref: Mapped[str] = mapped_column(String(160), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="ready", nullable=False)
+    supports_metadata_filters: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    embedding_model: Mapped[str] = mapped_column(String(120), default="Bge-m3", nullable=False)
+    embedding_dimensions: Mapped[int] = mapped_column(Integer, default=3072, nullable=False)
+    last_indexed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    course_version: Mapped[CourseVersion] = relationship(back_populates="rag_config")
+    retrieval_events: Mapped[list["CoachRetrievalEvent"]] = relationship(back_populates="rag_config")
 
 
 class CourseKbDocument(Base):
     __tablename__ = "course_kb_documents"
+    __table_args__ = (
+        UniqueConstraint("id", "course_version_id", name="uq_course_kb_documents_id_version"),
+        ForeignKeyConstraint(
+            ["course_version_id", "course_id"],
+            ["course_versions.id", "course_versions.course_id"],
+            name="fk_course_kb_documents_version_course",
+            ondelete="CASCADE",
+        ),
+        Index("ix_course_kb_documents_version_status", "course_version_id", "status", "id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     course_id: Mapped[int] = mapped_column(ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
     course_version_id: Mapped[int] = mapped_column(
         ForeignKey("course_versions.id", ondelete="CASCADE"),
-        nullable=True,
+        nullable=False,
         index=True,
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
     tags: Mapped[str] = mapped_column(String(255), nullable=True)
     source_type: Mapped[str] = mapped_column(String(40), default="seed", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    status: Mapped[str] = mapped_column(String(30), default="approved", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     course: Mapped[Course] = relationship(back_populates="kb_documents")
     course_version: Mapped[CourseVersion] = relationship(
@@ -306,6 +381,66 @@ class CourseKbDocument(Base):
     module_scopes: Mapped[list["CourseKbDocumentModule"]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
+        foreign_keys="CourseKbDocumentModule.document_id",
+    )
+    chunks: Mapped[list["CourseKbDocumentChunk"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        foreign_keys="CourseKbDocumentChunk.document_id",
+    )
+    index_jobs: Mapped[list["CourseKbIndexJob"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        foreign_keys="CourseKbIndexJob.document_id",
+    )
+
+
+class CourseKbDocumentChunk(Base):
+    """A locally auditable retrieval unit for an approved course KB document."""
+
+    __tablename__ = "course_kb_document_chunks"
+    __table_args__ = (
+        UniqueConstraint("document_id", "chunk_index", name="uq_course_kb_document_chunk_index"),
+        ForeignKeyConstraint(
+            ["document_id", "course_version_id"],
+            ["course_kb_documents.id", "course_kb_documents.course_version_id"],
+            name="fk_course_kb_chunks_document_version",
+            ondelete="CASCADE",
+        ),
+        Index("ix_course_kb_document_chunks_document_status", "document_id", "embedding_status"),
+        Index("ix_course_kb_document_chunks_version_status", "course_version_id", "embedding_status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("course_kb_documents.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    course_version_id: Mapped[int] = mapped_column(
+        ForeignKey("course_versions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    embedding: Mapped[list] = mapped_column(RAG_EMBEDDING_TYPE, nullable=True)
+    embedding_input_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    embedding_model: Mapped[str] = mapped_column(String(120), nullable=True)
+    embedding_dimension: Mapped[int] = mapped_column(Integer, nullable=True)
+    embedding_status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)
+    embedding_indexed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    embedding_error: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    document: Mapped[CourseKbDocument] = relationship(
+        back_populates="chunks",
+        foreign_keys=[document_id],
     )
 
 
@@ -313,7 +448,22 @@ class CourseKbDocumentModule(Base):
     """Optional module scopes for a course-version knowledge document."""
 
     __tablename__ = "course_kb_document_modules"
-    __table_args__ = (Index("ix_course_kb_document_modules_module", "course_module_id"),)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["document_id", "course_version_id"],
+            ["course_kb_documents.id", "course_kb_documents.course_version_id"],
+            name="fk_course_kb_document_modules_document_version",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["course_module_id", "course_version_id"],
+            ["course_modules.id", "course_modules.course_version_id"],
+            name="fk_course_kb_document_modules_module_version",
+            ondelete="CASCADE",
+        ),
+        Index("ix_course_kb_document_modules_module", "course_module_id"),
+        Index("ix_course_kb_document_modules_version_module", "course_version_id", "course_module_id"),
+    )
 
     document_id: Mapped[int] = mapped_column(
         ForeignKey("course_kb_documents.id", ondelete="CASCADE"),
@@ -323,10 +473,71 @@ class CourseKbDocumentModule(Base):
         ForeignKey("course_modules.id", ondelete="CASCADE"),
         primary_key=True,
     )
+    course_version_id: Mapped[int] = mapped_column(
+        ForeignKey("course_versions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    document: Mapped[CourseKbDocument] = relationship(back_populates="module_scopes")
-    course_module: Mapped[CourseModule] = relationship(back_populates="kb_document_scopes")
+    document: Mapped[CourseKbDocument] = relationship(
+        back_populates="module_scopes",
+        foreign_keys=[document_id],
+    )
+    course_module: Mapped[CourseModule] = relationship(
+        back_populates="kb_document_scopes",
+        foreign_keys=[course_module_id],
+    )
+
+
+class CourseKbIndexJob(Base):
+    """Durable request to build/rebuild one document's searchable chunks."""
+
+    __tablename__ = "course_kb_index_jobs"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["document_id", "course_version_id"],
+            ["course_kb_documents.id", "course_kb_documents.course_version_id"],
+            name="fk_course_kb_index_jobs_document_version",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint("attempt_count >= 0", name="ck_course_kb_index_jobs_attempt_count"),
+        CheckConstraint("max_attempts >= 1", name="ck_course_kb_index_jobs_max_attempts"),
+        Index("ix_course_kb_index_jobs_status_next", "status", "next_attempt_at", "id"),
+        Index("ix_course_kb_index_jobs_version_status", "course_version_id", "status"),
+        Index("ix_course_kb_index_jobs_document_status", "document_id", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    course_version_id: Mapped[int] = mapped_column(
+        ForeignKey("course_versions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("course_kb_documents.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    source_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    embedding_model: Mapped[str] = mapped_column(String(120), default="Bge-m3", nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="queued", nullable=False)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    document: Mapped[CourseKbDocument] = relationship(
+        back_populates="index_jobs",
+        foreign_keys=[document_id],
+    )
 
 
 class UserCourseEnrollment(Base):
@@ -349,6 +560,11 @@ class UserCourseEnrollment(Base):
     module_stage_progress: Mapped[list["UserModuleStageProgress"]] = relationship(
         back_populates="enrollment",
         cascade="all, delete-orphan",
+    )
+    coach_thread: Mapped["CoachThread"] = relationship(
+        back_populates="enrollment",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
 
 
@@ -399,6 +615,86 @@ class UserModuleStageProgress(Base):
 
     enrollment: Mapped[UserCourseEnrollment] = relationship(back_populates="module_stage_progress")
     module_stage_content: Mapped[CourseModuleStageContent] = relationship(back_populates="progress_rows")
+
+
+class CoachThread(Base):
+    """One durable coaching conversation for a learner's pinned course enrollment."""
+
+    __tablename__ = "coach_threads"
+    __table_args__ = (Index("ix_coach_threads_user_updated", "user_id", "last_message_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    enrollment_id: Mapped[int] = mapped_column(
+        ForeignKey("user_course_enrollments.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    last_message_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship(back_populates="coach_threads")
+    enrollment: Mapped[UserCourseEnrollment] = relationship(back_populates="coach_thread")
+    messages: Mapped[list["CoachMessage"]] = relationship(
+        back_populates="thread",
+        cascade="all, delete-orphan",
+    )
+
+
+class CoachMessage(Base):
+    """Persisted learner or assistant message with the active learning-stage context."""
+
+    __tablename__ = "coach_messages"
+    __table_args__ = (Index("ix_coach_messages_thread_created", "thread_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    thread_id: Mapped[int] = mapped_column(ForeignKey("coach_threads.id", ondelete="CASCADE"), nullable=False)
+    module_stage_content_id: Mapped[int] = mapped_column(
+        ForeignKey("course_module_stage_contents.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    model: Mapped[str] = mapped_column(String(120), nullable=True)
+    prompt_version: Mapped[str] = mapped_column(String(80), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    thread: Mapped[CoachThread] = relationship(back_populates="messages")
+    module_stage_content: Mapped[CourseModuleStageContent] = relationship(back_populates="coach_messages")
+    retrieval_events: Mapped[list["CoachRetrievalEvent"]] = relationship(
+        back_populates="assistant_message",
+        cascade="all, delete-orphan",
+    )
+
+
+class CoachRetrievalEvent(Base):
+    """Audit record for the sources and outcome used to create one coach reply."""
+
+    __tablename__ = "coach_retrieval_events"
+    __table_args__ = (Index("ix_coach_retrieval_events_config_created", "rag_config_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assistant_message_id: Mapped[int] = mapped_column(
+        ForeignKey("coach_messages.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    rag_config_id: Mapped[int] = mapped_column(
+        ForeignKey("course_rag_configs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    retrieval_method: Mapped[str] = mapped_column(String(50), nullable=False)
+    source_chunks_json: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    grounded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="ok", nullable=False)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    assistant_message: Mapped[CoachMessage] = relationship(back_populates="retrieval_events")
+    rag_config: Mapped[CourseRagConfig] = relationship(back_populates="retrieval_events")
 
 
 class Exam(Base):

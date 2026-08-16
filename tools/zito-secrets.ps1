@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet("init", "import-env", "set", "set-server-password", "list", "run-server")]
+    [ValidateSet("init", "import-env", "set", "set-server-password", "list", "diagnose-sms", "run-rag-indexer", "run-server")]
     [string]$Action,
 
     [Parameter(Position = 1)]
@@ -8,6 +8,9 @@ param(
 
     [ValidateRange(1, 65535)]
     [int]$Port = 8000,
+
+    [ValidateRange(1, 1000)]
+    [int]$Limit = 20,
 
     [switch]$Reload
 )
@@ -110,6 +113,27 @@ function Import-VaultEnvironment {
     return $loaded
 }
 
+function Get-SafeSmsDiagnostics {
+    $loaded = Import-VaultEnvironment
+    $urlText = [string]$env:SMSIR_API_URL
+    [System.Uri]$uri = $null
+    $urlIsValid = [System.Uri]::TryCreate($urlText, [System.UriKind]::Absolute, [ref]$uri)
+
+    [ordered]@{
+        vault_environment_loaded = $loaded
+        otp_mock = [string]$env:OTP_MOCK
+        smsir_url_configured = -not [string]::IsNullOrWhiteSpace($urlText)
+        smsir_url_valid = $urlIsValid
+        smsir_url_scheme = if ($urlIsValid) { $uri.Scheme } else { "" }
+        smsir_url_host = if ($urlIsValid) { $uri.Host } else { "" }
+        smsir_url_port = if ($urlIsValid) { $uri.Port } else { $null }
+        smsir_api_key_configured = -not [string]::IsNullOrWhiteSpace([string]$env:SMSIR_API_KEY)
+        smsir_template_id_configured = -not [string]::IsNullOrWhiteSpace([string]$env:SMSIR_TEMPLATE_ID)
+        smsir_code_parameter_configured = -not [string]::IsNullOrWhiteSpace([string]$env:SMSIR_CODE_PARAMETER)
+        smsir_timeout_seconds = [string]$env:SMSIR_TIMEOUT_SECONDS
+    } | ConvertTo-Json
+}
+
 function Write-Inventory {
     Ensure-SecretRoot
     if (Test-Path $InventoryPath) { return }
@@ -194,6 +218,20 @@ switch ($Action) {
     "list" {
         $vault = Read-Vault
         @($vault.secrets.Keys) | ForEach-Object { [string]$_ } | Sort-Object
+    }
+    "diagnose-sms" {
+        Get-SafeSmsDiagnostics
+    }
+    "run-rag-indexer" {
+        $loaded = Import-VaultEnvironment
+        $python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+        if (!(Test-Path $python)) {
+            throw "Virtual environment was not found: $python"
+        }
+
+        Write-Output "vault-environment-loaded=$loaded"
+        & $python -m src.cli.rag_indexer --once --limit $Limit
+        exit $LASTEXITCODE
     }
     "run-server" {
         $loaded = Import-VaultEnvironment

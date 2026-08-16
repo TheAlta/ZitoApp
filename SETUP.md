@@ -112,6 +112,20 @@ Run migrations:
 .\.venv\Scripts\python.exe -m alembic upgrade head
 ```
 
+## RAG Indexing Worker
+Course KB documents are chunked and indexed by a separate worker. Learner
+requests never create embeddings for course content. After an approved KB
+document is added or changed, run one local batch with the private vault:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 run-rag-indexer -Limit 20
+```
+
+The result contains only counts such as `processed`, `succeeded`, `retry`, and
+`failed`; it never prints API keys or source text. A `retry` result means the
+same durable job will be attempted later. The production worker will be added
+as a separate systemd service before RAG is enabled for learners.
+
 ## Stop The Server
 In the PowerShell window where Uvicorn is running, press:
 

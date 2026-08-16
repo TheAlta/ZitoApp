@@ -25,6 +25,21 @@ def _mock_response(system_prompt: str, user_message: str) -> str:
         or message_data.get("question")
         or user_message
     ).strip()
+
+    if "ZITO_COURSE_COACH_V1" in system_prompt:
+        question = str(message_data.get("learner_question") or answer_text).strip()
+        return json.dumps(
+            {
+                "answer": (
+                    f"برای پرسش «{question}»، بر اساس محتوای تاییدشده همین سرفصل، "
+                    "یک قدم کوچک و قابل اجرا انتخاب کن و نتیجه‌اش را در مرحله بعد مرور کن."
+                ),
+                "grounded": True,
+                "source_numbers": [1],
+                "suggested_action": "یک اقدام کوتاه متناسب با همین درس انتخاب کن.",
+            },
+            ensure_ascii=False,
+        )
     normalized = answer_text.replace(" ", "").replace("\u200c", "").lower()
 
     invalid_tokens = {

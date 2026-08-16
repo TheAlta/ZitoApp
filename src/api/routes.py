@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from src.db import get_db
 from src.models import (
+    CoachMessage,
     Course,
     CourseModule,
     CourseModuleStageContent,
@@ -23,6 +24,11 @@ from src.models import (
 from src.schemas import (
     AdminLoginIn,
     AdminLoginOut,
+    CoachCitationOut,
+    CoachHistoryOut,
+    CoachMessageOut,
+    CoachQuestionIn,
+    CoachReplyOut,
     CoachingCheckpointOut,
     CourseOut,
     EnrollmentOut,
@@ -55,6 +61,7 @@ from src.security import (
     set_user_cookie,
 )
 from src.services.otp import OtpError, OtpRateLimitError, normalize_otp_code, request_otp, verify_otp
+from src.services.coach import answer_course_question, list_coach_messages
 
 router = APIRouter()
 LEARNING_STAGE_COUNT = 20
@@ -456,7 +463,12 @@ def _module_current_stage_out(
         total_stage_count=len(stages),
         course_completed=enrollment.status == "completed",
         content=content,
-        coaching=_coaching_checkpoint(content, enrollment.status == "completed"),
+        coaching=_coaching_checkpoint(
+            content,
+            enrollment.status == "completed",
+            enabled=True,
+            stage_number=ordinal,
+        ),
         module_id=module.id,
         module_number=module.module_number,
         module_title=module.title,
@@ -507,7 +519,12 @@ def _complete_module_learning_stage(
         next_stage_number=None if course_completed else enrollment.current_stage_number,
         course_completed=course_completed,
         progress_percentage=enrollment.progress_percentage,
-        coaching=_coaching_checkpoint(content, course_completed),
+        coaching=_coaching_checkpoint(
+            content,
+            course_completed,
+            enabled=True,
+            stage_number=stage_number,
+        ),
         path=path,
     )
 
@@ -656,12 +673,77 @@ def _learning_path_out(
     )
 
 
-def _coaching_checkpoint(content: dict, course_completed: bool = False) -> CoachingCheckpointOut:
+def _coaching_checkpoint(
+    content: dict,
+    course_completed: bool = False,
+    *,
+    enabled: bool = False,
+    stage_number: int | None = None,
+) -> CoachingCheckpointOut:
     checkpoint = content.get("coaching_checkpoint") if isinstance(content, dict) else None
     prompt = "مسیر را کامل کردی؛ درباره جمع‌بندی سوالی داری؟" if course_completed else "درباره این مرحله سوالی داری؟"
     if isinstance(checkpoint, dict) and checkpoint.get("prompt"):
         prompt = str(checkpoint["prompt"])
-    return CoachingCheckpointOut(prompt=prompt, enabled=False, mode="preview")
+    return CoachingCheckpointOut(
+        prompt=prompt,
+        enabled=enabled,
+        mode="live" if enabled else "preview",
+        stage_number=stage_number,
+    )
+
+
+def _resolve_coaching_stage(
+    db: Session,
+    enrollment: UserCourseEnrollment,
+    requested_stage_number: int | None,
+) -> tuple[CourseModuleStageContent, list[CourseModuleStageContent]]:
+    """Map a user-visible stage number to the user's pinned module content.
+
+    The client cannot select a course, course version, module, or KB. It may
+    ask about the current stage or a stage it has already reached.
+    """
+    if not _uses_module_structure(db, enrollment.course_version_id):
+        raise HTTPException(
+            status_code=409,
+            detail="کوچینگ هوشمند فقط برای نسخه جدید دوره فعال است.",
+        )
+    stages = _approved_module_stages(db, enrollment.course_version_id)
+    max_stage_number = len(stages) if enrollment.status == "completed" else enrollment.current_stage_number
+    stage_number = requested_stage_number or max_stage_number
+    if stage_number < 1 or stage_number > max_stage_number:
+        raise HTTPException(
+            status_code=409,
+            detail="فقط درباره مرحله جاری یا مرحله‌های طی‌شده می‌توانی سؤال بپرسی.",
+        )
+    return stages[stage_number - 1], stages
+
+
+def _coach_message_out(
+    message: CoachMessage,
+    stage_numbers: dict[int, int],
+) -> CoachMessageOut:
+    metadata = message.content_json if isinstance(message.content_json, dict) else {}
+    citations: list[CoachCitationOut] = []
+    raw_citations = metadata.get("citations") if isinstance(metadata, dict) else None
+    if isinstance(raw_citations, list):
+        for item in raw_citations:
+            if not isinstance(item, dict):
+                continue
+            number = item.get("source_number")
+            title = item.get("title")
+            scope = item.get("scope")
+            if isinstance(number, int) and isinstance(title, str) and isinstance(scope, str):
+                citations.append(
+                    CoachCitationOut(source_number=number, title=title, scope=scope)
+                )
+    return CoachMessageOut(
+        id=message.id,
+        role=message.role,
+        content=message.content,
+        created_at=message.created_at,
+        stage_number=stage_numbers.get(message.module_stage_content_id),
+        citations=citations,
+    )
 
 
 @router.get("/health")
@@ -926,6 +1008,72 @@ def get_learning_path(
     _sync_enrollment_progress(enrollment, progress_rows)
     db.commit()
     return _learning_path_out(db, enrollment, stages, progress_rows)
+
+
+@router.get(
+    "/api/learning/enrollments/{enrollment_id}/coach/messages",
+    response_model=CoachHistoryOut,
+)
+def get_coach_history(
+    enrollment_id: int,
+    limit: int = 20,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> CoachHistoryOut:
+    enrollment = _owned_enrollment(db, enrollment_id, user.id)
+    _, stages = _resolve_coaching_stage(db, enrollment, None)
+    thread, messages = list_coach_messages(
+        db,
+        user=user,
+        enrollment=enrollment,
+        limit=limit,
+    )
+    stage_numbers = {stage.id: number for number, stage in enumerate(stages, start=1)}
+    return CoachHistoryOut(
+        thread_id=thread.id if thread else None,
+        messages=[_coach_message_out(message, stage_numbers) for message in messages],
+    )
+
+
+@router.post(
+    "/api/learning/enrollments/{enrollment_id}/coach/messages",
+    response_model=CoachReplyOut,
+)
+async def ask_course_coach(
+    enrollment_id: int,
+    payload: CoachQuestionIn,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> CoachReplyOut:
+    question = payload.message.strip()
+    if len(question) < 2:
+        raise HTTPException(status_code=422, detail="سؤال کوچینگ را کامل‌تر بنویس.")
+    # A coach response can wait on the model provider; do not keep the
+    # enrollment row locked for the duration of that external request.
+    enrollment = _owned_enrollment(db, enrollment_id, user.id)
+    stage, _ = _resolve_coaching_stage(db, enrollment, payload.stage_number)
+    try:
+        reply = await answer_course_question(
+            db,
+            user=user,
+            enrollment=enrollment,
+            stage=stage,
+            stage_number=payload.stage_number or enrollment.current_stage_number,
+            question=question,
+        )
+        db.commit()
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="وضعیت کوچینگ این دوره معتبر نیست.") from exc
+
+    return CoachReplyOut(
+        thread_id=reply.thread.id,
+        answer=reply.assistant_message.content,
+        grounded=reply.grounded,
+        citations=[CoachCitationOut(**citation) for citation in reply.citations],
+        retrieval_method=reply.retrieval_method,
+        suggested_action=reply.suggested_action,
+    )
 
 
 @router.get(

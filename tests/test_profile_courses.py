@@ -188,7 +188,9 @@ class ProfileAndCourseTests(unittest.TestCase):
         self.assertEqual(completion.status_code, 200)
         self.assertEqual(completion.json()["progress_percentage"], 1)
         self.assertEqual(completion.json()["next_stage_number"], 2)
-        self.assertFalse(completion.json()["coaching"]["enabled"])
+        self.assertTrue(completion.json()["coaching"]["enabled"])
+        self.assertEqual(completion.json()["coaching"]["mode"], "live")
+        self.assertEqual(completion.json()["coaching"]["stage_number"], 1)
 
         with SessionLocal() as db:
             enrollment = db.scalars(

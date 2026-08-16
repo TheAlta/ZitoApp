@@ -1,5 +1,6 @@
 ﻿from sqlalchemy import select
 from sqlalchemy.orm import Session
+import hashlib
 from copy import deepcopy
 from datetime import datetime, timezone
 
@@ -11,12 +12,17 @@ from src.models import (
     CourseKbDocumentModule,
     CourseModule,
     CourseModuleStageContent,
+    CourseRagConfig,
     CourseStageContent,
     CourseVersion,
     Exam,
     LearningStageTemplate,
 )
 from src.security import hash_password
+
+
+def _kb_content_checksum(content: str) -> str:
+    return hashlib.sha256(content.strip().encode("utf-8")).hexdigest()
 
 
 PHASE2_SAMPLE_COURSE = {
@@ -467,11 +473,24 @@ def _seed_legacy_flat_course(db: Session) -> Course:
     for item in PHASE2_SAMPLE_KB:
         current = existing_kb.get(item["title"])
         if current:
+            current.course_id = course.id
+            current.course_version_id = version.id
             current.content = item["content"]
+            current.content_checksum = _kb_content_checksum(item["content"])
             current.tags = item["tags"]
             current.source_type = "seed"
+            current.status = "approved"
         else:
-            db.add(CourseKbDocument(course_id=course.id, source_type="seed", **item))
+            db.add(
+                CourseKbDocument(
+                    course_id=course.id,
+                    course_version_id=version.id,
+                    content_checksum=_kb_content_checksum(item["content"]),
+                    source_type="seed",
+                    status="approved",
+                    **item,
+                )
+            )
 
     exam = db.scalars(select(Exam).where(Exam.course_version_id == version.id)).first()
     questions_json = [
@@ -646,24 +665,68 @@ def _seed_module_version(
         document = existing_docs.get(title)
         if document:
             document.course_id = course.id
+            document.course_version_id = version.id
             document.content = content
+            document.content_checksum = _kb_content_checksum(content)
             document.tags = ",".join(["phase2", "module", *spec["tags"]])
             document.source_type = "seed"
+            document.status = "approved"
         else:
             document = CourseKbDocument(
                 course_id=course.id,
                 course_version_id=version.id,
                 title=title,
                 content=content,
+                content_checksum=_kb_content_checksum(content),
                 tags=",".join(["phase2", "module", *spec["tags"]]),
                 source_type="seed",
+                status="approved",
             )
             db.add(document)
             db.flush()
 
         scope = db.get(CourseKbDocumentModule, (document.id, module.id))
-        if not scope:
-            db.add(CourseKbDocumentModule(document_id=document.id, course_module_id=module.id))
+        if scope:
+            scope.course_version_id = version.id
+        else:
+            db.add(
+                CourseKbDocumentModule(
+                    document_id=document.id,
+                    course_module_id=module.id,
+                    course_version_id=version.id,
+                )
+            )
+
+    rag_config = db.scalars(
+        select(CourseRagConfig).where(CourseRagConfig.course_version_id == version.id)
+    ).first()
+    if rag_config:
+        rag_config.provider = "zito_embedding"
+        rag_config.endpoint_config_ref = "ARVAN_EMBEDDING_API_BASE_URL"
+        rag_config.embedding_model = get_settings().arvan_embedding_model
+        rag_config.embedding_dimensions = get_settings().arvan_embedding_dimensions
+        rag_config.status = "ready"
+    else:
+        db.add(
+            CourseRagConfig(
+                course_version_id=version.id,
+                provider="zito_embedding",
+                endpoint_config_ref="ARVAN_EMBEDDING_API_BASE_URL",
+                embedding_model=get_settings().arvan_embedding_model,
+                embedding_dimensions=get_settings().arvan_embedding_dimensions,
+                status="ready",
+            )
+        )
+
+    # Chunks are generated locally at seed time and durable jobs are queued.
+    # External embedding calls never run in a learner request.
+    db.flush()
+    from src.services.rag import sync_document_chunks
+
+    documents = db.scalars(
+        select(CourseKbDocument).where(CourseKbDocument.course_version_id == version.id)
+    ).all()
+    sync_document_chunks(db, list(documents))
 
     questions_json = [
         {

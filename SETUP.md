@@ -112,7 +112,36 @@ Run migrations:
 .\.venv\Scripts\python.exe -m alembic upgrade head
 ```
 
+When using the private local vault, the equivalent command loads `DATABASE_URL` without printing it:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 migrate-db
+```
+
+## Syncing the Mock Knowledge Base
+
+The checked-in Markdown source at `knowledge_base/personal-development-ai-mock-kb.md` is the approved mock source for the five-module sample course. Syncing it updates only the course KB documents, their module scopes, chunks, and durable indexing jobs; it does not call Arvan.
+
+Preview a sync without changing PostgreSQL:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 sync-mock-kb -DryRun
+```
+
+Apply the source to PostgreSQL, then process the queued jobs separately:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 sync-mock-kb
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 run-rag-indexer -Limit 20
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 verify-rag
+```
+
+Each imported document stores a `source_reference`, such as `knowledge_base/personal-development-ai-mock-kb.md#module-2`, so future CMS content can replace this mock workflow without changing the learner-facing retrieval path.
+`verify-rag` sends one sample question through the configured embedding endpoint and prints only retrieval metadata: source title, module/course scope, and similarity score.
+Use `verify-rag -ModuleNumber 2` to inspect another module without exposing the underlying source text.
+
 ## RAG Indexing Worker
+
 Course KB documents are chunked and indexed by a separate worker. Learner
 requests never create embeddings for course content. After an approved KB
 document is added or changed, run one local batch with the private vault:

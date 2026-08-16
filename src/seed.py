@@ -19,6 +19,10 @@ from src.models import (
     LearningStageTemplate,
 )
 from src.security import hash_password
+from src.services.kb_import import (
+    MOCK_PERSONAL_DEVELOPMENT_KB_REFERENCE,
+    sync_personal_development_mock_kb,
+)
 
 
 def _kb_content_checksum(content: str) -> str:
@@ -649,60 +653,13 @@ def _seed_module_version(
             )
     db.flush()
 
-    existing_docs = {
-        item.title: item
-        for item in db.scalars(
-            select(CourseKbDocument).where(CourseKbDocument.course_version_id == version.id)
-        ).all()
-    }
-    for spec, module in module_pairs:
-        title = f"دانش پایه سرفصل: {spec['title']}"
-        content = (
-            f"این سند دانش پایه سرفصل «{spec['title']}» در دوره «{course.title}» است. "
-            f"هدف‌های سرفصل: {', '.join(spec['objectives'])}. "
-            "مربی زیتو فقط باید پاسخ‌هایی ارائه کند که با همین سرفصل، محتوای تاییدشده آن و هدف یادگیری کاربر مرتبط باشند."
-        )
-        document = existing_docs.get(title)
-        if document:
-            document.course_id = course.id
-            document.course_version_id = version.id
-            document.content = content
-            document.content_checksum = _kb_content_checksum(content)
-            document.tags = ",".join(["phase2", "module", *spec["tags"]])
-            document.source_type = "seed"
-            document.status = "approved"
-        else:
-            document = CourseKbDocument(
-                course_id=course.id,
-                course_version_id=version.id,
-                title=title,
-                content=content,
-                content_checksum=_kb_content_checksum(content),
-                tags=",".join(["phase2", "module", *spec["tags"]]),
-                source_type="seed",
-                status="approved",
-            )
-            db.add(document)
-            db.flush()
-
-        scope = db.get(CourseKbDocumentModule, (document.id, module.id))
-        if scope:
-            scope.course_version_id = version.id
-        else:
-            db.add(
-                CourseKbDocumentModule(
-                    document_id=document.id,
-                    course_module_id=module.id,
-                    course_version_id=version.id,
-                )
-            )
-
     rag_config = db.scalars(
         select(CourseRagConfig).where(CourseRagConfig.course_version_id == version.id)
     ).first()
     if rag_config:
         rag_config.provider = "zito_embedding"
         rag_config.endpoint_config_ref = "ARVAN_EMBEDDING_API_BASE_URL"
+        rag_config.knowledge_base_ref = MOCK_PERSONAL_DEVELOPMENT_KB_REFERENCE
         rag_config.embedding_model = get_settings().arvan_embedding_model
         rag_config.embedding_dimensions = get_settings().arvan_embedding_dimensions
         rag_config.status = "ready"
@@ -712,21 +669,22 @@ def _seed_module_version(
                 course_version_id=version.id,
                 provider="zito_embedding",
                 endpoint_config_ref="ARVAN_EMBEDDING_API_BASE_URL",
+                knowledge_base_ref=MOCK_PERSONAL_DEVELOPMENT_KB_REFERENCE,
                 embedding_model=get_settings().arvan_embedding_model,
                 embedding_dimensions=get_settings().arvan_embedding_dimensions,
                 status="ready",
             )
         )
 
-    # Chunks are generated locally at seed time and durable jobs are queued.
-    # External embedding calls never run in a learner request.
     db.flush()
-    from src.services.rag import sync_document_chunks
-
-    documents = db.scalars(
-        select(CourseKbDocument).where(CourseKbDocument.course_version_id == version.id)
-    ).all()
-    sync_document_chunks(db, list(documents))
+    # This local fake-CMS source is handled exactly like a future approved CMS
+    # source: persist documents, scope them, chunk them, and queue indexing.
+    sync_personal_development_mock_kb(
+        db,
+        course=course,
+        course_version=version,
+        modules_by_number={module.module_number: module for _, module in module_pairs},
+    )
 
     questions_json = [
         {

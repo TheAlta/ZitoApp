@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet("init", "import-env", "set", "set-server-password", "list", "diagnose-sms", "run-rag-indexer", "run-server")]
+    [ValidateSet("init", "import-env", "set", "set-server-password", "list", "diagnose-sms", "migrate-db", "sync-mock-kb", "verify-rag", "run-rag-indexer", "run-server")]
     [string]$Action,
 
     [Parameter(Position = 1)]
@@ -11,6 +11,11 @@ param(
 
     [ValidateRange(1, 1000)]
     [int]$Limit = 20,
+
+    [ValidateRange(1, 1000)]
+    [int]$ModuleNumber = 1,
+
+    [switch]$DryRun,
 
     [switch]$Reload
 )
@@ -221,6 +226,41 @@ switch ($Action) {
     }
     "diagnose-sms" {
         Get-SafeSmsDiagnostics
+    }
+    "migrate-db" {
+        $loaded = Import-VaultEnvironment
+        $python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+        if (!(Test-Path $python)) {
+            throw "Virtual environment was not found: $python"
+        }
+
+        Write-Output "vault-environment-loaded=$loaded"
+        & $python -m alembic upgrade head
+        exit $LASTEXITCODE
+    }
+    "sync-mock-kb" {
+        $loaded = Import-VaultEnvironment
+        $python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+        if (!(Test-Path $python)) {
+            throw "Virtual environment was not found: $python"
+        }
+
+        $arguments = @("-m", "src.cli.kb_sync")
+        if ($DryRun) { $arguments += "--dry-run" }
+        Write-Output "vault-environment-loaded=$loaded"
+        & $python @arguments
+        exit $LASTEXITCODE
+    }
+    "verify-rag" {
+        $loaded = Import-VaultEnvironment
+        $python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+        if (!(Test-Path $python)) {
+            throw "Virtual environment was not found: $python"
+        }
+
+        Write-Output "vault-environment-loaded=$loaded"
+        & $python -m src.cli.rag_verify --module-number $ModuleNumber
+        exit $LASTEXITCODE
     }
     "run-rag-indexer" {
         $loaded = Import-VaultEnvironment

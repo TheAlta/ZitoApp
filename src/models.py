@@ -364,6 +364,7 @@ class CourseKbDocument(Base):
     content_checksum: Mapped[str] = mapped_column(String(64), nullable=False)
     tags: Mapped[str] = mapped_column(String(255), nullable=True)
     source_type: Mapped[str] = mapped_column(String(40), default="seed", nullable=False)
+    source_reference: Mapped[str] = mapped_column(String(500), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="approved", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

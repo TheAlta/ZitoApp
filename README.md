@@ -33,6 +33,7 @@ After setup:
 - `src/lib/arvan_embeddings.py`: Arvan Bge-m3 embedding client with dimension validation.
 - `src/services/rag.py`: version-safe retrieval, chunk synchronization and durable RAG index jobs.
 - `src/cli/rag_indexer.py`: standalone RAG worker command for local batches or a supervised production worker.
+- `src/cli/coach_verify.py`: rollback-only, end-to-end verification of one grounded Coach reply.
 - `src/prompts/`: editable system prompts.
 - `src/api/routes.py`: authentication, canonical profile, course, legacy flat and module-scoped learning engines, and admin routes.
 
@@ -46,6 +47,7 @@ Use the Windows-only DPAPI vault instead of manually editing local `.env` files 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 set env.ARVAN_EMBEDDING_API_BASE_URL
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 set env.ARVAN_EMBEDDING_API_KEY
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 list
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 verify-coach
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 run-server -Port 8000 -Reload
 ```
 

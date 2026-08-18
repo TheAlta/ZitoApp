@@ -140,6 +140,16 @@ Each imported document stores a `source_reference`, such as `knowledge_base/pers
 `verify-rag` sends one sample question through the configured embedding endpoint and prints only retrieval metadata: source title, module/course scope, and similarity score.
 Use `verify-rag -ModuleNumber 2` to inspect another module without exposing the underlying source text.
 
+## Verifying The Grounded Course Coach
+
+After RAG retrieval is healthy, run one end-to-end Coach check with the private vault:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 verify-coach
+```
+
+`verify-coach` sends a course-relevant question through embeddings, local pgvector retrieval and the configured Arvan chat model. It creates a temporary learner only inside the current transaction and rolls it back before exit. The command prints metadata only, never API keys, profile data or KB text. Use `verify-coach -ModuleNumber 2` to verify a different course module.
+
 ## RAG Indexing Worker
 
 Course KB documents are chunked and indexed by a separate worker. Learner

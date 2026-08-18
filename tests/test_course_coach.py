@@ -1,5 +1,7 @@
 import asyncio
+import json
 import unittest
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -12,7 +14,7 @@ from src.db import Base, SessionLocal, engine
 from src.main import app
 from src.models import CoachMessage, CoachRetrievalEvent, CoachThread, UserCourseEnrollment
 from src.seed import seed_defaults
-from src.services.rag import run_pending_index_jobs
+from src.services.rag import RetrievalResult, run_pending_index_jobs
 
 
 PROFILE_PAYLOAD = {
@@ -120,6 +122,94 @@ class CourseCoachTests(unittest.TestCase):
 
         self.assertEqual(history.status_code, 404)
         self.assertEqual(reply.status_code, 404)
+
+    def test_coach_sends_only_safe_personalization_and_requests_json(self) -> None:
+        model_response = json.dumps(
+            {
+                "answer": "یک اقدام کوچک مشخص کن و فردا نتیجه را مرور کن.",
+                "grounded": True,
+                "source_numbers": [1],
+                "suggested_action": "امروز فقط اولین قدم را بنویس.",
+            },
+            ensure_ascii=False,
+        )
+        with TestClient(app) as client:
+            enrollment_id = login_and_enroll(client, "09125550104")
+            client.post(
+                f"/api/learning/enrollments/{enrollment_id}/stages/1/complete",
+                json={"response": None},
+            )
+            with patch("src.services.coach.ask_ai", new=AsyncMock(return_value=model_response)) as ask_ai_mock:
+                reply = client.post(
+                    f"/api/learning/enrollments/{enrollment_id}/coach/messages",
+                    json={"message": "برای شروع چه قدمی بردارم؟", "stage_number": 1},
+                )
+
+        self.assertEqual(reply.status_code, 200, reply.text)
+        _, request_body = ask_ai_mock.await_args.args
+        request_data = json.loads(request_body)
+        self.assertEqual(ask_ai_mock.await_args.kwargs["response_format"], {"type": "json_object"})
+        self.assertNotIn("phone", request_data["learner_context"])
+        self.assertNotIn("referral_source", request_data["learner_context"]["learner"])
+        self.assertNotIn("09125550104", request_body)
+
+    def test_coach_returns_cited_fallback_when_model_response_is_not_usable(self) -> None:
+        with TestClient(app) as client:
+            enrollment_id = login_and_enroll(client, "09125550105")
+            client.post(
+                f"/api/learning/enrollments/{enrollment_id}/stages/1/complete",
+                json={"response": None},
+            )
+            with patch(
+                "src.services.coach.ask_ai",
+                new=AsyncMock(return_value='{"answer":"پاسخ بدون منبع","source_numbers":[]}'),
+            ):
+                reply = client.post(
+                    f"/api/learning/enrollments/{enrollment_id}/coach/messages",
+                    json={"message": "این مفهوم چه کاربردی دارد؟", "stage_number": 1},
+                )
+
+        self.assertEqual(reply.status_code, 200, reply.text)
+        body = reply.json()
+        self.assertTrue(body["grounded"])
+        self.assertTrue(body["citations"])
+        self.assertIn("منابع مرتبط", body["answer"])
+
+        with SessionLocal() as db:
+            thread = db.scalars(select(CoachThread).where(CoachThread.enrollment_id == enrollment_id)).one()
+            assistant = db.scalars(
+                select(CoachMessage)
+                .where(CoachMessage.thread_id == thread.id, CoachMessage.role == "assistant")
+                .order_by(CoachMessage.id.desc())
+            ).first()
+            event = db.scalars(
+                select(CoachRetrievalEvent).where(CoachRetrievalEvent.assistant_message_id == assistant.id)
+            ).one()
+        self.assertEqual(event.status, "fallback")
+
+    def test_coach_does_not_call_model_when_no_approved_source_is_available(self) -> None:
+        no_sources = RetrievalResult(rag_config=None, method="not_configured", chunks=[])
+        with TestClient(app) as client:
+            enrollment_id = login_and_enroll(client, "09125550106")
+            client.post(
+                f"/api/learning/enrollments/{enrollment_id}/stages/1/complete",
+                json={"response": None},
+            )
+            with patch(
+                "src.services.coach.retrieve_course_chunks",
+                new=AsyncMock(return_value=no_sources),
+            ), patch("src.services.coach.ask_ai", new=AsyncMock()) as ask_ai_mock:
+                reply = client.post(
+                    f"/api/learning/enrollments/{enrollment_id}/coach/messages",
+                    json={"message": "برای این بخش راهنما می خواهم.", "stage_number": 1},
+                )
+
+        self.assertEqual(reply.status_code, 200, reply.text)
+        body = reply.json()
+        self.assertFalse(body["grounded"])
+        self.assertEqual(body["citations"], [])
+        self.assertEqual(body["retrieval_method"], "not_configured")
+        ask_ai_mock.assert_not_awaited()
 
 
 if __name__ == "__main__":

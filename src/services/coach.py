@@ -269,6 +269,10 @@ async def answer_course_question(
                 load_prompt("course_coach_response.md"),
                 json.dumps(request_payload, ensure_ascii=False),
                 temperature=0.2,
+                # The prompt and parser both require an object. Request it at
+                # the gateway level too, so a conversational prose reply does
+                # not turn a grounded answer into an avoidable fallback.
+                response_format={"type": "json_object"},
             )
             parsed = parse_json_object(raw_response)
             answer = str(parsed.get("answer") or "").strip()

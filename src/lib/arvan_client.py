@@ -26,7 +26,7 @@ def _mock_response(system_prompt: str, user_message: str) -> str:
         or user_message
     ).strip()
 
-    if "ZITO_COURSE_COACH_V1" in system_prompt:
+    if "ZITO_COURSE_COACH_V" in system_prompt:
         question = str(message_data.get("learner_question") or answer_text).strip()
         return json.dumps(
             {

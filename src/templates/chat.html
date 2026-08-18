@@ -1540,7 +1540,7 @@
         <button id="coachSend" type="submit">بپرس</button>
       </form>
       <div class="coaching-actions">
-        <span id="coachAvailability">کوچینگ هوشمند در حال آماده‌سازی است.</span>
+        <span id="coachAvailability" aria-live="polite">کوچینگ هوشمند در حال آماده‌سازی است.</span>
         <button id="coachContinue" type="button">ادامه مسیر</button>
       </div>
     </section>
@@ -1873,10 +1873,21 @@
         addCoachCitations(message.citations);
       });
     }
+    let coachBusyTimer = null;
     function setCoachBusy(isBusy) {
       coachInput.disabled = isBusy;
       coachSend.disabled = isBusy;
-      coachSend.textContent = isBusy ? "..." : "بپرس";
+      if (coachBusyTimer) window.clearTimeout(coachBusyTimer);
+      if (isBusy) {
+        coachSend.textContent = "در حال بررسی";
+        coachAvailability.textContent = "در حال یافتن منابع تاییدشده...";
+        coachBusyTimer = window.setTimeout(() => {
+          coachAvailability.textContent = "منبع پیدا شد؛ در حال آماده‌سازی پاسخ شخصی‌سازی‌شده...";
+        }, 900);
+        return;
+      }
+      coachSend.textContent = "بپرس";
+      coachAvailability.textContent = "پاسخ‌ها فقط از منابع تاییدشده همین دوره ساخته می‌شوند.";
     }
     async function sendCoachQuestion(event) {
       event.preventDefault();

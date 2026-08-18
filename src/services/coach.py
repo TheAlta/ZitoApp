@@ -25,8 +25,9 @@ from src.services.json_utils import parse_json_object
 from src.services.rag import RetrievedChunk, format_retrieved_context, retrieve_course_chunks
 
 
-COACH_PROMPT_VERSION = "course-coach-v1"
-_MODEL_HISTORY_LIMIT = 6
+COACH_PROMPT_VERSION = "course-coach-v2"
+_MODEL_HISTORY_LIMIT = 4
+_MODEL_HISTORY_MESSAGE_CHAR_LIMIT = 600
 _VISIBLE_HISTORY_LIMIT = 40
 
 
@@ -138,17 +139,24 @@ def list_coach_messages(
     return thread, list(reversed(messages))
 
 
-def _history_for_model(db: Session, thread_id: int) -> list[dict[str, str]]:
+def _history_for_model(
+    db: Session,
+    thread_id: int,
+    *,
+    exclude_message_id: int | None = None,
+) -> list[dict[str, str]]:
+    statement = select(CoachMessage).where(CoachMessage.thread_id == thread_id)
+    if exclude_message_id is not None:
+        statement = statement.where(CoachMessage.id != exclude_message_id)
     messages = db.scalars(
-        select(CoachMessage)
-        .where(CoachMessage.thread_id == thread_id)
+        statement
         .order_by(CoachMessage.created_at.desc(), CoachMessage.id.desc())
         .limit(_MODEL_HISTORY_LIMIT)
     ).all()
     return [
         {
             "role": "assistant" if item.role == "assistant" else "user",
-            "content": item.content[:1200],
+            "content": item.content[:_MODEL_HISTORY_MESSAGE_CHAR_LIMIT],
         }
         for item in reversed(messages)
     ]
@@ -226,15 +234,14 @@ async def answer_course_question(
         raise ValueError("The enrolled course no longer exists.")
 
     thread = get_or_create_coach_thread(db, user=user, enrollment=enrollment)
-    db.add(
-        CoachMessage(
-            thread_id=thread.id,
-            module_stage_content_id=stage.id,
-            role="user",
-            content=clean_question,
-            content_json={"stage_number": stage_number},
-        )
+    learner_message = CoachMessage(
+        thread_id=thread.id,
+        module_stage_content_id=stage.id,
+        role="user",
+        content=clean_question,
+        content_json={"stage_number": stage_number},
     )
+    db.add(learner_message)
     db.flush()
 
     started = perf_counter()
@@ -262,7 +269,13 @@ async def answer_course_question(
             request_payload = {
                 "learner_question": clean_question,
                 "learner_context": context,
-                "conversation_history": _history_for_model(db, thread.id),
+                # The current question is already represented by learner_question.
+                # Excluding it prevents redundant prompt tokens on every request.
+                "conversation_history": _history_for_model(
+                    db,
+                    thread.id,
+                    exclude_message_id=learner_message.id,
+                ),
                 "retrieved_sources": format_retrieved_context(retrieval.chunks),
             }
             raw_response = await ask_ai(

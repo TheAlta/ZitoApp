@@ -152,6 +152,7 @@ class CourseCoachTests(unittest.TestCase):
         self.assertNotIn("phone", request_data["learner_context"])
         self.assertNotIn("referral_source", request_data["learner_context"]["learner"])
         self.assertNotIn("09125550104", request_body)
+        self.assertEqual(request_data["conversation_history"], [])
 
     def test_coach_returns_cited_fallback_when_model_response_is_not_usable(self) -> None:
         with TestClient(app) as client:

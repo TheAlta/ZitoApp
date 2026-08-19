@@ -27,12 +27,15 @@ After setup:
 
 ## Important files
 - `DATABASE_V2_DESIGN.md`: implemented Sprint 1/Sprint 2.5/RAG schema status plus the remaining future CMS database target.
+- `DATABASE_GUIDE.md`: code-derived guide to the current data model, migrations, RAG schema and known migration boundaries.
 - `PROJECT_RAW_AUDIT.md`: code-derived snapshot of the project before the database V2 migration.
 - `SETUP.md`: PostgreSQL, environment, migration and Git setup.
 - `src/lib/arvan_client.py`: OpenAI-compatible Arvan chat client used for validation and coaching responses.
 - `src/lib/arvan_embeddings.py`: Arvan Bge-m3 embedding client with dimension validation.
 - `src/services/rag.py`: version-safe retrieval, chunk synchronization and durable RAG index jobs.
 - `src/cli/rag_indexer.py`: standalone RAG worker command for local batches or a supervised production worker.
+- `src/cli/db_audit.py`: aggregate-only migration and legacy-cleanup safety audit.
+- `deploy/systemd/zito-rag-indexer.service`: reviewed systemd unit template for the production RAG worker.
 - `src/cli/coach_verify.py`: rollback-only, end-to-end verification of one grounded Coach reply.
 - `src/prompts/`: editable system prompts.
 - `src/api/routes.py`: authentication, canonical profile, course, legacy flat and module-scoped learning engines, and admin routes.

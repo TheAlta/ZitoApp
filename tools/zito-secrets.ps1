@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet("init", "import-env", "set", "set-server-password", "list", "diagnose-sms", "migrate-db", "sync-mock-kb", "verify-rag", "verify-coach", "run-rag-indexer", "run-server")]
+    [ValidateSet("init", "import-env", "set", "set-server-password", "list", "diagnose-sms", "migrate-db", "audit-db", "sync-mock-kb", "verify-rag", "verify-coach", "run-rag-indexer", "run-server")]
     [string]$Action,
 
     [Parameter(Position = 1)]
@@ -236,6 +236,17 @@ switch ($Action) {
 
         Write-Output "vault-environment-loaded=$loaded"
         & $python -m alembic upgrade head
+        exit $LASTEXITCODE
+    }
+    "audit-db" {
+        $loaded = Import-VaultEnvironment
+        $python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
+        if (!(Test-Path $python)) {
+            throw "Virtual environment was not found: $python"
+        }
+
+        Write-Output "vault-environment-loaded=$loaded"
+        & $python -m src.cli.db_audit
         exit $LASTEXITCODE
     }
     "sync-mock-kb" {

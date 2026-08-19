@@ -1,0 +1,20 @@
+[Unit]
+Description=Zito course knowledge-base RAG index worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/zito/app
+EnvironmentFile=/opt/zito/app/.env
+ExecStart=/opt/zito/app/.venv/bin/python -m src.cli.rag_indexer --watch --limit 20
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

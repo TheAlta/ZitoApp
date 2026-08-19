@@ -121,3 +121,30 @@ class CanonicalSchemaContractTests(unittest.TestCase):
             }.issubset(kb_chunk_columns)
         )
         self.assertTrue({"thread_id", "module_stage_content_id", "role", "content"}.issubset(coach_message_columns))
+
+    def test_enrollment_cannot_point_to_a_different_course_than_its_version(self) -> None:
+        inspector = inspect(self.engine)
+        foreign_keys = inspector.get_foreign_keys("user_course_enrollments")
+        constraints = inspector.get_check_constraints("user_course_enrollments")
+        indexes = inspector.get_indexes("user_course_enrollments")
+
+        composite_version_fk = next(
+            (
+                item
+                for item in foreign_keys
+                if item["name"] == "fk_user_course_enrollments_version_course"
+            ),
+            None,
+        )
+        self.assertIsNotNone(composite_version_fk)
+        self.assertEqual(composite_version_fk["constrained_columns"], ["course_version_id", "course_id"])
+        self.assertEqual(composite_version_fk["referred_table"], "course_versions")
+        self.assertEqual(composite_version_fk["referred_columns"], ["id", "course_id"])
+
+        check_names = {item["name"] for item in constraints}
+        self.assertIn("ck_user_course_enrollments_current_stage_number", check_names)
+        self.assertIn("ck_user_course_enrollments_progress_percentage", check_names)
+        self.assertIn(
+            "ix_user_course_enrollments_user_status",
+            {item["name"] for item in indexes},
+        )

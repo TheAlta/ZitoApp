@@ -543,7 +543,22 @@ class CourseKbIndexJob(Base):
 
 class UserCourseEnrollment(Base):
     __tablename__ = "user_course_enrollments"
-    __table_args__ = (UniqueConstraint("user_id", "course_version_id", name="uq_user_course_version_enrollment"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "course_version_id", name="uq_user_course_version_enrollment"),
+        # `course_id` is retained for compatibility and fast response shaping, but it
+        # must always describe the same course as the selected version.
+        ForeignKeyConstraint(
+            ["course_version_id", "course_id"],
+            ["course_versions.id", "course_versions.course_id"],
+            name="fk_user_course_enrollments_version_course",
+        ),
+        CheckConstraint("current_stage_number >= 1", name="ck_user_course_enrollments_current_stage_number"),
+        CheckConstraint(
+            "progress_percentage >= 0 AND progress_percentage <= 100",
+            name="ck_user_course_enrollments_progress_percentage",
+        ),
+        Index("ix_user_course_enrollments_user_status", "user_id", "status"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)

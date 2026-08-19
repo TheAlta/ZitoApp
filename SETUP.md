@@ -134,6 +134,7 @@ Apply the source to PostgreSQL, then process the queued jobs separately:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 sync-mock-kb
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 run-rag-indexer -Limit 20
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 verify-rag
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 audit-db
 ```
 
 Each imported document stores a `source_reference`, such as `knowledge_base/personal-development-ai-mock-kb.md#module-2`, so future CMS content can replace this mock workflow without changing the learner-facing retrieval path.
@@ -162,8 +163,23 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1
 
 The result contains only counts such as `processed`, `succeeded`, `retry`, and
 `failed`; it never prints API keys or source text. A `retry` result means the
-same durable job will be attempted later. The production worker will be added
-as a separate systemd service before RAG is enabled for learners.
+same durable job will be attempted later. The reviewed production unit template
+is [deploy/systemd/zito-rag-indexer.service](deploy/systemd/zito-rag-indexer.service);
+follow [deploy/README.md](deploy/README.md) during an approved deployment.
+
+## Database Safety Audit
+
+Run the aggregate-only audit before a migration or any future cleanup of the
+legacy flat learning engine:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 audit-db
+```
+
+It reports only counts: current Alembic revision, flat-vs-module learning
+usage, enrollment course/version mismatches, invalid progress values, and RAG
+job statuses. It never prints phone numbers, learner profile data, secrets or
+KB text.
 
 ## Stop The Server
 In the PowerShell window where Uvicorn is running, press:

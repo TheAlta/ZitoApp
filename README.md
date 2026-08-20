@@ -9,8 +9,9 @@ Zito is a FastAPI-based authenticated learning platform with AI-assisted trainin
 - Collects seven learner-profile fields incrementally in the chat UI without AI validation.
 - Lets the authenticated learner choose a complete published Fake CMS course.
 - Keeps legacy version 1 enrollments on the original flat 20-stage engine while new enrollments use the module-scoped engine.
-- Serves the active Fake CMS course as five ordered course modules, each with the same 20 reusable educational templates (100 stored learning items in the sample version).
-- Persists one canonical module-stage progress row per item for version 2, blocks skipping, and resumes the latest course after login.
+- Keeps the previous V1/V2 course contracts for existing learners and serves new enrollments from V3: five ordered modules with eight focused stages each (40 stored learning items).
+- Gives every V3 module a learning path, summary, interactive flashcards, golden tips, common mistakes, a cached RAG-grounded personalized example, an evaluated mini quiz, and a completion step.
+- Persists one canonical module-stage progress row per item, blocks skipping, keeps failed mini quizzes on the same stage, and moves a finished V3 learner to an awaiting-final-exam state.
 - Keeps the Zito avatar visible during course selection and every learning stage.
 - Provides typed empty image, video and audio slots ready for future CMS media, plus strict course-version and module scopes for RAG retrieval.
 - Runs a grounded coaching API after each stage: only approved chunks from the learner's current module or explicit course-global KB sources may be cited.
@@ -35,6 +36,7 @@ After setup:
 - `src/services/rag.py`: version-safe retrieval, chunk synchronization and durable RAG index jobs.
 - `src/cli/rag_indexer.py`: standalone RAG worker command for local batches or a supervised production worker.
 - `src/cli/db_audit.py`: aggregate-only migration and legacy-cleanup safety audit.
+- `src/cli/seed_course_content.py`: idempotently seeds versioned Fake CMS content and indexes its initial KB jobs after a schema migration.
 - `deploy/systemd/zito-rag-indexer.service`: reviewed systemd unit template for the production RAG worker.
 - `src/cli/coach_verify.py`: rollback-only, end-to-end verification of one grounded Coach reply.
 - `src/prompts/`: editable system prompts.
@@ -51,6 +53,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 set env.ARVAN_EMBEDDING_API_KEY
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 list
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 verify-coach
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 seed-course-content
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 run-server -Port 8000 -Reload
 ```
 

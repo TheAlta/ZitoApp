@@ -174,6 +174,78 @@ def _audit_citation(number: int, chunk: RetrievedChunk) -> dict[str, Any]:
     return {"source_number": number, **chunk.citation()}
 
 
+def _stage_visible_content(stage: CourseModuleStageContent) -> str:
+    """Build a bounded, learner-visible source from the current approved stage.
+
+    The RAG worker remains the primary source of truth.  This source exists
+    only as a graceful fallback while an approved KB document is waiting to be
+    indexed or the embedding provider is temporarily unavailable.  It never
+    reads the private evaluation configuration stored beside a stage.
+    """
+    content = stage.content_json if isinstance(stage.content_json, dict) else {}
+    parts: list[str] = [f"عنوان مرحله: {stage.title}"]
+
+    intro = content.get("intro")
+    if isinstance(intro, str) and intro.strip():
+        parts.append(intro.strip())
+
+    for block in content.get("blocks", []):
+        if not isinstance(block, dict):
+            continue
+        title = block.get("title")
+        if isinstance(title, str) and title.strip():
+            parts.append(title.strip())
+        body = block.get("body")
+        if isinstance(body, str) and body.strip():
+            parts.append(body.strip())
+        for item in block.get("items", []):
+            if isinstance(item, str) and item.strip():
+                parts.append(item.strip())
+            elif isinstance(item, dict):
+                for key in ("front", "back", "point", "mistake", "correction", "question"):
+                    value = item.get(key)
+                    if isinstance(value, str) and value.strip():
+                        parts.append(value.strip())
+                options = item.get("options")
+                if isinstance(options, list):
+                    parts.extend(str(option).strip() for option in options if str(option).strip())
+
+    activity = content.get("activity")
+    if isinstance(activity, dict):
+        for key in ("title", "prompt"):
+            value = activity.get(key)
+            if isinstance(value, str) and value.strip():
+                parts.append(value.strip())
+
+    # De-duplicate deterministically and keep this emergency source small
+    # enough for a model request.  The full version-scoped KB remains the
+    # preferred context whenever retrieval is ready.
+    seen: set[str] = set()
+    unique_parts = []
+    for part in parts:
+        normalized = " ".join(part.split())
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            unique_parts.append(normalized)
+    return "\n".join(unique_parts)[:4200]
+
+
+def _current_stage_fallback_source(stage: CourseModuleStageContent) -> RetrievedChunk | None:
+    content = _stage_visible_content(stage)
+    if not content:
+        return None
+    return RetrievedChunk(
+        # Negative IDs make it explicit in audit JSON that this is not a
+        # persisted KB chunk.  No database foreign key points to this value.
+        chunk_id=-(stage.id or 1),
+        document_id=0,
+        document_title=f"محتوای تاییدشده مرحله: {stage.title}",
+        content=content,
+        score=1.0,
+        scope="current_stage",
+    )
+
+
 def _citations_from_numbers(
     source_numbers: Any,
     chunks: list[RetrievedChunk],
@@ -258,8 +330,20 @@ async def answer_course_question(
     public_citations: list[dict[str, Any]] = []
     audit_citations: list[dict[str, Any]] = []
     model: str | None = None
+    source_chunks = retrieval.chunks
+    retrieval_method = retrieval.method
 
-    if not retrieval.chunks:
+    if not source_chunks:
+        # A newly published course can have approved stage material before its
+        # background embedding job finishes.  Keep the coach useful, but mark
+        # the source honestly and never substitute content from another module.
+        stage_fallback = _current_stage_fallback_source(stage)
+        if stage_fallback:
+            source_chunks = [stage_fallback]
+            retrieval_method = "stage_content_fallback"
+            status = "stage_fallback"
+
+    if not source_chunks:
         answer = _fallback_without_sources()
         grounded = False
         status = "no_grounding"
@@ -276,7 +360,7 @@ async def answer_course_question(
                     thread.id,
                     exclude_message_id=learner_message.id,
                 ),
-                "retrieved_sources": format_retrieved_context(retrieval.chunks),
+                "retrieved_sources": format_retrieved_context(source_chunks),
             }
             raw_response = await ask_ai(
                 load_prompt("course_coach_response.md"),
@@ -294,7 +378,7 @@ async def answer_course_question(
             answer = answer[:2500]
             public_citations, audit_citations = _citations_from_numbers(
                 parsed.get("source_numbers"),
-                retrieval.chunks,
+                source_chunks,
             )
             candidate_action = parsed.get("suggested_action")
             if isinstance(candidate_action, str) and candidate_action.strip():
@@ -302,9 +386,9 @@ async def answer_course_question(
             grounded = True
             model = get_settings().arvan_model
         except (ArvanAIError, ValueError, TypeError) as exc:
-            answer = _fallback_after_model_error(retrieval.chunks)
-            public_citations = [_public_citation(index, chunk) for index, chunk in enumerate(retrieval.chunks, start=1)]
-            audit_citations = [_audit_citation(index, chunk) for index, chunk in enumerate(retrieval.chunks, start=1)]
+            answer = _fallback_after_model_error(source_chunks)
+            public_citations = [_public_citation(index, chunk) for index, chunk in enumerate(source_chunks, start=1)]
+            audit_citations = [_audit_citation(index, chunk) for index, chunk in enumerate(source_chunks, start=1)]
             grounded = True
             status = "fallback"
             error_message = str(exc)[:1000]
@@ -329,7 +413,7 @@ async def answer_course_question(
         CoachRetrievalEvent(
             assistant_message_id=assistant_message.id,
             rag_config_id=retrieval.rag_config.id if retrieval.rag_config else None,
-            retrieval_method=retrieval.method,
+            retrieval_method=retrieval_method,
             source_chunks_json=audit_citations,
             grounded=grounded,
             latency_ms=round((perf_counter() - started) * 1000),
@@ -344,6 +428,6 @@ async def answer_course_question(
         assistant_message=assistant_message,
         grounded=grounded,
         citations=public_citations,
-        retrieval_method=retrieval.method,
+        retrieval_method=retrieval_method,
         suggested_action=suggested_action,
     )

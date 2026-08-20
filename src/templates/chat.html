@@ -1146,6 +1146,84 @@
     .choice-option, .check-option { display: flex; align-items: center; gap: 9px; padding: 9px 10px; color: #665e72; border: 1px solid rgba(137, 108, 174, .09); border-radius: 11px; background: rgba(251, 247, 249, .56); font-size: 12px; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
     .choice-option:hover, .check-option:hover { border-color: rgba(113, 86, 177, .28); background: rgba(243, 237, 248, .72); transform: translateX(-2px); }
     .choice-option input, .check-option input { flex: none; width: 17px; height: 17px; accent-color: #775ec5; }
+    .flashcard-deck { display: grid; justify-items: center; gap: 14px; padding: 15px 0 7px; }
+    .flashcard-stack { position: relative; width: min(100%, 408px); min-height: 300px; aspect-ratio: 3 / 4; perspective: 1400px; isolation: isolate; }
+    .flashcard-shadow {
+      position: absolute;
+      inset: 4px 7px 0 7px;
+      display: block;
+      overflow: hidden;
+      border: 1px solid rgba(119, 82, 177, .18);
+      border-radius: 25px;
+      background:
+        radial-gradient(circle at 24% 20%, rgba(255, 255, 255, .72) 0 2px, transparent 2.5px),
+        radial-gradient(circle at 78% 70%, rgba(238, 182, 148, .26) 0 2px, transparent 2.5px),
+        linear-gradient(145deg, rgba(250, 241, 248, .98), rgba(228, 241, 242, .96));
+      box-shadow: 0 13px 27px rgba(91, 67, 136, .10);
+      transform-origin: 50% 100%;
+    }
+    .flashcard-shadow::after { content: "Z"; position: absolute; inset: 12px; display: grid; place-items: center; border: 1px solid rgba(122, 92, 166, .14); border-radius: 18px; color: rgba(118, 83, 163, .18); font: 900 44px/1 Arial, sans-serif; }
+    .flashcard-shadow.layer-1 { z-index: 7; transform: translate(-4px, 8px) rotate(-2deg); }
+    .flashcard-shadow.layer-2 { z-index: 6; transform: translate(8px, 13px) rotate(2.4deg); opacity: .95; }
+    .flashcard-shadow.layer-3 { z-index: 5; transform: translate(-11px, 18px) rotate(-4deg); opacity: .89; }
+    .flashcard-shadow.layer-4 { z-index: 4; transform: translate(13px, 23px) rotate(4.3deg); opacity: .82; }
+    .flashcard-shadow.layer-5 { z-index: 3; transform: translate(-15px, 28px) rotate(-5.3deg); opacity: .75; }
+    .flashcard-shadow.layer-6 { z-index: 2; transform: translate(16px, 33px) rotate(5.6deg); opacity: .66; }
+    .flashcard-shadow.layer-7 { z-index: 1; transform: translate(-17px, 38px) rotate(-6.5deg); opacity: .56; }
+    .flashcard {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      width: 100%;
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+      padding: clamp(23px, 5vw, 32px);
+      overflow: hidden;
+      color: #4c385d;
+      text-align: right;
+      border: 1px solid rgba(118, 80, 175, .28);
+      border-radius: 27px;
+      background:
+        radial-gradient(circle at 96% 4%, rgba(239, 173, 137, .31), transparent 25%),
+        radial-gradient(circle at 4% 96%, rgba(91, 176, 177, .18), transparent 30%),
+        linear-gradient(142deg, rgba(255, 253, 250, .99), rgba(251, 239, 248, .96) 49%, rgba(235, 247, 245, .98));
+      box-shadow: 0 22px 40px rgba(92, 66, 142, .19);
+      cursor: pointer;
+      font: inherit;
+      transform-origin: 82% 96%;
+      transition: transform .22s ease, box-shadow .22s ease;
+    }
+    .flashcard::before { content: ""; position: absolute; inset: 12px; z-index: -1; border: 1px solid rgba(118, 80, 175, .14); border-radius: 20px; pointer-events: none; }
+    .flashcard::after { content: ""; position: absolute; left: -45px; bottom: -52px; width: 155px; height: 155px; border: 1px solid rgba(88, 164, 171, .18); border-radius: 50%; box-shadow: 0 0 0 22px rgba(119, 83, 174, .05), 0 0 0 43px rgba(88, 164, 171, .04); pointer-events: none; }
+    .flashcard:hover { transform: translateY(-5px) rotate(-.8deg); box-shadow: 0 28px 48px rgba(92, 66, 142, .24); }
+    .flashcard:focus-visible { outline: 3px solid rgba(98, 70, 201, .40); outline-offset: 4px; }
+    .flashcard.is-dealing { pointer-events: none; animation: flashcard-deal .21s ease-in forwards; }
+    .flashcard.is-arriving { pointer-events: none; animation: flashcard-arrive .30s cubic-bezier(.2, .9, .25, 1) both; }
+    .flashcard-corner { position: absolute; top: 21px; right: 23px; display: grid; gap: 1px; min-width: 37px; color: #805daa; font: 900 11px/1 Arial, sans-serif; text-align: center; }
+    .flashcard-corner::after { content: "✦"; color: #de966f; font-size: 13px; }
+    .flashcard-body { position: relative; z-index: 1; display: grid; align-content: center; gap: 13px; min-height: 0; padding: 18px 12px 10px; }
+    .flashcard-kicker { color: #8a66aa; font-size: 11px; font-weight: 900; letter-spacing: .01em; }
+    .flashcard-front { display: block; color: #49385a; font-size: clamp(22px, 4.1vw, 31px); line-height: 1.7; }
+    .flashcard-back { display: block; color: #6c6275; font-size: clamp(13px, 2.3vw, 15px); line-height: 2.05; }
+    .flashcard-action { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 13px; color: #765a95; border-top: 1px solid rgba(121, 91, 165, .14); font-size: 11px; font-weight: 900; }
+    .flashcard-action::after { content: "←"; font-family: Arial, sans-serif; font-size: 15px; }
+    .flashcard-footer { display: flex; align-items: center; justify-content: space-between; width: min(100%, 408px); padding: 0 4px; color: #85778e; font-size: 11px; }
+    .flashcard-count { color: #765996; font-weight: 900; }
+    @keyframes flashcard-deal { to { opacity: 0; transform: translate(-42px, -22px) rotate(-8deg) scale(.97); } }
+    @keyframes flashcard-arrive { from { opacity: 0; transform: translate(32px, 20px) rotate(5deg) scale(.96); } to { opacity: 1; transform: translateY(0) rotate(0) scale(1); } }
+    .personalized-example { padding: 16px; border: 1px solid rgba(87, 151, 171, .22); border-radius: 16px; background: linear-gradient(135deg, rgba(232, 246, 245, .78), rgba(243, 235, 250, .72)); }
+    .personalized-example.is-loading { color: #766987; min-height: 118px; display: grid; place-items: center; }
+    .personalized-example h4 { margin: 0 0 8px; color: #4e5470; font-size: 16px; }
+    .personalized-example p { color: #665f73; line-height: 2; }
+    .personalized-example ol { margin: 10px 0 0; padding: 0; list-style: none; counter-reset: personal-step; }
+    .personalized-example li { position: relative; padding: 4px 30px 4px 0; color: #625d70; line-height: 1.85; counter-increment: personal-step; }
+    .personalized-example li::before { content: counter(personal-step); position: absolute; top: 5px; right: 0; width: 20px; height: 20px; display: grid; place-items: center; color: #fff; border-radius: 50%; background: linear-gradient(145deg, #7a60bd, #58a5aa); font-size: 9px; font-weight: 900; }
+    .personalized-example-question { margin-top: 13px !important; padding-top: 11px; border-top: 1px solid rgba(100, 126, 154, .16); color: #5d4d73 !important; font-weight: 900; }
+    .assessment-feedback { margin-top: 15px; padding: 12px 14px; border-radius: 13px; background: rgba(239, 233, 249, .74); color: #62526f; line-height: 1.9; font-size: 12px; }
+    .assessment-feedback.passed { color: #34725d; background: rgba(226, 245, 234, .82); }
+    .final-exam-note { margin-top: 16px; padding: 14px 16px; color: #5d4a76; border: 1px solid rgba(121, 90, 183, .2); border-radius: 14px; background: rgba(241, 234, 250, .72); line-height: 1.9; }
     .media-slots { display: grid; gap: 10px; margin-top: 14px; }
     .media-slot {
       min-height: 108px;
@@ -1490,9 +1568,9 @@
             <div class="module-stage-heading">
               <div>
                 <span id="activeModuleEyebrow" class="module-stage-eyebrow">نمای سرفصل</span>
-                <h3 id="activeModuleTitle">مسیر ۲۰ مرحله‌ای</h3>
+                <h3 id="activeModuleTitle">مسیر آموزشی سرفصل</h3>
               </div>
-              <span id="activeModuleProgress" class="module-stage-progress">۰ از ۲۰</span>
+              <span id="activeModuleProgress" class="module-stage-progress">۰ از ۰</span>
             </div>
             <p id="activeModuleDescription" class="module-stage-description"></p>
             <div class="module-stage-focus" aria-live="polite">
@@ -1507,10 +1585,10 @@
             </div>
             <details id="moduleStageMap" class="module-stage-map">
               <summary>
-                <span>نقشه ۲۰ مرحله‌ای این سرفصل</span>
+                <span>نقشه مراحل این سرفصل</span>
                 <small>نمایش ترتیب کامل</small>
               </summary>
-              <div id="moduleStageRail" class="module-stage-rail" role="list" aria-label="۲۰ مرحله این سرفصل"></div>
+              <div id="moduleStageRail" class="module-stage-rail" role="list" aria-label="مراحل این سرفصل"></div>
             </details>
           </section>
         </section>
@@ -1633,6 +1711,9 @@
       mind_map: "نقشه ذهنی",
       golden_tips: "نکات طلایی",
       common_mistakes: "اشتباهات رایج",
+      personalized_work_example: "مثال در مسیر شغلی تو",
+      module_assessment: "تمرین و آزمونک سرفصل",
+      module_completion: "پایان سرفصل",
       personalized_path: "مسیر شخصی‌سازی‌شده",
       final_project: "پروژه نهایی",
     };
@@ -1765,7 +1846,7 @@
       activeModuleEyebrow.textContent = `سرفصل ${module.module_number} از ${modules.length}`;
       activeModuleTitle.textContent = module.title;
       activeModuleProgress.textContent = `${module.completed_stage_count} از ${module.total_stage_count}`;
-      activeModuleDescription.textContent = module.description || "در این سرفصل، هر مفهوم را در ۲۰ قالب کوتاه و کاربردی مرور می‌کنی.";
+      activeModuleDescription.textContent = module.description || "در این سرفصل، مفهوم‌ها را قدم‌به‌قدم مرور و تمرین می‌کنی.";
       moduleCurrentLabel.textContent = currentIndex >= 0 ? "الان اینجایی" : module.status === "completed" ? "آخرین قدم" : "وضعیت سرفصل";
       moduleCurrentStage.textContent = currentItem ? currentItem.title : "هنوز شروع نشده";
       moduleNextStage.textContent = nextItem ? nextItem.title : module.status === "completed" ? "این سرفصل کامل شده" : "پس از شروع مشخص می‌شود";
@@ -1815,7 +1896,7 @@
       if (Array.isArray(path.modules) && path.modules.length) {
         stagePathList.classList.add("module-path-list");
         const activeModule = path.modules.find((module) => module.is_current)
-          || (path.status === "completed" ? path.modules.at(-1) : path.modules[0]);
+          || (["completed", "awaiting_final_exam"].includes(path.status) ? path.modules.at(-1) : path.modules[0]);
         inspectedModuleId = activeModule?.module_id ?? null;
         stagePathList.innerHTML = path.modules.map((module) => {
           const total = Number(module.total_stage_count) || 20;
@@ -1828,7 +1909,7 @@
             <span class="path-module-copy">
               <span class="path-module-kicker">سرفصل ${module.module_number} · ${statusLabel}</span>
               <strong>${escapeHtml(module.title)}</strong>
-              <small>${escapeHtml(module.description || "۲۰ قدم کوتاه برای یادگیری و تمرین")}</small>
+              <small>${escapeHtml(module.description || "چند قدم کوتاه برای یادگیری و تمرین")}</small>
               <span class="path-module-meter" aria-hidden="true"><i style="width:${modulePercentage}%"></i></span>
             </span>
             <span class="path-module-count"><strong>${completed}</strong><small>از ${total}</small></span>
@@ -1851,7 +1932,9 @@
           </div>`;
         }).join("");
       }
-      coachMessage.textContent = path.status === "completed"
+      coachMessage.textContent = path.status === "awaiting_final_exam"
+        ? "همه سرفصل‌ها کامل شده‌اند. آزمون نهایی دوره در مرحله بعدی آماده می‌شود."
+        : path.status === "completed"
         ? "آفرین! این مسیر را کامل کردی. من برای مرور هم کنارت می‌مانم."
         : path.modules?.find((module) => module.is_current)
           ? `سرفصل «${path.modules.find((module) => module.is_current).title}» آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`
@@ -1927,10 +2010,14 @@
         } catch (error) {
           if (!handleMissingUser(error)) addModalMessage("تاریخچه کوچینگ فعلاً در دسترس نیست.");
         }
-      } else if (result.course_completed) {
-        addModalMessage("مسیر این دوره را کامل کردی. آزمون نهایی و مدرک در اسپرینت مربوط به خودشان فعال می‌شوند.");
+      } else if (result.course_completed || result.path?.final_exam_available) {
+        addModalMessage("سرفصل‌های دوره را کامل کردی. آزمون نهایی و گواهی پایان دوره در اسپرینت مربوط به خودشان فعال می‌شوند.");
       }
-      coachContinue.textContent = result.course_completed ? "دیدن جمع‌بندی" : "ادامه مسیر";
+      coachContinue.textContent = result.course_completed
+        ? "دیدن جمع‌بندی"
+        : result.path?.final_exam_available
+          ? "دیدن وضعیت آزمون نهایی"
+          : "ادامه مسیر";
       answerModal.classList.add("show");
       answerModal.setAttribute("aria-hidden", "false");
       if (coaching.enabled) coachInput.focus();
@@ -2074,6 +2161,39 @@
       }
       askCurrentProfileStep();
     }
+    function renderFlashcardDeck(cards, title) {
+      const normalizedCards = cards.map((item) => ({
+        front: String(item.front || "مفهوم کلیدی"),
+        back: String(item.back || "توضیح این کارت در حال تکمیل است."),
+      }));
+      if (!normalizedCards.length) {
+        return `<section class="content-block block-flashcards">${title}<p>کارت‌های این بخش هنوز در دسترس نیستند.</p></section>`;
+      }
+      const firstCard = normalizedCards[0];
+      const layerCount = Math.min(Math.max(normalizedCards.length + 3, 6), 7);
+      const layers = Array.from(
+        { length: layerCount },
+        (_, index) => `<i class="flashcard-shadow layer-${index + 1}" aria-hidden="true"></i>`,
+      ).join("");
+      return `<section class="content-block block-flashcards">${title}
+        <div class="flashcard-deck" data-flashcard-deck data-flashcards="${escapeHtml(JSON.stringify(normalizedCards))}">
+          <div class="flashcard-stack" data-flashcard-stack>
+            ${layers}
+            <button class="flashcard is-active" type="button" data-flashcard data-flashcard-index="0" aria-label="کارت 1 از ${normalizedCards.length}; برای رفتن به کارت بعدی انتخاب کن">
+              <span class="flashcard-corner" data-flashcard-corner>01</span>
+              <span class="flashcard-body">
+                <span class="flashcard-kicker" data-flashcard-kicker>کارت 1 از ${normalizedCards.length}</span>
+                <strong class="flashcard-front" data-flashcard-front>${escapeHtml(firstCard.front)}</strong>
+                <span class="flashcard-back" data-flashcard-back>${escapeHtml(firstCard.back)}</span>
+              </span>
+              <span class="flashcard-action" data-flashcard-action>${normalizedCards.length > 1 ? "برای کارت بعدی، روی کارت بزن" : "این کارت را مرور کن"}</span>
+            </button>
+          </div>
+          <div class="flashcard-footer"><span>${normalizedCards.length > 1 ? "برای دیدن کارت بعدی، روی کارت بزن" : "یک فلش‌کارت در این مرحله قرار دارد"}</span><span class="flashcard-count" data-flashcard-count>۱ از ${normalizedCards.length}</span></div>
+        </div>
+      </section>`;
+    }
+
     function renderContentBlock(block, blockIndex) {
       const kind = block.kind || "paragraph";
       const title = block.title ? `<div class="content-block-title"><span aria-hidden="true"></span><h3>${escapeHtml(block.title)}</h3></div>` : "";
@@ -2087,11 +2207,18 @@
       if (kind === "cards") {
         return `<section class="content-block block-${kind}">${title}<div class="block-cards">${(block.items || []).map((item) => `<article class="content-card"><strong>${escapeHtml(item.title || "نکته")}</strong><span>${escapeHtml(item.body || "")}</span></article>`).join("")}</div></section>`;
       }
+      if (kind === "flashcards") {
+        const cards = Array.isArray(block.items) ? block.items.filter((item) => item && typeof item === "object") : [];
+        return renderFlashcardDeck(cards, title);
+      }
+      if (kind === "personalized_example") {
+        return `<section class="content-block block-${kind}">${title}<div class="personalized-example is-loading" data-personalized-example>${escapeHtml(block.body || "زیتو در حال آماده‌سازی مثال شخصی‌سازی‌شده است.")}</div></section>`;
+      }
       if (kind === "qa") {
         return `<section class="content-block block-${kind}">${title}<div class="block-qa">${(block.items || []).map((item, itemIndex) => `<details class="qa-item" ${itemIndex === 0 ? "open" : ""}><summary>${escapeHtml(item.question || "")}</summary><p>${escapeHtml(item.answer || "")}</p></details>`).join("")}</div></section>`;
       }
       if (kind === "quiz") {
-        return `<section class="content-block block-${kind}">${title}${(block.items || []).map((item, questionIndex) => `<div class="quiz-item"><div class="quiz-question">${escapeHtml(item.question || "")}</div><div class="choice-list">${(item.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-choice-${blockIndex}-${questionIndex}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></div>`).join("")}</section>`;
+        return `<section class="content-block block-${kind}">${title}${(block.items || []).map((item, questionIndex) => `<div class="quiz-item"><div class="quiz-question">${escapeHtml(item.question || "")}</div><div class="choice-list">${(item.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-choice-${blockIndex}-${questionIndex}" data-assessment-question="${escapeHtml(item.id || `q-${blockIndex}-${questionIndex}`)}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></div>`).join("")}</section>`;
       }
       if (kind === "scenario") {
         return `<section class="content-block block-scenario">${title}<p>${escapeHtml(block.body || "")}</p><div class="choice-list">${(block.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-scenario-${blockIndex}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></section>`;
@@ -2117,19 +2244,126 @@
       return `<div class="media-slots">${slots.map((slot) => `<div class="media-slot" data-media-kind="${escapeHtml(slot.kind || "file")}"><div><span class="media-slot-icon" aria-hidden="true">${icons[slot.kind] || "□"}</span><strong>${escapeHtml(slot.label || "رسانه مرحله")}</strong><small>جایگاه آماده است؛ فایل بعداً از CMS منتشر می‌شود.</small></div></div>`).join("")}</div>`;
     }
 
+    function assessmentFeedbackMarkup(assessment) {
+      if (!assessment?.evaluated) return "";
+      const state = assessment.passed ? "passed" : "";
+      const score = assessment.score === null || assessment.score === undefined ? "-" : `${assessment.score} از ۱۰۰`;
+      const passScore = assessment.pass_score === null || assessment.pass_score === undefined ? "" : ` · حداقل نمره ${assessment.pass_score}`;
+      return `<div class="assessment-feedback ${state}"><strong>نتیجه آزمونک: ${score}${passScore}</strong><br>${escapeHtml(assessment.feedback || "نتیجه ثبت شد.")}</div>`;
+    }
+
+    function bindFlashcards() {
+      lessonPanel.querySelectorAll("[data-flashcard-deck]").forEach((deck) => {
+        let cards = [];
+        try {
+          cards = JSON.parse(deck.dataset.flashcards || "[]");
+        } catch (_error) {
+          return;
+        }
+        if (!Array.isArray(cards) || !cards.length) return;
+
+        const card = deck.querySelector("[data-flashcard]");
+        const counter = deck.querySelector("[data-flashcard-count]");
+        const front = deck.querySelector("[data-flashcard-front]");
+        const back = deck.querySelector("[data-flashcard-back]");
+        const kicker = deck.querySelector("[data-flashcard-kicker]");
+        const corner = deck.querySelector("[data-flashcard-corner]");
+        if (!card || !front || !back || !kicker || !corner) return;
+
+        const persianNumber = (value) => String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[digit]);
+        let activeIndex = 0;
+        let isAnimating = false;
+
+        function renderCard(index) {
+          const item = cards[index];
+          const position = `${persianNumber(index + 1)} از ${persianNumber(cards.length)}`;
+          front.textContent = String(item.front || "مفهوم کلیدی");
+          back.textContent = String(item.back || "توضیح این کارت در حال تکمیل است.");
+          kicker.textContent = `کارت ${position}`;
+          corner.textContent = String(index + 1).padStart(2, "0");
+          card.dataset.flashcardIndex = String(index);
+          card.setAttribute("aria-label", `کارت ${position}; برای رفتن به کارت بعدی انتخاب کن`);
+          if (counter) counter.textContent = position;
+        }
+
+        function showNextCard() {
+          if (isAnimating || cards.length < 2) return;
+          isAnimating = true;
+          const nextIndex = (activeIndex + 1) % cards.length;
+          card.classList.remove("is-arriving");
+          card.classList.add("is-dealing");
+          window.setTimeout(() => {
+            activeIndex = nextIndex;
+            renderCard(activeIndex);
+            card.classList.remove("is-dealing");
+            card.classList.add("is-arriving");
+            window.setTimeout(() => {
+              card.classList.remove("is-arriving");
+              isAnimating = false;
+            }, 300);
+          }, 210);
+        }
+
+        renderCard(activeIndex);
+        card.addEventListener("click", showNextCard);
+        card.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            showNextCard();
+          }
+        });
+      });
+    }
+
+    function renderPersonalizedExample(target, result) {
+      const content = result.content || {};
+      const citations = Array.isArray(result.citations) ? result.citations : [];
+      const steps = Array.isArray(content.application_steps) ? content.application_steps : [];
+      target.classList.remove("is-loading");
+      target.innerHTML = `<h4>${escapeHtml(content.title || "مثال کاربردی")}</h4>
+        <p>${escapeHtml(content.scenario || "مثال شخصی‌سازی‌شده فعلاً در دسترس نیست.")}</p>
+        ${steps.length ? `<ol>${steps.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>` : ""}
+        ${content.reflection_question ? `<p class="personalized-example-question">${escapeHtml(content.reflection_question)}</p>` : ""}
+        ${citations.length ? `<p class="coach-source-note">منابع تاییدشده: ${escapeHtml(citations.map((item) => item.title).filter(Boolean).join("، "))}</p>` : ""}`;
+    }
+
+    async function loadPersonalizedExample(lesson) {
+      const target = lessonPanel.querySelector("[data-personalized-example]");
+      if (!target || !currentEnrollmentId) return;
+      try {
+        const result = await api(`/api/learning/enrollments/${currentEnrollmentId}/stages/${lesson.stage_number}/personalized-example`, { method: "POST" });
+        if (currentLesson?.stage_number !== lesson.stage_number) return;
+        renderPersonalizedExample(target, result);
+      } catch (error) {
+        if (currentLesson?.stage_number !== lesson.stage_number) return;
+        target.classList.remove("is-loading");
+        target.textContent = "مثال شخصی‌سازی‌شده فعلاً آماده نشد؛ می‌توانی از زیتو درباره همین مرحله سوال بپرسی.";
+      }
+    }
+
     function renderLesson(lesson) {
       currentLesson = lesson;
       lessonPanel.classList.remove("empty");
       const content = lesson.content || {};
       const activity = content.activity || {};
       const blocks = Array.isArray(content.blocks) ? content.blocks : [];
-      const completeLabel = lesson.course_completed ? "مسیر کامل شده است" : "تکمیل مرحله و ادامه";
+      const waitingForFinalExam = Boolean(lesson.final_exam_available);
+      const terminal = lesson.course_completed || waitingForFinalExam;
+      const completeLabel = lesson.course_completed
+        ? "مسیر کامل شده است"
+        : waitingForFinalExam
+          ? "آماده آزمون نهایی"
+          : "تکمیل مرحله و ادامه";
       const templateLabel = stageLabel(lesson.stage_type);
+      const moduleStageCount = lesson.module_stage_count || 20;
+      const finalExamNote = waitingForFinalExam
+        ? '<div class="final-exam-note">همه سرفصل‌ها را کامل کرده‌ای. آزمون نهایی و گواهی پایان دوره در اسپرینت بعدی این بخش فعال می‌شوند.</div>'
+        : "";
       lessonPanel.innerHTML = `
         <article class="lesson-article" data-stage-type="${escapeHtml(lesson.stage_type)}">
           <header class="stage-header">
             <div class="stage-heading-copy">
-              <div class="stage-number">${lesson.module_title ? `سرفصل ${lesson.module_number} از ${lesson.total_module_count} · قدم ${lesson.module_stage_number} از ۲۰` : `مرحله ${lesson.stage_number} از ${lesson.total_stage_count}`}</div>
+              <div class="stage-number">${lesson.module_title ? `سرفصل ${lesson.module_number} از ${lesson.total_module_count} · قدم ${lesson.module_stage_number} از ${moduleStageCount}` : `مرحله ${lesson.stage_number} از ${lesson.total_stage_count}`}</div>
               <h2>${escapeHtml(lesson.title)}</h2>
               <div class="stage-type"><span aria-hidden="true"></span>${escapeHtml(templateLabel)}</div>
             </div>
@@ -2143,32 +2377,43 @@
             <strong>${escapeHtml(activity.title || "خروجی مرحله")}</strong>
             <p>${escapeHtml(activity.prompt || "وقتی مرور این مرحله تمام شد، مسیر را ادامه بده.")}</p>
           </section>
+          ${assessmentFeedbackMarkup(lesson.assessment)}
+          ${finalExamNote}
           <div class="stage-progress-footer">
             <span>پیشرفت کل مسیر</span>
             <strong>${lesson.progress_percentage}٪</strong>
           </div>
           <div class="meter"><div class="bar" style="width: ${lesson.progress_percentage}%"></div></div>
           <div class="lesson-actions">
-            <button class="stage-complete-button ${lesson.course_completed ? "done" : ""}" type="button" data-complete-stage ${lesson.course_completed ? "disabled" : ""}>${completeLabel}</button>
+            <button class="stage-complete-button ${terminal ? "done" : ""}" type="button" data-complete-stage ${terminal ? "disabled" : ""}>${completeLabel}</button>
           </div>
         </article>`;
       const completeButton = lessonPanel.querySelector("[data-complete-stage]");
-      if (!lesson.course_completed) completeButton.addEventListener("click", completeCurrentStage);
-      coachMessage.textContent = lesson.course_completed
-        ? "این دوره کامل شده؛ هر زمان خواستی می‌توانی مرحله‌ها را مرور کنی."
-        : lesson.module_title
-          ? `من در سرفصل «${lesson.module_title}» کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`
-          : `من در تمام مرحله ${lesson.stage_number} کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`;
+      if (!terminal) completeButton.addEventListener("click", completeCurrentStage);
+      bindFlashcards();
+      if (lesson.stage_type === "personalized_work_example") loadPersonalizedExample(lesson);
+      coachMessage.textContent = waitingForFinalExam
+        ? "مسیر سرفصل‌ها کامل شده است. برای مرور یا پرسش، من همچنان کنار تو هستم."
+        : lesson.course_completed
+          ? "این دوره کامل شده؛ هر زمان خواستی می‌توانی مرحله‌ها را مرور کنی."
+          : lesson.module_title
+            ? `من در سرفصل «${lesson.module_title}» کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`
+            : `من در تمام مرحله ${lesson.stage_number} کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`;
       lessonPanel.scrollTop = 0;
     }
 
     function collectStageResponse() {
+      const answers = {};
+      lessonPanel.querySelectorAll("[data-assessment-question]:checked").forEach((item) => {
+        answers[item.dataset.assessmentQuestion] = item.value;
+      });
       const selected = Array.from(lessonPanel.querySelectorAll("input:checked")).map((item) => item.value);
+      if (Object.keys(answers).length) return { answers, selected_items: selected };
       return selected.length ? { selected_items: selected } : null;
     }
 
     async function completeCurrentStage() {
-      if (!currentLesson || currentLesson.course_completed) return;
+      if (!currentLesson || currentLesson.course_completed || currentLesson.final_exam_available) return;
       const completeButton = lessonPanel.querySelector("[data-complete-stage]");
       completeButton.disabled = true;
       completeButton.textContent = "در حال ثبت...";
@@ -2179,7 +2424,14 @@
           body: JSON.stringify({ response }),
         });
         renderLearningPath(result.path);
-        setStatus(result.course_completed ? "مسیر کامل شد" : `مرحله ${result.next_stage_number} آماده است`);
+        if (result.stage_completed === false) {
+          currentLesson.assessment = result.assessment;
+          renderLesson(currentLesson);
+          setStatus("آزمونک نیاز به تلاش دوباره دارد");
+          return;
+        }
+        const finalExamAvailable = Boolean(result.path?.final_exam_available);
+        setStatus(result.course_completed ? "مسیر کامل شد" : finalExamAvailable ? "آماده آزمون نهایی" : `مرحله ${result.next_stage_number} آماده است`);
         await showCoachingCheckpoint(result);
       } catch (error) {
         completeButton.disabled = false;
@@ -2257,22 +2509,12 @@
       }
     }
 
-    async function selectCourse(course, option) {
+    function selectCourse(course, option) {
       courseList.querySelectorAll("button").forEach((buttonItem) => { buttonItem.disabled = true; });
       option.querySelector(".course-option-arrow").textContent = "…";
-      try {
-        selectedTrack = course.domain || "personal_development";
-        localStorage.setItem("zito_track", selectedTrack);
-        const enrollment = await api(`/api/courses/${course.id}/enroll`, { method: "POST" });
-        currentEnrollmentId = enrollment.id;
-        const path = await api(`/api/learning/enrollments/${enrollment.id}`);
-        renderLearningPath(path);
-        await loadLearningStage();
-      } catch (error) {
-        coachMessage.textContent = error.message;
-        courseList.querySelectorAll("button").forEach((buttonItem) => { buttonItem.disabled = false; });
-        option.querySelector(".course-option-arrow").textContent = "‹";
-      }
+      selectedTrack = course.domain || "personal_development";
+      localStorage.setItem("zito_track", selectedTrack);
+      window.location.assign(`/app/courses/${encodeURIComponent(course.slug)}`);
     }
 
     async function loadLearningStage() {

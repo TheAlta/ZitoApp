@@ -42,6 +42,29 @@ def login_and_enroll(client: TestClient, phone: str) -> tuple[int, int]:
     return user_id, enrollment_response.json()["id"]
 
 
+def complete_module_stage(client: TestClient, enrollment_id: int, stage_number: int):
+    response = None
+    if stage_number % 8 == 7:
+        lesson = client.get(f"/api/learning/enrollments/{enrollment_id}/stages/current")
+        if lesson.status_code != 200:
+            raise AssertionError(lesson.text)
+        quiz = next(
+            block
+            for block in lesson.json()["content"]["blocks"]
+            if block.get("kind") == "quiz"
+        )
+        response = {
+            "answers": {
+                item["id"]: item["options"][0]
+                for item in quiz["items"]
+            }
+        }
+    return client.post(
+        f"/api/learning/enrollments/{enrollment_id}/stages/{stage_number}/complete",
+        json={"response": response},
+    )
+
+
 class LearningEngineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -65,18 +88,15 @@ class LearningEngineTests(unittest.TestCase):
                 .order_by(UserModuleStageProgress.id)
             ).all()
 
-        self.assertEqual(len(rows), 100)
+        self.assertEqual(len(rows), 40)
         self.assertEqual(rows[0].status, "available")
         self.assertTrue(all(row.status == "locked" for row in rows[1:]))
 
     def test_progress_resumes_and_media_slots_are_empty_but_typed(self) -> None:
         with TestClient(app) as client:
             _, enrollment_id = login_and_enroll(client, "09121110002")
-            for stage_number in range(1, 14):
-                response = client.post(
-                    f"/api/learning/enrollments/{enrollment_id}/stages/{stage_number}/complete",
-                    json={"response": None},
-                )
+            for stage_number in range(1, 9):
+                response = complete_module_stage(client, enrollment_id, stage_number)
                 self.assertEqual(response.status_code, 200)
 
             resumed_path = client.get("/api/learning/enrollments/current")
@@ -84,13 +104,13 @@ class LearningEngineTests(unittest.TestCase):
                 f"/api/learning/enrollments/{enrollment_id}/stages/current"
             )
 
-        self.assertEqual(resumed_path.json()["current_stage_number"], 14)
-        self.assertEqual(resumed_path.json()["progress_percentage"], 13)
-        self.assertEqual(current_stage.json()["stage_type"], "audio_summary")
-        self.assertEqual(current_stage.json()["module_number"], 1)
-        self.assertEqual(current_stage.json()["module_stage_number"], 14)
+        self.assertEqual(resumed_path.json()["current_stage_number"], 9)
+        self.assertEqual(resumed_path.json()["progress_percentage"], 20)
+        self.assertEqual(current_stage.json()["stage_type"], "learning_path")
+        self.assertEqual(current_stage.json()["module_number"], 2)
+        self.assertEqual(current_stage.json()["module_stage_number"], 1)
         media_slots = current_stage.json()["content"]["media_slots"]
-        self.assertEqual(media_slots[0]["kind"], "audio")
+        self.assertEqual(media_slots[0]["kind"], "video")
         self.assertEqual(media_slots[0]["status"], "empty")
         self.assertIsNone(media_slots[0]["url"])
 
@@ -98,28 +118,24 @@ class LearningEngineTests(unittest.TestCase):
         with TestClient(app) as client:
             _, enrollment_id = login_and_enroll(client, "09121110003")
             last_response = None
-            for stage_number in range(1, 101):
-                last_response = client.post(
-                    f"/api/learning/enrollments/{enrollment_id}/stages/{stage_number}/complete",
-                    json={"response": None},
-                )
+            for stage_number in range(1, 41):
+                last_response = complete_module_stage(client, enrollment_id, stage_number)
                 self.assertEqual(last_response.status_code, 200)
 
-            repeated = client.post(
-                f"/api/learning/enrollments/{enrollment_id}/stages/100/complete",
-                json={"response": None},
-            )
+            repeated = complete_module_stage(client, enrollment_id, 40)
             completed_stage = client.get(
                 f"/api/learning/enrollments/{enrollment_id}/stages/current"
             )
 
-        self.assertTrue(last_response.json()["course_completed"])
+        self.assertFalse(last_response.json()["course_completed"])
+        self.assertTrue(last_response.json()["path"]["final_exam_available"])
         self.assertEqual(last_response.json()["progress_percentage"], 100)
         self.assertIsNone(last_response.json()["next_stage_number"])
         self.assertEqual(repeated.status_code, 200)
         self.assertEqual(repeated.json()["progress_percentage"], 100)
-        self.assertTrue(completed_stage.json()["course_completed"])
-        self.assertEqual(completed_stage.json()["stage_number"], 100)
+        self.assertFalse(completed_stage.json()["course_completed"])
+        self.assertTrue(completed_stage.json()["final_exam_available"])
+        self.assertEqual(completed_stage.json()["stage_number"], 40)
 
         with SessionLocal() as db:
             enrollment = db.get(UserCourseEnrollment, enrollment_id)
@@ -129,9 +145,38 @@ class LearningEngineTests(unittest.TestCase):
                     UserModuleStageProgress.status == "completed",
                 )
             ).all()
-        self.assertEqual(enrollment.status, "completed")
+        self.assertEqual(enrollment.status, "awaiting_final_exam")
         self.assertEqual(enrollment.progress_percentage, 100)
-        self.assertEqual(len(rows), 100)
+        self.assertEqual(len(rows), 40)
+
+    def test_module_assessment_blocks_progress_until_the_learner_passes(self) -> None:
+        with TestClient(app) as client:
+            _, enrollment_id = login_and_enroll(client, "09121110007")
+            for stage_number in range(1, 7):
+                self.assertEqual(
+                    complete_module_stage(client, enrollment_id, stage_number).status_code,
+                    200,
+                )
+
+            failed = client.post(
+                f"/api/learning/enrollments/{enrollment_id}/stages/7/complete",
+                json={"response": None},
+            )
+            current_after_failure = client.get(
+                f"/api/learning/enrollments/{enrollment_id}/stages/current"
+            )
+            passed = complete_module_stage(client, enrollment_id, 7)
+
+        self.assertEqual(failed.status_code, 200)
+        self.assertFalse(failed.json()["stage_completed"])
+        self.assertEqual(failed.json()["assessment"]["score"], 0)
+        self.assertFalse(failed.json()["assessment"]["passed"])
+        self.assertEqual(current_after_failure.json()["stage_number"], 7)
+        self.assertEqual(current_after_failure.json()["assessment"]["attempt_count"], 1)
+        self.assertEqual(passed.status_code, 200)
+        self.assertTrue(passed.json()["stage_completed"])
+        self.assertTrue(passed.json()["assessment"]["passed"])
+        self.assertEqual(passed.json()["next_stage_number"], 8)
 
     def test_another_user_cannot_read_or_complete_an_enrollment(self) -> None:
         with TestClient(app) as owner:

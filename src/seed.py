@@ -83,6 +83,53 @@ PHASE2_STAGE_TYPES = [
     {"number": 20, "type": "final_project", "title": "پروژه نهایی و جمع بندی"},
 ]
 
+# Version 3 is the learner-facing flow introduced after the original twenty
+# reusable templates. It intentionally has eight module stages; the final exam
+# belongs to the whole course, not to every module.
+EIGHT_STAGE_FLOW_TYPES = [
+    {"number": 1, "type": "learning_path", "title": "مسیر یادگیری این سرفصل"},
+    {"number": 2, "type": "lesson_summary", "title": "خلاصه درس"},
+    {"number": 3, "type": "flashcards", "title": "فلش‌کارت‌های مرور سریع"},
+    {"number": 4, "type": "golden_tips", "title": "نکات طلایی درس"},
+    {"number": 5, "type": "common_mistakes", "title": "اشتباهات رایج"},
+    {"number": 6, "type": "personalized_work_example", "title": "مثال در مسیر شغلی تو"},
+    {"number": 7, "type": "module_assessment", "title": "تمرین و آزمونک سرفصل"},
+    {"number": 8, "type": "module_completion", "title": "پایان سرفصل"},
+]
+
+EIGHT_STAGE_TEMPLATE_EXTRAS = [
+    {"number": 21, "type": "personalized_work_example", "title": "مثال شخصی‌سازی‌شده شغلی"},
+    {"number": 22, "type": "module_assessment", "title": "تمرین و آزمونک سرفصل"},
+    {"number": 23, "type": "module_completion", "title": "پایان سرفصل"},
+]
+
+COURSE_V3_OVERVIEW = {
+    "summary": "یک مسیر کوتاه، کاربردی و شخصی‌سازی‌شده برای ساخت عادت‌های رشد با کمک هوش مصنوعی.",
+    "description": (
+        "در این دوره یاد می‌گیری هدف‌های شخصی و حرفه‌ای خودت را به قدم‌های کوچک تبدیل کنی، "
+        "از هوش مصنوعی با قضاوت انسانی استفاده کنی و یک برنامه پایدار برای ادامه مسیر بسازی."
+    ),
+    "estimated_learning_minutes": 480,
+    "estimated_duration_label": "حدود ۴ هفته با روزی ۲۰ تا ۳۰ دقیقه تمرین",
+    "learning_outcomes": [
+        "هدف یادگیری خودت را روشن و قابل اجرا تعریف کنی.",
+        "برای زمان آزاد روزانه، عادت یادگیری پایدار بسازی.",
+        "خروجی هوش مصنوعی را با نگاه انتقادی بررسی کنی.",
+        "یادگیری را به مسیر شغلی و زندگی روزمره‌ات وصل کنی.",
+    ],
+    "career_outcomes": [
+        "برنامه رشد حرفه‌ای واقع‌بینانه‌تری بسازی.",
+        "برای تصمیم‌ها و بازخوردهای کاری، چارچوب فکری روشن‌تری داشته باشی.",
+        "از AI به‌عنوان دستیار تحلیل و برنامه‌ریزی استفاده کنی، نه جایگزین قضاوت تخصصی.",
+    ],
+    "daily_life_outcomes": [
+        "هدف‌های بزرگ را به قدم‌های کوچک روزانه تبدیل کنی.",
+        "بعد از عقب‌افتادن از برنامه، سریع‌تر و بدون فشار اضافه به مسیر برگردی.",
+        "برای یادگیری و تصمیم‌های شخصی، بازبینی منظم داشته باشی.",
+    ],
+    "final_exam_label": "پس از پایان همه سرفصل‌ها، آزمون نهایی دوره را می‌دهی.",
+}
+
 PHASE2_MODULES = [
     {
         "number": 1,
@@ -397,6 +444,202 @@ def _sample_stage_content(stage: dict, module: dict | None = None) -> dict:
     return payload
 
 
+def _eight_stage_module_content(stage: dict, module: dict) -> tuple[dict, dict | None]:
+    """Return public stage content and private assessment rules for version 3."""
+
+    objectives = list(module["objectives"])
+    primary_objective = objectives[0]
+    secondary_objective = objectives[1] if len(objectives) > 1 else objectives[0]
+    stage_type = stage["type"]
+    blocks: list[dict]
+    activity: dict
+    evaluation_config: dict | None = None
+    media_slots: list[dict] = []
+
+    if stage_type == "learning_path":
+        blocks = [
+            {"kind": "timeline", "title": "مسیر این سرفصل", "items": objectives},
+            {"kind": "highlight", "title": "چرا مهم است؟", "body": module["description"]},
+        ]
+        activity = {
+            "kind": "planning",
+            "title": "نقطه شروع",
+            "prompt": f"قبل از شروع، یک خروجی کوچک برای «{primary_objective}» در ذهن مشخص کن.",
+        }
+        media_slots = [{"kind": "video", "label": "ویدیوی معرفی سرفصل", "status": "empty", "url": None}]
+    elif stage_type == "lesson_summary":
+        blocks = [
+            {
+                "kind": "highlight",
+                "title": "خلاصه درس",
+                "body": (
+                    f"در «{module['title']}» روی {primary_objective} تمرکز می‌کنی. "
+                    "هدف این است که آن را از یک مفهوم کلی به تصمیم و اقدام واقعی تبدیل کنی."
+                ),
+            },
+            {"kind": "bullets", "title": "چیزهایی که با خودت می‌بری", "items": objectives},
+        ]
+        activity = {
+            "kind": "reflection",
+            "title": "مرور کوتاه",
+            "prompt": f"به یک موقعیت واقعی فکر کن که {secondary_objective} در آن برایت مهم بوده است.",
+        }
+        media_slots = [{"kind": "audio", "label": "خلاصه صوتی سرفصل", "status": "empty", "url": None}]
+    elif stage_type == "flashcards":
+        blocks = [
+            {
+                "kind": "flashcards",
+                "title": "فلش‌کارت‌های این سرفصل",
+                "items": [
+                    {"front": "مفهوم کلیدی", "back": primary_objective},
+                    {"front": "در عمل", "back": f"{module['title']} را با یک قدم کوتاه و قابل بازبینی شروع کن."},
+                    {"front": "یادآوری", "back": "AI دستیار فکر کردن است؛ تصمیم نهایی و بررسی مسئولانه با توست."},
+                ],
+            }
+        ]
+        activity = {
+            "kind": "review",
+            "title": "مرور سریع",
+            "prompt": "کارت‌ها را یکی‌یکی مرور کن و روی مفهومی که برایت تازه‌تر است مکث کن.",
+        }
+        media_slots = [{"kind": "image", "label": "تصویر مرور مفاهیم", "status": "empty", "url": None}]
+    elif stage_type == "golden_tips":
+        blocks = [
+            {
+                "kind": "tips",
+                "title": "نکات طلایی",
+                "items": [
+                    f"برای «{primary_objective}» یک معیار ساده و قابل مشاهده تعیین کن.",
+                    "کار را آن‌قدر کوچک انتخاب کن که بتوانی امروز شروعش کنی.",
+                    "خروجی AI را با شرایط واقعی خودت و یک بررسی انسانی تطبیق بده.",
+                ],
+            }
+        ]
+        activity = {
+            "kind": "selection",
+            "title": "یک نکته برای امروز",
+            "prompt": "یکی از نکات را انتخاب کن که همین امروز بتوانی اجرا کنی.",
+        }
+    elif stage_type == "common_mistakes":
+        blocks = [
+            {
+                "kind": "mistakes",
+                "title": "خطاهایی که مسیر را سخت می‌کنند",
+                "items": [
+                    {"mistake": "هدف خیلی بزرگ و مبهم", "correction": "هدف را به یک خروجی کوچک برای همین هفته تبدیل کن."},
+                    {"mistake": "اعتماد کامل به اولین پاسخ AI", "correction": "منبع، فرض‌ها و تناسب پاسخ با شرایط خودت را بررسی کن."},
+                    {"mistake": "برنامه بدون زمان واقعی", "correction": "تمرین را با زمان آزاد روزانه‌ات هماهنگ کن."},
+                ],
+            }
+        ]
+        activity = {
+            "kind": "reflection",
+            "title": "پیشگیری از خطا",
+            "prompt": "یکی از این خطاها را که ممکن است برایت رخ دهد انتخاب کن و راه اصلاحش را به خاطر بسپار.",
+        }
+    elif stage_type == "personalized_work_example":
+        blocks = [
+            {
+                "kind": "personalized_example",
+                "title": "مثال مخصوص مسیر تو",
+                "body": "زیتو با توجه به شغل یا رشته، هدف یادگیری و محتوای تاییدشده این سرفصل، یک مثال کاربردی آماده می‌کند.",
+            }
+        ]
+        activity = {
+            "kind": "application",
+            "title": "اتصال به دنیای واقعی",
+            "prompt": "بعد از دیدن مثال، فکر کن مشابه آن در کار یا مسیر تحصیلی تو کجا رخ می‌دهد.",
+        }
+    elif stage_type == "module_assessment":
+        first_correct = f"یک اقدام کوچک و قابل اندازه‌گیری برای «{primary_objective}» انتخاب کنم."
+        second_correct = "خروجی را با شرایط واقعی و بررسی انسانی مقایسه کنم."
+        blocks = [
+            {
+                "kind": "quiz",
+                "title": "آزمونک سرفصل",
+                "items": [
+                    {
+                        "id": "q1",
+                        "question": f"برای شروع «{primary_objective}» کدام انتخاب بهتر است؟",
+                        "options": [
+                            first_correct,
+                            "تا زمانی که برنامه کامل نشود هیچ اقدامی انجام ندهم.",
+                            "چند هدف بزرگ را هم‌زمان و بدون زمان‌بندی شروع کنم.",
+                        ],
+                    },
+                    {
+                        "id": "q2",
+                        "question": "بعد از دریافت پیشنهاد از AI، قدم مسئولانه چیست؟",
+                        "options": [
+                            second_correct,
+                            "پاسخ AI را بدون بررسی اجرا کنم.",
+                            "فقط به دلیل طولانی بودن پاسخ، آن را درست فرض کنم.",
+                        ],
+                    },
+                ],
+            }
+        ]
+        activity = {
+            "kind": "assessment",
+            "title": "ارزیابی سرفصل",
+            "prompt": "به هر دو سوال پاسخ بده. برای عبور از این مرحله باید حداقل ۶۰ از ۱۰۰ بگیری.",
+        }
+        evaluation_config = {
+            "mode": "single_choice",
+            "pass_score": 60,
+            "questions": [
+                {"id": "q1", "correct_option": first_correct, "weight": 50},
+                {"id": "q2", "correct_option": second_correct, "weight": 50},
+            ],
+        }
+    elif stage_type == "module_completion":
+        blocks = [
+            {
+                "kind": "highlight",
+                "title": "این سرفصل را تمام کردی",
+                "body": (
+                    f"آفرین. در «{module['title']}» از شناخت مفهوم تا تمرین و ارزیابی جلو آمدی. "
+                    "در مرحله بعد، زیتو سراغ سرفصل بعدی می‌رود."
+                ),
+            },
+            {"kind": "bullets", "title": "جمع‌بندی کوتاه", "items": objectives},
+        ]
+        activity = {
+            "kind": "continue",
+            "title": "آماده برای ادامه",
+            "prompt": "نمره آزمونک ثبت شده است. با ادامه دادن، سرفصل بعدی باز می‌شود.",
+        }
+    else:
+        raise ValueError(f"Unsupported eight-stage flow type: {stage_type}")
+
+    return (
+        {
+            "contract_version": 2,
+            "intro": f"{module['title']}: {stage['title']} آماده است.",
+            "blocks": blocks,
+            "activity": activity,
+            "media_slots": media_slots,
+            "coaching_checkpoint": {
+                "prompt": "هر سوالی درباره این بخش داری از زیتو بپرس.",
+                "mode": "live",
+                "enabled": True,
+            },
+            "ui_hint": {
+                "template": stage_type,
+                "avatar_visible": True,
+                "primary_action": "ثبت و ادامه",
+            },
+            "module": {
+                "number": module["number"],
+                "title": module["title"],
+                "objectives": objectives,
+                "tags": module["tags"],
+            },
+        },
+        evaluation_config,
+    )
+
+
 def _seed_legacy_flat_course(db: Session) -> Course:
     course = db.scalars(
         select(Course).where(Course.slug == PHASE2_SAMPLE_COURSE["slug"])
@@ -534,7 +777,7 @@ def _seed_stage_templates(db: Session) -> dict[str, LearningStageTemplate]:
         item.code: item
         for item in db.scalars(select(LearningStageTemplate)).all()
     }
-    for stage in PHASE2_STAGE_TYPES:
+    for stage in [*PHASE2_STAGE_TYPES, *EIGHT_STAGE_TEMPLATE_EXTRAS]:
         template = existing.get(stage["type"])
         if template:
             template.title = stage["title"]
@@ -570,6 +813,8 @@ def _seed_module_version(
     if version:
         version.status = "published"
         version.source = "fake_cms"
+        version.module_stage_count = 20
+        version.requires_final_exam = False
         version.published_at = version.published_at or now
     else:
         version = CourseVersion(
@@ -577,6 +822,8 @@ def _seed_module_version(
             version_number=2,
             status="published",
             source="fake_cms",
+            module_stage_count=20,
+            requires_final_exam=False,
             published_at=now,
         )
         db.add(version)
@@ -717,12 +964,170 @@ def _seed_module_version(
     return version
 
 
+def _seed_eight_stage_module_version(
+    db: Session,
+    course: Course,
+    template_by_code: dict[str, LearningStageTemplate],
+) -> CourseVersion:
+    """Seed the active eight-stage Fake CMS version without changing v1/v2."""
+
+    now = datetime.now(timezone.utc)
+    version = db.scalars(
+        select(CourseVersion).where(
+            CourseVersion.course_id == course.id,
+            CourseVersion.version_number == 3,
+        )
+    ).first()
+    if version:
+        version.status = "published"
+        version.source = "fake_cms_eight_stage"
+        version.overview_json = deepcopy(COURSE_V3_OVERVIEW)
+        version.module_stage_count = len(EIGHT_STAGE_FLOW_TYPES)
+        version.requires_final_exam = True
+        version.published_at = version.published_at or now
+    else:
+        version = CourseVersion(
+            course_id=course.id,
+            version_number=3,
+            status="published",
+            source="fake_cms_eight_stage",
+            overview_json=deepcopy(COURSE_V3_OVERVIEW),
+            module_stage_count=len(EIGHT_STAGE_FLOW_TYPES),
+            requires_final_exam=True,
+            published_at=now,
+        )
+        db.add(version)
+        db.flush()
+
+    existing_modules = {
+        item.module_number: item
+        for item in db.scalars(
+            select(CourseModule).where(CourseModule.course_version_id == version.id)
+        ).all()
+    }
+    module_pairs: list[tuple[dict, CourseModule]] = []
+    for spec in PHASE2_MODULES:
+        module = existing_modules.get(spec["number"])
+        if module:
+            module.title = spec["title"]
+            module.description = spec["description"]
+            module.learning_objectives_json = spec["objectives"]
+            module.tags_json = spec["tags"]
+            module.status = "approved"
+        else:
+            module = CourseModule(
+                course_version_id=version.id,
+                module_number=spec["number"],
+                title=spec["title"],
+                description=spec["description"],
+                learning_objectives_json=spec["objectives"],
+                tags_json=spec["tags"],
+                status="approved",
+            )
+            db.add(module)
+        module_pairs.append((spec, module))
+    db.flush()
+
+    for spec, module in module_pairs:
+        existing_contents = {
+            item.stage_number: item
+            for item in db.scalars(
+                select(CourseModuleStageContent).where(
+                    CourseModuleStageContent.course_module_id == module.id
+                )
+            ).all()
+        }
+        for stage in EIGHT_STAGE_FLOW_TYPES:
+            payload, evaluation_config = _eight_stage_module_content(stage, spec)
+            current = existing_contents.get(stage["number"])
+            if current:
+                current.template_id = template_by_code[stage["type"]].id
+                current.title = stage["title"]
+                current.content_json = payload
+                current.evaluation_config_json = evaluation_config
+                current.status = "approved"
+                current.ai_generation_status = "seeded"
+                current.review_status = "approved"
+                current.reviewed_by = "seed"
+                current.generated_at = current.generated_at or now
+                current.reviewed_at = current.reviewed_at or now
+                current.content_version = 1
+                continue
+            db.add(
+                CourseModuleStageContent(
+                    course_module_id=module.id,
+                    template_id=template_by_code[stage["type"]].id,
+                    stage_number=stage["number"],
+                    title=stage["title"],
+                    content_json=payload,
+                    evaluation_config_json=evaluation_config,
+                    status="approved",
+                    ai_generation_status="seeded",
+                    review_status="approved",
+                    reviewed_by="seed",
+                    generated_at=now,
+                    reviewed_at=now,
+                    content_version=1,
+                )
+            )
+    db.flush()
+
+    rag_config = db.scalars(
+        select(CourseRagConfig).where(CourseRagConfig.course_version_id == version.id)
+    ).first()
+    if rag_config:
+        rag_config.provider = "zito_embedding"
+        rag_config.endpoint_config_ref = "ARVAN_EMBEDDING_API_BASE_URL"
+        rag_config.knowledge_base_ref = MOCK_PERSONAL_DEVELOPMENT_KB_REFERENCE
+        rag_config.embedding_model = get_settings().arvan_embedding_model
+        rag_config.embedding_dimensions = get_settings().arvan_embedding_dimensions
+        rag_config.status = "ready"
+    else:
+        db.add(
+            CourseRagConfig(
+                course_version_id=version.id,
+                provider="zito_embedding",
+                endpoint_config_ref="ARVAN_EMBEDDING_API_BASE_URL",
+                knowledge_base_ref=MOCK_PERSONAL_DEVELOPMENT_KB_REFERENCE,
+                embedding_model=get_settings().arvan_embedding_model,
+                embedding_dimensions=get_settings().arvan_embedding_dimensions,
+                status="ready",
+            )
+        )
+
+    db.flush()
+    sync_personal_development_mock_kb(
+        db,
+        course=course,
+        course_version=version,
+        modules_by_number={module.module_number: module for _, module in module_pairs},
+    )
+
+    exam = db.scalars(select(Exam).where(Exam.course_version_id == version.id)).first()
+    if not exam:
+        db.add(
+            Exam(
+                course_version_id=version.id,
+                title="آزمون نهایی توسعه فردی با هوش مصنوعی",
+                questions_json=[],
+                passing_score=70,
+                status="draft",
+            )
+        )
+    elif exam.status == "draft":
+        exam.title = "آزمون نهایی توسعه فردی با هوش مصنوعی"
+        exam.questions_json = []
+        exam.passing_score = 70
+    return version
+
+
 def seed_phase2_fake_course(db: Session) -> None:
-    """Seed a safe legacy v1 plus the active five-module fake-CMS v2 course."""
+    """Seed legacy v1/v2 compatibility plus the active eight-stage v3 course."""
 
     course = _seed_legacy_flat_course(db)
     template_by_code = _seed_stage_templates(db)
     _seed_module_version(db, course, template_by_code)
+    _seed_eight_stage_module_version(db, course, template_by_code)
     db.commit()
 
 

@@ -141,6 +141,10 @@ class CourseVersion(Base):
     __table_args__ = (
         UniqueConstraint("course_id", "version_number", name="uq_course_versions_course_version"),
         UniqueConstraint("id", "course_id", name="uq_course_versions_id_course"),
+        CheckConstraint(
+            "module_stage_count IS NULL OR module_stage_count >= 1",
+            name="ck_course_versions_module_stage_count",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -148,6 +152,11 @@ class CourseVersion(Base):
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(40), default="draft", nullable=False)
     source: Mapped[str] = mapped_column(String(40), default="seed", nullable=False)
+    # A published version owns both its overview copy and its learning-flow contract.
+    # Keeping them versioned prevents a CMS update from changing an active learner's path.
+    overview_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    module_stage_count: Mapped[int] = mapped_column(Integer, nullable=True)
+    requires_final_exam: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -282,6 +291,9 @@ class CourseModuleStageContent(Base):
     stage_number: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    # Kept separate from learner-facing content so answer keys and grading rules
+    # never leave the API response.
+    evaluation_config_json: Mapped[dict] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(40), default="approved", nullable=False)
     ai_generation_status: Mapped[str] = mapped_column(String(40), default="seeded", nullable=False)
     review_status: Mapped[str] = mapped_column(String(40), default="approved", nullable=False)
@@ -607,6 +619,14 @@ class UserModuleStageProgress(Base):
     __table_args__ = (
         UniqueConstraint("enrollment_id", "module_stage_content_id", name="uq_user_module_stage_progress_item"),
         Index("ix_user_module_stage_progress_enrollment_status", "enrollment_id", "status"),
+        CheckConstraint(
+            "score IS NULL OR (score >= 0 AND score <= 100)",
+            name="ck_user_module_stage_progress_score",
+        ),
+        CheckConstraint(
+            "assessment_attempt_count >= 0",
+            name="ck_user_module_stage_progress_attempt_count",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -620,6 +640,15 @@ class UserModuleStageProgress(Base):
     )
     status: Mapped[str] = mapped_column(String(40), default="locked", nullable=False)
     response_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    score: Mapped[int] = mapped_column(Integer, nullable=True)
+    evaluation_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    assessment_attempt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    evaluated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    generated_content_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    generated_content_sources_json: Mapped[list] = mapped_column(JSON, nullable=True)
+    generated_content_model: Mapped[str] = mapped_column(String(120), nullable=True)
+    generated_content_prompt_version: Mapped[str] = mapped_column(String(80), nullable=True)
+    generated_content_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(

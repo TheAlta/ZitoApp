@@ -72,6 +72,29 @@ class CourseOut(BaseModel):
     version_number: int
     stage_count: int
     module_count: int = 0
+    module_stage_count: int | None = None
+    requires_final_exam: bool = False
+
+
+class CourseOverviewModuleOut(BaseModel):
+    module_id: int
+    module_number: int
+    title: str
+    description: str | None = None
+    learning_objectives: list[str] = Field(default_factory=list)
+    stage_count: int
+
+
+class CourseOverviewOut(CourseOut):
+    summary: str
+    description: str
+    estimated_learning_minutes: int | None = None
+    estimated_duration_label: str | None = None
+    learning_outcomes: list[str] = Field(default_factory=list)
+    career_outcomes: list[str] = Field(default_factory=list)
+    daily_life_outcomes: list[str] = Field(default_factory=list)
+    final_exam_label: str | None = None
+    modules: list[CourseOverviewModuleOut] = Field(default_factory=list)
 
 
 class EnrollmentOut(BaseModel):
@@ -123,6 +146,9 @@ class LearningPathOut(BaseModel):
     stages: list[LearningStageSummaryOut]
     module_count: int = 0
     modules: list[LearningModuleOut] = Field(default_factory=list)
+    final_exam_required: bool = False
+    final_exam_available: bool = False
+    final_exam_status: str = "not_required"
 
 
 class CoachingCheckpointOut(BaseModel):
@@ -130,6 +156,15 @@ class CoachingCheckpointOut(BaseModel):
     enabled: bool = False
     mode: str = "preview"
     stage_number: int | None = None
+
+
+class StageAssessmentOut(BaseModel):
+    evaluated: bool = False
+    score: int | None = None
+    passed: bool | None = None
+    pass_score: int | None = None
+    feedback: str | None = None
+    attempt_count: int = 0
 
 
 class LearningStageOut(BaseModel):
@@ -149,7 +184,10 @@ class LearningStageOut(BaseModel):
     module_number: int | None = None
     module_title: str | None = None
     module_stage_number: int | None = None
+    module_stage_count: int | None = None
     total_module_count: int = 0
+    final_exam_available: bool = False
+    assessment: StageAssessmentOut | None = None
 
 
 class StageCompleteIn(BaseModel):
@@ -164,6 +202,8 @@ class StageCompleteOut(BaseModel):
     progress_percentage: int
     coaching: CoachingCheckpointOut
     path: LearningPathOut
+    stage_completed: bool = True
+    assessment: StageAssessmentOut | None = None
 
 
 class CoachQuestionIn(BaseModel):
@@ -177,6 +217,13 @@ class CoachCitationOut(BaseModel):
     source_number: int
     title: str
     scope: str
+
+
+class PersonalizedStageContentOut(BaseModel):
+    cached: bool
+    grounded: bool
+    content: dict[str, Any]
+    citations: list[CoachCitationOut] = Field(default_factory=list)
 
 
 class CoachMessageOut(BaseModel):

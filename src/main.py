@@ -53,6 +53,11 @@ def app_ui() -> HTMLResponse:
     return _html("chat.html")
 
 
+@app.get("/app/courses/{course_slug}", response_class=HTMLResponse)
+def course_overview_ui(course_slug: str) -> HTMLResponse:
+    return _html("course_overview.html")
+
+
 @app.get("/admin/login", response_class=HTMLResponse)
 def admin_login_ui() -> HTMLResponse:
     return _html("admin_login.html")

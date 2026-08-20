@@ -188,8 +188,15 @@ class CourseCoachTests(unittest.TestCase):
             ).one()
         self.assertEqual(event.status, "fallback")
 
-    def test_coach_does_not_call_model_when_no_approved_source_is_available(self) -> None:
+    def test_coach_uses_current_stage_when_kb_is_not_ready(self) -> None:
         no_sources = RetrievalResult(rag_config=None, method="not_configured", chunks=[])
+        model_response = json.dumps(
+            {
+                "answer": "Use one small, trackable action from the current lesson.",
+                "source_numbers": [1],
+            },
+            ensure_ascii=False,
+        )
         with TestClient(app) as client:
             enrollment_id = login_and_enroll(client, "09125550106")
             client.post(
@@ -199,7 +206,10 @@ class CourseCoachTests(unittest.TestCase):
             with patch(
                 "src.services.coach.retrieve_course_chunks",
                 new=AsyncMock(return_value=no_sources),
-            ), patch("src.services.coach.ask_ai", new=AsyncMock()) as ask_ai_mock:
+            ), patch(
+                "src.services.coach.ask_ai",
+                new=AsyncMock(return_value=model_response),
+            ) as ask_ai_mock:
                 reply = client.post(
                     f"/api/learning/enrollments/{enrollment_id}/coach/messages",
                     json={"message": "برای این بخش راهنما می خواهم.", "stage_number": 1},
@@ -207,10 +217,26 @@ class CourseCoachTests(unittest.TestCase):
 
         self.assertEqual(reply.status_code, 200, reply.text)
         body = reply.json()
-        self.assertFalse(body["grounded"])
-        self.assertEqual(body["citations"], [])
-        self.assertEqual(body["retrieval_method"], "not_configured")
-        ask_ai_mock.assert_not_awaited()
+        self.assertTrue(body["grounded"])
+        self.assertEqual(body["retrieval_method"], "stage_content_fallback")
+        self.assertEqual(body["citations"][0]["scope"], "current_stage")
+        ask_ai_mock.assert_awaited_once()
+        _, request_body = ask_ai_mock.await_args.args
+        request_data = json.loads(request_body)
+        self.assertIn("retrieved_sources", request_data)
+        self.assertNotIn("09125550106", request_body)
+
+        with SessionLocal() as db:
+            thread = db.scalars(select(CoachThread).where(CoachThread.enrollment_id == enrollment_id)).one()
+            assistant = db.scalars(
+                select(CoachMessage)
+                .where(CoachMessage.thread_id == thread.id, CoachMessage.role == "assistant")
+                .order_by(CoachMessage.id.desc())
+            ).first()
+            event = db.scalars(
+                select(CoachRetrievalEvent).where(CoachRetrievalEvent.assistant_message_id == assistant.id)
+            ).one()
+        self.assertEqual(event.status, "stage_fallback")
 
 
 if __name__ == "__main__":

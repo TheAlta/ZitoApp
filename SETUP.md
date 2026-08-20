@@ -118,6 +118,16 @@ When using the private local vault, the equivalent command loads `DATABASE_URL` 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 migrate-db
 ```
 
+After a migration that introduces a new Fake CMS course version, seed the
+checked-in learning content separately. This command is idempotent, does not
+create or modify administrator accounts, and processes its initial queued KB
+index jobs before it finishes. A retry/failed index job makes the command fail
+visibly instead of leaving Coach with an empty source set:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 seed-course-content
+```
+
 ## Syncing the Mock Knowledge Base
 
 The checked-in Markdown source at `knowledge_base/personal-development-ai-mock-kb.md` is the approved mock source for the five-module sample course. Syncing it updates only the course KB documents, their module scopes, chunks, and durable indexing jobs; it does not call Arvan.
@@ -128,7 +138,7 @@ Preview a sync without changing PostgreSQL:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 sync-mock-kb -DryRun
 ```
 
-Apply the source to PostgreSQL, then process the queued jobs separately:
+Apply a changed mock source to PostgreSQL, then process its newly queued jobs:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\zito-secrets.ps1 sync-mock-kb

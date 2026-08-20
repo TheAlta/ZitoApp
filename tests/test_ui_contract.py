@@ -119,9 +119,32 @@ class UiContractTests(unittest.TestCase):
         self.assertIn('id="coachInput"', html)
         self.assertIn("/coach/messages", html)
         self.assertIn("coaching.enabled", html)
+        self.assertIn("/app/courses/${encodeURIComponent(course.slug)}", html)
+        self.assertIn("data-flashcard", html)
+        self.assertIn("flashcard-stack", html)
+        self.assertIn("flashcard-shadow", html)
+        self.assertIn("data-flashcards", html)
+        self.assertIn("data-flashcard-front", html)
+        self.assertIn("flashcard-deal", html)
+        self.assertIn("data-personalized-example", html)
+        self.assertIn("data-assessment-question", html)
         self.assertNotIn("/api/training/", html)
         self.assertNotIn("${firstNameOf(profile.full_name)} سلام", html)
         self.assertNotIn("/api/onboarding/${userId}/answer", html)
+
+    def test_course_overview_is_a_separate_single_scroll_ui(self) -> None:
+        with TestClient(app) as client:
+            response = client.get("/app/courses/personal-development-ai")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.text
+        self.assertIn('id="startCourse"', html)
+        self.assertIn("/api/courses/slug/", html)
+        self.assertIn("scroll-behavior: smooth", html)
+        self.assertIn('font-family: "YekanZito"', html)
+        self.assertIn("learning-map", html)
+        self.assertIn("/landing-static/zito-mascot.svg", html)
+        self.assertIn("/api/courses/${course.id}/enroll", html)
 
     def test_admin_renders_canonical_profile_without_legacy_answers(self) -> None:
         admin_template = Path("src/templates/admin.html").read_text(encoding="utf-8")

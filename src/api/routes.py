@@ -30,6 +30,8 @@ from src.schemas import (
     CoachQuestionIn,
     CoachReplyOut,
     CoachingCheckpointOut,
+    CourseOverviewModuleOut,
+    CourseOverviewOut,
     CourseOut,
     EnrollmentOut,
     LearningPathOut,
@@ -42,6 +44,8 @@ from src.schemas import (
     PhoneLoginOut,
     ProfileOut,
     ProfilePatchIn,
+    PersonalizedStageContentOut,
+    StageAssessmentOut,
     StageCompleteIn,
     StageCompleteOut,
     UserMeOut,
@@ -62,6 +66,7 @@ from src.security import (
 )
 from src.services.otp import OtpError, OtpRateLimitError, normalize_otp_code, request_otp, verify_otp
 from src.services.coach import answer_course_question, list_coach_messages
+from src.services.personalized_stage import generate_personalized_work_example
 
 router = APIRouter()
 LEARNING_STAGE_COUNT = 20
@@ -178,6 +183,12 @@ def _published_version_for(course: Course) -> CourseVersion | None:
     return next((version for version in versions if version.status == "published"), None)
 
 
+def _module_stage_count(version: CourseVersion) -> int:
+    """Older module versions keep their original twenty-stage contract."""
+
+    return version.module_stage_count or LEARNING_STAGE_COUNT
+
+
 def _course_out(db: Session, course: Course) -> CourseOut | None:
     version = _published_version_for(course)
     if not version:
@@ -196,6 +207,8 @@ def _course_out(db: Session, course: Course) -> CourseOut | None:
             version_number=version.version_number,
             stage_count=len(module_stages),
             module_count=len({stage.course_module_id for stage in module_stages}),
+            module_stage_count=_module_stage_count(version),
+            requires_final_exam=version.requires_final_exam,
         )
     approved_stages = sorted(
         (
@@ -216,6 +229,67 @@ def _course_out(db: Session, course: Course) -> CourseOut | None:
         version_number=version.version_number,
         stage_count=len(approved_stages),
         module_count=0,
+        module_stage_count=None,
+        requires_final_exam=False,
+    )
+
+
+def _course_overview_out(db: Session, course: Course) -> CourseOverviewOut | None:
+    version = _published_version_for(course)
+    course_out = _course_out(db, course)
+    if not version or not course_out:
+        return None
+
+    overview = version.overview_json if isinstance(version.overview_json, dict) else {}
+    modules: list[CourseOverviewModuleOut] = []
+    if _uses_module_structure(db, version.id):
+        stages = _approved_module_stages(db, version.id)
+        module_stages: dict[int, list[CourseModuleStageContent]] = {}
+        for stage in stages:
+            module_stages.setdefault(stage.course_module_id, []).append(stage)
+        for module_id, items in module_stages.items():
+            module = items[0].course_module
+            if not module:
+                continue
+            modules.append(
+                CourseOverviewModuleOut(
+                    module_id=module_id,
+                    module_number=module.module_number,
+                    title=module.title,
+                    description=module.description,
+                    learning_objectives=list(module.learning_objectives_json or []),
+                    stage_count=len(items),
+                )
+            )
+
+    return CourseOverviewOut(
+        id=course_out.id,
+        title=course_out.title,
+        slug=course_out.slug,
+        domain=course_out.domain,
+        version_id=course_out.version_id,
+        version_number=course_out.version_number,
+        stage_count=course_out.stage_count,
+        module_count=course_out.module_count,
+        module_stage_count=course_out.module_stage_count,
+        requires_final_exam=course_out.requires_final_exam,
+        summary=str(overview.get("summary") or "معرفی این دوره در حال تکمیل است."),
+        description=str(overview.get("description") or "محتوای این دوره به‌صورت مرحله‌ای ارائه می‌شود."),
+        estimated_learning_minutes=(
+            overview.get("estimated_learning_minutes")
+            if isinstance(overview.get("estimated_learning_minutes"), int)
+            else None
+        ),
+        estimated_duration_label=(
+            str(overview["estimated_duration_label"])
+            if overview.get("estimated_duration_label")
+            else None
+        ),
+        learning_outcomes=[str(item) for item in overview.get("learning_outcomes", []) if str(item).strip()],
+        career_outcomes=[str(item) for item in overview.get("career_outcomes", []) if str(item).strip()],
+        daily_life_outcomes=[str(item) for item in overview.get("daily_life_outcomes", []) if str(item).strip()],
+        final_exam_label=(str(overview["final_exam_label"]) if overview.get("final_exam_label") else None),
+        modules=modules,
     )
 
 
@@ -246,6 +320,10 @@ def _uses_module_structure(db: Session, course_version_id: int) -> bool:
 
 
 def _approved_module_stages(db: Session, course_version_id: int) -> list[CourseModuleStageContent]:
+    version = db.get(CourseVersion, course_version_id)
+    if not version:
+        raise HTTPException(status_code=409, detail="نسخه دوره پیدا نشد.")
+    expected_stage_count = _module_stage_count(version)
     modules = db.scalars(
         select(CourseModule)
         .where(
@@ -274,11 +352,11 @@ def _approved_module_stages(db: Session, course_version_id: int) -> list[CourseM
         )
         .order_by(CourseModule.module_number, CourseModuleStageContent.stage_number)
     ).all()
-    expected_numbers = list(range(1, LEARNING_STAGE_COUNT + 1))
-    if len(stages) != len(modules) * LEARNING_STAGE_COUNT:
+    expected_numbers = list(range(1, expected_stage_count + 1))
+    if len(stages) != len(modules) * expected_stage_count:
         raise HTTPException(
             status_code=409,
-            detail="هر سرفصل نسخه منتشرشده باید دقیقاً ۲۰ قالب تاییدشده داشته باشد.",
+            detail=f"هر سرفصل نسخه منتشرشده باید دقیقاً {expected_stage_count} قالب تاییدشده داشته باشد.",
         )
     for module in modules:
         module_numbers = [
@@ -289,7 +367,7 @@ def _approved_module_stages(db: Session, course_version_id: int) -> list[CourseM
         if module_numbers != expected_numbers:
             raise HTTPException(
                 status_code=409,
-                detail=f"سرفصل «{module.title}» باید ۲۰ قالب پیوسته و تاییدشده داشته باشد.",
+                detail=f"سرفصل «{module.title}» باید {expected_stage_count} قالب پیوسته و تاییدشده داشته باشد.",
             )
     return list(stages)
 
@@ -324,14 +402,20 @@ def _ensure_module_stage_progress(
 def _sync_module_enrollment_progress(
     enrollment: UserCourseEnrollment,
     progress_rows: list[UserModuleStageProgress],
+    *,
+    requires_final_exam: bool,
 ) -> None:
     total = len(progress_rows)
     completed_count = sum(row.status == "completed" for row in progress_rows)
     enrollment.progress_percentage = round(completed_count * 100 / total) if total else 0
     if total and completed_count == total:
-        enrollment.status = "completed"
         enrollment.current_stage_number = total
-        enrollment.completed_at = enrollment.completed_at or datetime.now(timezone.utc)
+        if requires_final_exam:
+            enrollment.status = "awaiting_final_exam"
+            enrollment.completed_at = None
+        else:
+            enrollment.status = "completed"
+            enrollment.completed_at = enrollment.completed_at or datetime.now(timezone.utc)
         return
 
     next_index = next(index for index, row in enumerate(progress_rows, start=1) if row.status != "completed")
@@ -341,6 +425,110 @@ def _sync_module_enrollment_progress(
     enrollment.completed_at = None
     if next_row.status in ("locked", "not_started"):
         next_row.status = "available"
+
+
+def _final_exam_state(version: CourseVersion, enrollment: UserCourseEnrollment) -> tuple[bool, bool, str]:
+    """Expose only lifecycle state; the final-exam implementation comes in its own sprint."""
+
+    if not version.requires_final_exam:
+        return False, False, "not_required"
+    if enrollment.status == "awaiting_final_exam":
+        return True, True, "available"
+    if enrollment.status == "completed":
+        return True, False, "passed"
+    return True, False, "locked"
+
+
+def _requires_final_exam(db: Session, enrollment: UserCourseEnrollment) -> bool:
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not version or version.course_id != enrollment.course_id:
+        raise HTTPException(status_code=409, detail="نسخه دوره با ثبت‌نام کاربر همخوانی ندارد.")
+    return bool(version.requires_final_exam)
+
+
+def _assessment_out(
+    stage: CourseModuleStageContent,
+    progress: UserModuleStageProgress,
+) -> StageAssessmentOut | None:
+    config = stage.evaluation_config_json if isinstance(stage.evaluation_config_json, dict) else None
+    if not config:
+        return None
+    result = progress.evaluation_json if isinstance(progress.evaluation_json, dict) else {}
+    pass_score = config.get("pass_score")
+    return StageAssessmentOut(
+        evaluated=progress.evaluated_at is not None,
+        score=progress.score,
+        passed=result.get("passed") if isinstance(result.get("passed"), bool) else None,
+        pass_score=pass_score if isinstance(pass_score, int) else None,
+        feedback=str(result["feedback"]) if result.get("feedback") else None,
+        attempt_count=int(progress.assessment_attempt_count or 0),
+    )
+
+
+def _evaluate_module_assessment(
+    stage: CourseModuleStageContent,
+    progress: UserModuleStageProgress,
+    payload: StageCompleteIn | None,
+) -> StageAssessmentOut:
+    """Grade a seeded multiple-choice assessment without exposing private answer keys."""
+
+    config = stage.evaluation_config_json if isinstance(stage.evaluation_config_json, dict) else {}
+    questions = config.get("questions") if isinstance(config.get("questions"), list) else []
+    pass_score = config.get("pass_score") if isinstance(config.get("pass_score"), int) else 60
+    response = payload.response if payload and isinstance(payload.response, dict) else {}
+    raw_answers = response.get("answers") if isinstance(response.get("answers"), dict) else {}
+    answers = {str(key): str(value).strip() for key, value in raw_answers.items() if isinstance(value, str)}
+
+    total_weight = sum(
+        item.get("weight", 0)
+        for item in questions
+        if isinstance(item, dict) and isinstance(item.get("weight", 0), int)
+    )
+    earned_weight = 0
+    answered_count = 0
+    for question in questions:
+        if not isinstance(question, dict):
+            continue
+        question_id = str(question.get("id") or "")
+        expected = str(question.get("correct_option") or "").strip()
+        weight = question.get("weight", 0)
+        if not question_id or not expected or not isinstance(weight, int):
+            continue
+        answer = answers.get(question_id)
+        if answer:
+            answered_count += 1
+        if answer == expected:
+            earned_weight += weight
+
+    score = round(earned_weight * 100 / total_weight) if total_weight else 0
+    passed = bool(questions) and answered_count == len(questions) and score >= pass_score
+    if not questions:
+        feedback = "تنظیمات آزمونک این مرحله کامل نیست؛ فعلا نمی‌توان آن را ارزیابی کرد."
+    elif answered_count < len(questions):
+        feedback = "برای ثبت نتیجه، به همه سوال‌های آزمونک پاسخ بده."
+    elif passed:
+        feedback = f"آفرین، با نمره {score} این آزمونک را با موفقیت گذراندی."
+    else:
+        feedback = f"نمره تو {score} شد. حداقل نمره عبور {pass_score} است؛ پاسخ‌ها را مرور و دوباره تلاش کن."
+
+    progress.response_json = response
+    progress.score = score
+    progress.evaluation_json = {
+        "passed": passed,
+        "feedback": feedback,
+        "answered_count": answered_count,
+        "question_count": len(questions),
+    }
+    progress.assessment_attempt_count = int(progress.assessment_attempt_count or 0) + 1
+    progress.evaluated_at = datetime.now(timezone.utc)
+    return _assessment_out(stage, progress) or StageAssessmentOut(
+        evaluated=True,
+        score=score,
+        passed=passed,
+        pass_score=pass_score,
+        feedback=feedback,
+        attempt_count=progress.assessment_attempt_count,
+    )
 
 
 def _module_learning_path_out(
@@ -378,7 +566,7 @@ def _module_learning_path_out(
                 title=stage.title,
                 status=progress.status,
                 is_current=(
-                    enrollment.status != "completed"
+                    enrollment.status not in ("completed", "awaiting_final_exam")
                     and ordinal == enrollment.current_stage_number
                 ),
                 module_id=module.id,
@@ -416,6 +604,7 @@ def _module_learning_path_out(
             )
         )
 
+    final_exam_required, final_exam_available, final_exam_status = _final_exam_state(version, enrollment)
     return LearningPathOut(
         enrollment_id=enrollment.id,
         course_id=course.id,
@@ -432,6 +621,9 @@ def _module_learning_path_out(
         stages=stage_summaries,
         module_count=len(modules),
         modules=modules,
+        final_exam_required=final_exam_required,
+        final_exam_available=final_exam_available,
+        final_exam_status=final_exam_status,
     )
 
 
@@ -441,16 +633,19 @@ def _module_current_stage_out(
     stages: list[CourseModuleStageContent],
     progress_rows: list[UserModuleStageProgress],
 ) -> LearningStageOut:
-    ordinal = len(stages) if enrollment.status == "completed" else enrollment.current_stage_number
+    terminal = enrollment.status in ("completed", "awaiting_final_exam")
+    ordinal = len(stages) if terminal else enrollment.current_stage_number
     if ordinal < 1 or ordinal > len(stages):
         raise HTTPException(status_code=409, detail="مرحله جاری این مسیر آموزشی معتبر نیست.")
     stage = stages[ordinal - 1]
     progress = progress_rows[ordinal - 1]
     module = stage.course_module
     course = db.get(Course, enrollment.course_id)
-    if not course or not module:
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not course or not module or not version or version.course_id != course.id:
         raise HTTPException(status_code=409, detail="محتوای سرفصل این مسیر پیدا نشد.")
     content = stage.content_json if isinstance(stage.content_json, dict) else {}
+    _, final_exam_available, _ = _final_exam_state(version, enrollment)
     return LearningStageOut(
         enrollment_id=enrollment.id,
         course_id=course.id,
@@ -473,7 +668,10 @@ def _module_current_stage_out(
         module_number=module.module_number,
         module_title=module.title,
         module_stage_number=stage.stage_number,
+        module_stage_count=_module_stage_count(version),
         total_module_count=len({item.course_module_id for item in stages}),
+        final_exam_available=final_exam_available,
+        assessment=_assessment_out(stage, progress),
     )
 
 
@@ -484,10 +682,17 @@ def _complete_module_learning_stage(
     payload: StageCompleteIn | None,
 ) -> StageCompleteOut:
     stages = _approved_module_stages(db, enrollment.course_version_id)
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not version:
+        raise HTTPException(status_code=409, detail="نسخه دوره پیدا نشد.")
     if stage_number < 1 or stage_number > len(stages):
         raise HTTPException(status_code=404, detail="مرحله آموزشی پیدا نشد.")
     progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
-    _sync_module_enrollment_progress(enrollment, progress_rows)
+    _sync_module_enrollment_progress(
+        enrollment,
+        progress_rows,
+        requires_final_exam=version.requires_final_exam,
+    )
     stage = stages[stage_number - 1]
     progress = progress_rows[stage_number - 1]
 
@@ -497,7 +702,31 @@ def _complete_module_learning_stage(
             detail=f"ابتدا مرحله {enrollment.current_stage_number} را کامل کن.",
         )
 
+    assessment = _assessment_out(stage, progress)
     if progress.status != "completed":
+        if stage.template.code == "module_assessment":
+            assessment = _evaluate_module_assessment(stage, progress, payload)
+            if not assessment.passed:
+                _sync_module_enrollment_progress(
+                    enrollment,
+                    progress_rows,
+                    requires_final_exam=version.requires_final_exam,
+                )
+                db.commit()
+                db.refresh(enrollment)
+                path = _module_learning_path_out(db, enrollment, stages, progress_rows)
+                content = stage.content_json if isinstance(stage.content_json, dict) else {}
+                return StageCompleteOut(
+                    enrollment_id=enrollment.id,
+                    completed_stage_number=stage_number,
+                    next_stage_number=enrollment.current_stage_number,
+                    course_completed=False,
+                    progress_percentage=enrollment.progress_percentage,
+                    coaching=_coaching_checkpoint(content, enabled=True, stage_number=stage_number),
+                    path=path,
+                    stage_completed=False,
+                    assessment=assessment,
+                )
         progress.status = "completed"
         progress.completed_at = datetime.now(timezone.utc)
         if payload and payload.response is not None:
@@ -506,17 +735,22 @@ def _complete_module_learning_stage(
             next_progress = progress_rows[stage_number]
             if next_progress.status in ("locked", "not_started"):
                 next_progress.status = "available"
-        _sync_module_enrollment_progress(enrollment, progress_rows)
+        _sync_module_enrollment_progress(
+            enrollment,
+            progress_rows,
+            requires_final_exam=version.requires_final_exam,
+        )
         db.commit()
         db.refresh(enrollment)
 
     path = _module_learning_path_out(db, enrollment, stages, progress_rows)
     course_completed = enrollment.status == "completed"
+    learning_complete = enrollment.status in ("completed", "awaiting_final_exam")
     content = stage.content_json if isinstance(stage.content_json, dict) else {}
     return StageCompleteOut(
         enrollment_id=enrollment.id,
         completed_stage_number=stage_number,
-        next_stage_number=None if course_completed else enrollment.current_stage_number,
+        next_stage_number=None if learning_complete else enrollment.current_stage_number,
         course_completed=course_completed,
         progress_percentage=enrollment.progress_percentage,
         coaching=_coaching_checkpoint(
@@ -526,6 +760,8 @@ def _complete_module_learning_stage(
             stage_number=stage_number,
         ),
         path=path,
+        stage_completed=True,
+        assessment=assessment,
     )
 
 
@@ -560,7 +796,7 @@ def _current_enrollment(db: Session, user_id: int) -> UserCourseEnrollment:
         select(UserCourseEnrollment)
         .where(
             UserCourseEnrollment.user_id == user_id,
-            UserCourseEnrollment.status.in_(("active", "completed")),
+            UserCourseEnrollment.status.in_(("active", "awaiting_final_exam", "completed")),
         )
         .order_by(UserCourseEnrollment.updated_at.desc(), UserCourseEnrollment.id.desc())
         .limit(1)
@@ -708,7 +944,11 @@ def _resolve_coaching_stage(
             detail="کوچینگ هوشمند فقط برای نسخه جدید دوره فعال است.",
         )
     stages = _approved_module_stages(db, enrollment.course_version_id)
-    max_stage_number = len(stages) if enrollment.status == "completed" else enrollment.current_stage_number
+    max_stage_number = (
+        len(stages)
+        if enrollment.status in ("completed", "awaiting_final_exam")
+        else enrollment.current_stage_number
+    )
     stage_number = requested_stage_number or max_stage_number
     if stage_number < 1 or stage_number > max_stage_number:
         raise HTTPException(
@@ -744,6 +984,21 @@ def _coach_message_out(
         stage_number=stage_numbers.get(message.module_stage_content_id),
         citations=citations,
     )
+
+
+def _personalized_citations(raw_citations: object) -> list[CoachCitationOut]:
+    if not isinstance(raw_citations, list):
+        return []
+    citations: list[CoachCitationOut] = []
+    for item in raw_citations:
+        if not isinstance(item, dict):
+            continue
+        number = item.get("source_number")
+        title = item.get("title")
+        scope = item.get("scope")
+        if isinstance(number, int) and isinstance(title, str) and isinstance(scope, str):
+            citations.append(CoachCitationOut(source_number=number, title=title, scope=scope))
+    return citations
 
 
 @router.get("/health")
@@ -907,6 +1162,20 @@ def list_published_courses(db: Session = Depends(get_db)) -> list[CourseOut]:
     return [course for course in output if course]
 
 
+@router.get("/api/courses/slug/{course_slug}", response_model=CourseOverviewOut)
+def get_course_overview(course_slug: str, db: Session = Depends(get_db)) -> CourseOverviewOut:
+    course = db.scalars(
+        select(Course)
+        .where(Course.slug == course_slug, Course.status == "published")
+        .options(selectinload(Course.versions).selectinload(CourseVersion.stages))
+        .limit(1)
+    ).first()
+    overview = _course_overview_out(db, course) if course else None
+    if not overview:
+        raise HTTPException(status_code=404, detail="دوره منتشرشده پیدا نشد.")
+    return overview
+
+
 @router.post("/api/courses/{course_id}/enroll", response_model=EnrollmentOut)
 def enroll_course(
     course_id: int,
@@ -953,7 +1222,11 @@ def enroll_course(
 
     if uses_modules:
         module_progress_rows = _ensure_module_stage_progress(db, enrollment, module_stages)
-        _sync_module_enrollment_progress(enrollment, module_progress_rows)
+        _sync_module_enrollment_progress(
+            enrollment,
+            module_progress_rows,
+            requires_final_exam=version.requires_final_exam,
+        )
     else:
         progress_rows = _ensure_stage_progress(db, enrollment, stages)
         _sync_enrollment_progress(enrollment, progress_rows)
@@ -980,7 +1253,11 @@ def get_current_learning_path(
     if _uses_module_structure(db, enrollment.course_version_id):
         stages = _approved_module_stages(db, enrollment.course_version_id)
         progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
-        _sync_module_enrollment_progress(enrollment, progress_rows)
+        _sync_module_enrollment_progress(
+            enrollment,
+            progress_rows,
+            requires_final_exam=_requires_final_exam(db, enrollment),
+        )
         db.commit()
         return _module_learning_path_out(db, enrollment, stages, progress_rows)
     stages = _approved_stages(db, enrollment.course_version_id)
@@ -1000,7 +1277,11 @@ def get_learning_path(
     if _uses_module_structure(db, enrollment.course_version_id):
         stages = _approved_module_stages(db, enrollment.course_version_id)
         progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
-        _sync_module_enrollment_progress(enrollment, progress_rows)
+        _sync_module_enrollment_progress(
+            enrollment,
+            progress_rows,
+            requires_final_exam=_requires_final_exam(db, enrollment),
+        )
         db.commit()
         return _module_learning_path_out(db, enrollment, stages, progress_rows)
     stages = _approved_stages(db, enrollment.course_version_id)
@@ -1089,7 +1370,11 @@ def get_current_learning_stage(
     if _uses_module_structure(db, enrollment.course_version_id):
         stages = _approved_module_stages(db, enrollment.course_version_id)
         progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
-        _sync_module_enrollment_progress(enrollment, progress_rows)
+        _sync_module_enrollment_progress(
+            enrollment,
+            progress_rows,
+            requires_final_exam=_requires_final_exam(db, enrollment),
+        )
         db.commit()
         return _module_current_stage_out(db, enrollment, stages, progress_rows)
     stages = _approved_stages(db, enrollment.course_version_id)
@@ -1117,6 +1402,68 @@ def get_current_learning_stage(
         course_completed=enrollment.status == "completed",
         content=content,
         coaching=_coaching_checkpoint(content, enrollment.status == "completed"),
+    )
+
+
+@router.post(
+    "/api/learning/enrollments/{enrollment_id}/stages/{stage_number}/personalized-example",
+    response_model=PersonalizedStageContentOut,
+)
+async def get_personalized_stage_example(
+    enrollment_id: int,
+    stage_number: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> PersonalizedStageContentOut:
+    """Create one cached job-aware example only for the learner's reachable stage."""
+
+    enrollment = _owned_enrollment(db, enrollment_id, user.id)
+    if not _uses_module_structure(db, enrollment.course_version_id):
+        raise HTTPException(status_code=409, detail="مثال شخصی‌سازی‌شده برای این نسخه دوره در دسترس نیست.")
+    stages = _approved_module_stages(db, enrollment.course_version_id)
+    if stage_number < 1 or stage_number > len(stages):
+        raise HTTPException(status_code=404, detail="مرحله آموزشی پیدا نشد.")
+    reachable_stage = (
+        len(stages)
+        if enrollment.status in ("completed", "awaiting_final_exam")
+        else enrollment.current_stage_number
+    )
+    if stage_number > reachable_stage:
+        raise HTTPException(status_code=409, detail="ابتدا به این مرحله از مسیر آموزشی برس.")
+
+    stage = stages[stage_number - 1]
+    if stage.template.code != "personalized_work_example":
+        raise HTTPException(status_code=409, detail="این مرحله نمونه شخصی‌سازی‌شده ندارد.")
+    progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
+    progress = progress_rows[stage_number - 1]
+    cached_content = progress.generated_content_json
+    if isinstance(cached_content, dict):
+        citations = _personalized_citations(progress.generated_content_sources_json)
+        return PersonalizedStageContentOut(
+            cached=True,
+            grounded=bool(citations),
+            content=cached_content,
+            citations=citations,
+        )
+
+    generated = await generate_personalized_work_example(
+        db,
+        user=user,
+        enrollment=enrollment,
+        stage=stage,
+        stage_number=stage_number,
+    )
+    progress.generated_content_json = generated.content
+    progress.generated_content_sources_json = generated.citations
+    progress.generated_content_model = generated.model
+    progress.generated_content_prompt_version = generated.prompt_version
+    progress.generated_content_at = datetime.now(timezone.utc)
+    db.commit()
+    return PersonalizedStageContentOut(
+        cached=False,
+        grounded=generated.grounded,
+        content=generated.content,
+        citations=[CoachCitationOut(**citation) for citation in generated.citations],
     )
 
 

@@ -26,6 +26,31 @@ def _mock_response(system_prompt: str, user_message: str) -> str:
         or user_message
     ).strip()
 
+    if "ZITO_PERSONALIZED_WORK_EXAMPLE_V1" in system_prompt:
+        learner_context = message_data.get("learner_context") if isinstance(message_data, dict) else {}
+        learner = learner_context.get("learner") if isinstance(learner_context, dict) else {}
+        module = learner_context.get("module") if isinstance(learner_context, dict) else {}
+        field = str(learner.get("work_or_study_field") or learner.get("preferred_career_path") or "مسیر حرفه‌ای تو")
+        module_title = str(module.get("title") or "این سرفصل")
+        return json.dumps(
+            {
+                "title": f"یک موقعیت کاربردی در {field}",
+                "scenario": (
+                    f"فرض کن در {field} می‌خواهی آموخته‌های «{module_title}» را به یک تصمیم روزانه تبدیل کنی. "
+                    "ابتدا مسئله را کوتاه و بدون داده حساس تعریف می‌کنی، سپس از AI برای پیشنهاد اولیه کمک می‌گیری "
+                    "و نتیجه را با شرایط واقعی و بررسی انسانی تطبیق می‌دهی."
+                ),
+                "application_steps": [
+                    "یک مسئله کوچک و واقعی را مشخص کن.",
+                    "از AI فقط برای تولید گزینه‌های اولیه کمک بگیر.",
+                    "گزینه‌ها را با داده‌ها و مسئولیت حرفه‌ای خودت بررسی کن.",
+                ],
+                "reflection_question": "کدام بخش این مثال را می‌توانی همین هفته در مسیر خودت امتحان کنی؟",
+                "source_numbers": [1],
+            },
+            ensure_ascii=False,
+        )
+
     if "ZITO_COURSE_COACH_V" in system_prompt:
         question = str(message_data.get("learner_question") or answer_text).strip()
         return json.dumps(

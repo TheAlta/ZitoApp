@@ -30,10 +30,10 @@ class DatabaseAuditTests(unittest.TestCase):
             "course_version_mismatches": 0,
             "invalid_progress_rows": 0,
         })
-        self.assertEqual(report["learning_structure"]["module_based_course_versions"], 1)
+        self.assertEqual(report["learning_structure"]["module_based_course_versions"], 2)
         self.assertEqual(report["learning_structure"]["flat_compatibility_course_versions"], 1)
         self.assertEqual(report["learning_structure"]["flat_compatibility_enrollments"], 0)
-        self.assertEqual(report["rag_index_jobs"], {"queued": 6})
+        self.assertEqual(report["rag_index_jobs"], {"queued": 12})
 
 
 if __name__ == "__main__":

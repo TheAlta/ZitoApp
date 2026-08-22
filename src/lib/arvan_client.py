@@ -26,6 +26,77 @@ def _mock_response(system_prompt: str, user_message: str) -> str:
         or user_message
     ).strip()
 
+    if "ZITO_FINAL_EXAM_GENERATION_V1" in system_prompt:
+        return json.dumps(
+            {
+                "questions": [
+                    {
+                        "id": "final-q-1",
+                        "type": "open",
+                        "question": "توضیح بده چرا هوش مصنوعی در مسیر توسعه فردی باید دستیار تصمیم‌گیری باشد، نه جایگزین قضاوت انسانی.",
+                        "rubric": "تفاوت کمک AI با تصمیم انسانی، بررسی نتیجه و مسئولیت‌پذیری را توضیح دهد.",
+                        "max_score": 34,
+                    },
+                    {
+                        "id": "final-q-2",
+                        "type": "scenario",
+                        "question": "فرض کن برای یک هدف یادگیری، AI چند پیشنهاد داده است. مسیر کوتاه و مسئولانه تو برای انتخاب و اجرای یک پیشنهاد چیست؟",
+                        "rubric": "هدف روشن، بررسی پیشنهادها، اقدام کوچک و بازبینی نتیجه را پوشش دهد.",
+                        "max_score": 33,
+                    },
+                    {
+                        "id": "final-q-3",
+                        "type": "open",
+                        "question": "دو کاری را بنویس که برای حفظ حریم خصوصی و کیفیت خروجی AI در یک تمرین واقعی انجام می‌دهی.",
+                        "rubric": "پرهیز از داده حساس و کنترل خروجی با منبع یا قضاوت انسانی را بیان کند.",
+                        "max_score": 33,
+                    },
+                ]
+            },
+            ensure_ascii=False,
+        )
+
+    if "ZITO_FINAL_EXAM_GRADING_V1" in system_prompt:
+        exam = message_data.get("exam") if isinstance(message_data, dict) else {}
+        questions = exam.get("questions") if isinstance(exam, dict) else []
+        answers = message_data.get("answers") if isinstance(message_data, dict) else {}
+        answers = answers if isinstance(answers, dict) else {}
+        meaningful = bool(questions) and all(
+            len(str(answers.get(item.get("id"), "")).strip().split()) >= 4
+            for item in questions
+            if isinstance(item, dict)
+        )
+        score = 82 if meaningful else 45
+        question_feedback = []
+        for index, item in enumerate(questions if isinstance(questions, list) else []):
+            if not isinstance(item, dict):
+                continue
+            max_score = int(item.get("max_score") or 0)
+            earned = [28, 27, 27][index] if meaningful and index < 3 else min(max_score, 15)
+            question_feedback.append(
+                {
+                    "question_id": str(item.get("id") or ""),
+                    "score": earned,
+                    "feedback": (
+                        "پاسخ روشن است و مسیر عملی و مسئولانه‌ای را نشان می‌دهد."
+                        if meaningful
+                        else "پاسخ را با توضیح، مثال یا گام عملی دقیق‌تر کامل کن."
+                    ),
+                }
+            )
+        return json.dumps(
+            {
+                "score": score,
+                "feedback": (
+                    "آفرین، مفاهیم اصلی دوره را با نگاه عملی و مسئولانه جمع‌بندی کردی."
+                    if meaningful
+                    else "هنوز برای عبور از آزمون نیاز به پاسخ‌های کامل‌تر و کاربردی‌تر داری."
+                ),
+                "question_feedback": question_feedback,
+            },
+            ensure_ascii=False,
+        )
+
     if "ZITO_PERSONALIZED_WORK_EXAMPLE_V1" in system_prompt:
         learner_context = message_data.get("learner_context") if isinstance(message_data, dict) else {}
         learner = learner_context.get("learner") if isinstance(learner_context, dict) else {}

@@ -130,6 +130,34 @@ COURSE_V3_OVERVIEW = {
     "final_exam_label": "پس از پایان همه سرفصل‌ها، آزمون نهایی دوره را می‌دهی.",
 }
 
+
+# This approved set is the resilient baseline for the final exam. The learner
+# flow asks the AI to generate a grounded variant first and uses these only if
+# the model or retrieval layer is temporarily unavailable.
+V3_FINAL_EXAM_FALLBACK_QUESTIONS = [
+    {
+        "id": "final-q-1",
+        "type": "open",
+        "question": "برای یکی از هدف‌های توسعه فردی خودت، یک برنامه کوتاه و قابل اجرا طراحی کن.",
+        "rubric": "هدف روشن، یک اقدام کوچک، زمان‌بندی واقع‌بینانه و معیار بازبینی را توضیح دهد.",
+        "max_score": 34,
+    },
+    {
+        "id": "final-q-2",
+        "type": "scenario",
+        "question": "اگر یک هفته از برنامه یادگیری عقب افتادی، مسیر را چطور اصلاح می‌کنی؟",
+        "rubric": "به بازبینی دلیل عقب‌افتادن، کاهش فشار، اولویت‌بندی و ادامه پایدار اشاره کند.",
+        "max_score": 33,
+    },
+    {
+        "id": "final-q-3",
+        "type": "open",
+        "question": "برای استفاده مسئولانه از یک پیشنهاد AI در مسیر حرفه‌ای خودت چه مراحلی را انجام می‌دهی؟",
+        "rubric": "به بررسی منبع و فرض‌ها، تطبیق با شرایط واقعی و قضاوت انسانی اشاره کند.",
+        "max_score": 33,
+    },
+]
+
 PHASE2_MODULES = [
     {
         "number": 1,
@@ -1104,20 +1132,21 @@ def _seed_eight_stage_module_version(
     )
 
     exam = db.scalars(select(Exam).where(Exam.course_version_id == version.id)).first()
-    if not exam:
+    if exam:
+        exam.title = "آزمون نهایی توسعه فردی با هوش مصنوعی"
+        exam.questions_json = deepcopy(V3_FINAL_EXAM_FALLBACK_QUESTIONS)
+        exam.passing_score = 70
+        exam.status = "published"
+    else:
         db.add(
             Exam(
                 course_version_id=version.id,
                 title="آزمون نهایی توسعه فردی با هوش مصنوعی",
-                questions_json=[],
+                questions_json=deepcopy(V3_FINAL_EXAM_FALLBACK_QUESTIONS),
                 passing_score=70,
-                status="draft",
+                status="published",
             )
         )
-    elif exam.status == "draft":
-        exam.title = "آزمون نهایی توسعه فردی با هوش مصنوعی"
-        exam.questions_json = []
-        exam.passing_score = 70
     return version
 
 

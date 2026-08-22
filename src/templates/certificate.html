@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>گواهی پایان دوره | زیتو</title>
+  <style>
+    @font-face { font-family: "YekanZito"; src: local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan"); font-display: swap; }
+    :root { --font-yekan: "YekanZito", "Yekan", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif; --ink: #453654; --soft: #7d6d88; --plum: #7a5cb2; --sky: #5b9eaf; --peach: #e9a27f; --paper: #fffdfa; --line: rgba(124, 92, 162, .22); }
+    * { box-sizing: border-box; }
+    body { min-width: 320px; min-height: 100vh; margin: 0; color: var(--ink); font-family: var(--font-yekan); background: radial-gradient(circle at 8% 14%, rgba(234, 165, 126, .20), transparent 24%), radial-gradient(circle at 90% 82%, rgba(111, 158, 187, .16), transparent 28%), linear-gradient(180deg, #fffaf6, #f6f0f8); }
+    button { font: inherit; }
+    .page { width: min(1050px, calc(100% - 34px)); margin: 0 auto; padding: 26px 0 52px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+    .brand img { width: 40px; height: 40px; object-fit: contain; }
+    .brand strong { font-size: 16px; letter-spacing: .07em; }
+    .back-link { color: #705b84; font-size: 13px; font-weight: 900; text-decoration: none; }
+    .certificate { position: relative; min-height: 650px; overflow: hidden; padding: clamp(30px, 6vw, 74px); border: 1px solid var(--line); border-radius: 28px; background: linear-gradient(135deg, rgba(255, 254, 252, .98), rgba(251, 243, 249, .94) 55%, rgba(240, 249, 248, .96)); box-shadow: 0 28px 70px rgba(115, 78, 127, .13), inset 0 1px 0 rgba(255,255,255,.94); text-align: center; }
+    .certificate::before, .certificate::after { content: ""; position: absolute; pointer-events: none; border-radius: 50%; }
+    .certificate::before { top: -138px; right: -108px; width: 310px; height: 310px; border: 1px solid rgba(133, 91, 179, .16); box-shadow: 0 0 0 28px rgba(133, 91, 179, .04), 0 0 0 57px rgba(91, 158, 175, .035); }
+    .certificate::after { bottom: -160px; left: -108px; width: 330px; height: 330px; border: 1px solid rgba(91, 158, 175, .15); box-shadow: 0 0 0 31px rgba(233, 162, 127, .04); }
+    .certificate-inner { position: relative; z-index: 1; display: grid; align-content: center; min-height: 500px; }
+    .seal { display: grid; place-items: center; width: 91px; height: 91px; margin: 0 auto 17px; color: #fff; border: 7px solid rgba(255,255,255,.75); border-radius: 50%; background: linear-gradient(145deg, #8e6dca, #59a2b0); box-shadow: 0 14px 33px rgba(124, 91, 172, .24); font-size: 35px; font-weight: 900; }
+    .eyebrow { margin: 0; color: #7c5c9c; font-size: 12px; font-weight: 900; letter-spacing: .06em; }
+    h1 { margin: 12px 0 7px; color: #463354; font-size: clamp(31px, 5vw, 54px); line-height: 1.35; }
+    .intro { max-width: 620px; margin: 0 auto; color: var(--soft); line-height: 2; font-size: clamp(14px, 1.7vw, 17px); }
+    .recipient { margin: 28px 0 8px; color: #5d4674; font-size: clamp(27px, 4vw, 43px); line-height: 1.4; }
+    .course { margin: 0; color: #6b5f75; font-size: clamp(15px, 2vw, 20px); line-height: 2; }
+    .facts { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 30px auto 0; }
+    .fact { min-width: 140px; padding: 11px 15px; border: 1px solid rgba(121, 90, 161, .15); border-radius: 14px; background: rgba(255,253,250,.72); text-align: right; }
+    .fact span, .fact strong { display: block; }
+    .fact span { color: #927f9c; font-size: 10px; }
+    .fact strong { margin-top: 3px; color: #5b4c67; font-size: 13px; }
+    .verification { display: inline-flex; align-items: center; gap: 8px; margin: 29px auto 0; padding: 9px 14px; color: #5f857e; border: 1px solid rgba(74, 151, 127, .20); border-radius: 999px; background: rgba(229, 246, 238, .65); font-size: 11px; font-weight: 900; }
+    .verification::before { width: 8px; height: 8px; border-radius: 50%; background: #3ca27c; box-shadow: 0 0 0 4px rgba(60, 162, 124, .11); content: ""; }
+    .certificate-number { margin: 13px 0 0; color: #8d7f95; font: 700 11px/1.8 Arial, sans-serif; letter-spacing: .08em; direction: ltr; }
+    .actions { display: flex; justify-content: center; gap: 10px; margin-top: 22px; }
+    .print-button { min-width: 166px; height: 46px; padding: 0 18px; color: #fff; border: 0; border-radius: 14px; background: linear-gradient(135deg, #926cc8, #579fb0); box-shadow: 0 13px 28px rgba(128, 94, 166, .20); cursor: pointer; font-size: 13px; font-weight: 900; }
+    .loading, .error { min-height: 530px; display: grid; place-items: center; color: var(--soft); line-height: 2; }
+    .error strong { display: block; color: #754a5d; font-size: 18px; }
+    @media (max-width: 560px) { .page { width: min(100% - 20px, 1050px); padding-top: 12px; } .topbar { margin-bottom: 12px; } .certificate { min-height: 580px; padding: 32px 19px; border-radius: 22px; } .certificate-inner { min-height: 465px; } .fact { min-width: calc(50% - 6px); } }
+    @media print { @page { size: A4 landscape; margin: 10mm; } body { background: #fff; } .page { width: 100%; padding: 0; } .topbar, .actions { display: none; } .certificate { min-height: 180mm; border-radius: 0; box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <a class="brand" href="/app/" aria-label="بازگشت به زیتو"><img src="/landing-static/zito-logo.svg" alt=""><strong>ZITO</strong></a>
+      <a class="back-link" href="/app/">بازگشت به مسیر یادگیری</a>
+    </header>
+    <section id="certificate" class="certificate" aria-live="polite"><div class="loading">در حال بررسی اعتبار گواهی...</div></section>
+  </main>
+  <script>
+    const root = document.querySelector("#certificate");
+    const number = decodeURIComponent(window.location.pathname.split("/").filter(Boolean).at(-1) || "");
+    const escapeHtml = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    const formatDate = (value) => {
+      try { return new Intl.DateTimeFormat("fa-IR", { dateStyle: "long" }).format(new Date(value)); }
+      catch (_) { return "تاریخ نامشخص"; }
+    };
+    function renderCertificate(data) {
+      root.innerHTML = `<div class="certificate-inner">
+        <div class="seal">Z</div>
+        <p class="eyebrow">گواهی پایان دوره زیتو</p>
+        <h1>با افتخار به</h1>
+        <h2 class="recipient">${escapeHtml(data.recipient_name)}</h2>
+        <p class="intro">به پاس تکمیل موفق مسیر یادگیری و عبور از ارزیابی نهایی، این گواهی صادر می‌شود.</p>
+        <p class="course">دوره «${escapeHtml(data.course_title)}» · نسخه ${escapeHtml(data.course_version_number)}</p>
+        <div class="facts">
+          <div class="fact"><span>نمره نهایی</span><strong>${escapeHtml(data.score)} از ۱۰۰</strong></div>
+          <div class="fact"><span>حدنصاب قبولی</span><strong>${escapeHtml(data.passing_score)} از ۱۰۰</strong></div>
+          <div class="fact"><span>تاریخ صدور</span><strong>${escapeHtml(formatDate(data.issued_at))}</strong></div>
+        </div>
+        <div class="verification">گواهی معتبر و قابل استعلام است</div>
+        <p class="certificate-number">${escapeHtml(data.certificate_number)}</p>
+        <div class="actions"><button class="print-button" type="button" onclick="window.print()">چاپ یا ذخیره PDF</button></div>
+      </div>`;
+    }
+    async function loadCertificate() {
+      try {
+        const response = await fetch(`/api/certificates/${encodeURIComponent(number)}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.valid) throw new Error(data.detail || "گواهی معتبر پیدا نشد.");
+        renderCertificate(data);
+      } catch (error) {
+        root.innerHTML = `<div class="error"><div><strong>گواهی قابل نمایش نیست</strong><p>${escapeHtml(error.message || "این شماره گواهی معتبر نیست.")}</p></div></div>`;
+      }
+    }
+    loadCertificate();
+  </script>
+</body>
+</html>

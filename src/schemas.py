@@ -226,6 +226,63 @@ class PersonalizedStageContentOut(BaseModel):
     citations: list[CoachCitationOut] = Field(default_factory=list)
 
 
+class FinalExamQuestionOut(BaseModel):
+    id: str
+    type: str
+    question: str
+    max_score: int
+
+
+class FinalExamAttemptOut(BaseModel):
+    id: int
+    enrollment_id: int
+    title: str
+    passing_score: int
+    status: str
+    attempt_number: int
+    questions: list[FinalExamQuestionOut] = Field(default_factory=list)
+    generation_method: str
+    created_at: datetime
+    submitted_at: datetime | None = None
+
+
+class CertificateOut(BaseModel):
+    certificate_number: str
+    recipient_name: str
+    course_title: str
+    course_version_number: int
+    score: int
+    passing_score: int
+    status: str
+    issued_at: datetime
+
+
+class FinalExamStateOut(BaseModel):
+    enrollment_id: int
+    status: str
+    title: str | None = None
+    passing_score: int | None = None
+    attempt: FinalExamAttemptOut | None = None
+    certificate: CertificateOut | None = None
+
+
+class FinalExamSubmitIn(BaseModel):
+    answers: dict[str, str] = Field(default_factory=dict)
+
+
+class FinalExamResultOut(BaseModel):
+    attempt: FinalExamAttemptOut
+    score: int
+    passed: bool
+    feedback: str
+    question_feedback: list[dict[str, Any]] = Field(default_factory=list)
+    certificate: CertificateOut | None = None
+
+
+class CertificateVerificationOut(CertificateOut):
+    valid: bool
+
+
 class CoachMessageOut(BaseModel):
     id: int
     role: str

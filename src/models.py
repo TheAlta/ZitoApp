@@ -758,21 +758,40 @@ class Exam(Base):
 
 class ExamAttempt(Base):
     __tablename__ = "exam_attempts"
+    __table_args__ = (
+        Index("ix_exam_attempts_enrollment_status_created", "enrollment_id", "status", "created_at"),
+        CheckConstraint("score IS NULL OR (score >= 0 AND score <= 100)", name="ck_exam_attempts_score"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     exam_id: Mapped[int] = mapped_column(ForeignKey("exams.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     enrollment_id: Mapped[int] = mapped_column(ForeignKey("user_course_enrollments.id", ondelete="CASCADE"), nullable=True)
     answers_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    # A learner keeps the exact questions and rubrics that were presented at
+    # the start of their attempt, even after a later CMS course revision.
+    questions_snapshot_json: Mapped[list] = mapped_column(JSON, nullable=True)
+    generation_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    status: Mapped[str] = mapped_column(String(40), default="in_progress", nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     score: Mapped[int] = mapped_column(Integer, nullable=True)
     passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     grading_feedback: Mapped[str] = mapped_column(Text, nullable=True)
+    grading_json: Mapped[dict] = mapped_column(JSON, nullable=True)
     graded_by_ai_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Certificate(Base):
     __tablename__ = "certificates"
+    __table_args__ = (
+        UniqueConstraint("user_id", "course_version_id", name="uq_certificates_user_course_version"),
+        CheckConstraint("score IS NULL OR (score >= 0 AND score <= 100)", name="ck_certificates_score"),
+        CheckConstraint(
+            "passing_score IS NULL OR (passing_score >= 0 AND passing_score <= 100)",
+            name="ck_certificates_passing_score",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -780,6 +799,11 @@ class Certificate(Base):
     course_version_id: Mapped[int] = mapped_column(ForeignKey("course_versions.id", ondelete="CASCADE"), nullable=False)
     exam_attempt_id: Mapped[int] = mapped_column(ForeignKey("exam_attempts.id", ondelete="SET NULL"), nullable=True)
     certificate_number: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    recipient_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    course_title: Mapped[str] = mapped_column(String(255), nullable=True)
+    course_version_number: Mapped[int] = mapped_column(Integer, nullable=True)
+    score: Mapped[int] = mapped_column(Integer, nullable=True)
+    passing_score: Mapped[int] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(40), default="issued", nullable=False)
     issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

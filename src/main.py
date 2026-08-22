@@ -58,6 +58,11 @@ def course_overview_ui(course_slug: str) -> HTMLResponse:
     return _html("course_overview.html")
 
 
+@app.get("/certificate/{certificate_number}", response_class=HTMLResponse)
+def certificate_ui(certificate_number: str) -> HTMLResponse:
+    return _html("certificate.html")
+
+
 @app.get("/admin/login", response_class=HTMLResponse)
 def admin_login_ui() -> HTMLResponse:
     return _html("admin_login.html")

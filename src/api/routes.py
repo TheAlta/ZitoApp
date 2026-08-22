@@ -8,12 +8,15 @@ from sqlalchemy.orm import Session, selectinload
 
 from src.db import get_db
 from src.models import (
+    Certificate,
     CoachMessage,
     Course,
     CourseModule,
     CourseModuleStageContent,
     CourseStageContent,
     CourseVersion,
+    Exam,
+    ExamAttempt,
     LearningStageTemplate,
     User,
     UserCourseEnrollment,
@@ -24,6 +27,8 @@ from src.models import (
 from src.schemas import (
     AdminLoginIn,
     AdminLoginOut,
+    CertificateOut,
+    CertificateVerificationOut,
     CoachCitationOut,
     CoachHistoryOut,
     CoachMessageOut,
@@ -34,6 +39,10 @@ from src.schemas import (
     CourseOverviewOut,
     CourseOut,
     EnrollmentOut,
+    FinalExamAttemptOut,
+    FinalExamResultOut,
+    FinalExamStateOut,
+    FinalExamSubmitIn,
     LearningPathOut,
     LearningModuleOut,
     LearningStageOut,
@@ -66,6 +75,18 @@ from src.security import (
 )
 from src.services.otp import OtpError, OtpRateLimitError, normalize_otp_code, request_otp, verify_otp
 from src.services.coach import answer_course_question, list_coach_messages
+from src.services.final_exam import (
+    FinalExamAIError,
+    FinalExamStateError,
+    attempt_number,
+    attempt_snapshot_questions,
+    grade_final_exam,
+    issued_certificate,
+    latest_attempt,
+    public_questions,
+    published_final_exam,
+    start_final_exam,
+)
 from src.services.personalized_stage import generate_personalized_work_example
 
 router = APIRouter()
@@ -428,7 +449,7 @@ def _sync_module_enrollment_progress(
 
 
 def _final_exam_state(version: CourseVersion, enrollment: UserCourseEnrollment) -> tuple[bool, bool, str]:
-    """Expose only lifecycle state; the final-exam implementation comes in its own sprint."""
+    """Expose the compact lifecycle state used by the learning-path views."""
 
     if not version.requires_final_exam:
         return False, False, "not_required"
@@ -437,6 +458,107 @@ def _final_exam_state(version: CourseVersion, enrollment: UserCourseEnrollment) 
     if enrollment.status == "completed":
         return True, False, "passed"
     return True, False, "locked"
+
+
+def _certificate_out(certificate: Certificate) -> CertificateOut:
+    if (
+        certificate.recipient_name is None
+        or certificate.course_title is None
+        or certificate.course_version_number is None
+        or certificate.score is None
+        or certificate.passing_score is None
+        or certificate.issued_at is None
+    ):
+        raise HTTPException(status_code=409, detail="اطلاعات گواهی این دوره ناقص است.")
+    return CertificateOut(
+        certificate_number=certificate.certificate_number,
+        recipient_name=certificate.recipient_name,
+        course_title=certificate.course_title,
+        course_version_number=certificate.course_version_number,
+        score=certificate.score,
+        passing_score=certificate.passing_score,
+        status=certificate.status,
+        issued_at=certificate.issued_at,
+    )
+
+
+def _final_exam_attempt_out(
+    db: Session,
+    *,
+    attempt: ExamAttempt,
+    exam: Exam,
+) -> FinalExamAttemptOut:
+    if attempt.enrollment_id is None or attempt.created_at is None:
+        raise HTTPException(status_code=409, detail="تلاش آزمون نهایی ناقص است.")
+    metadata = attempt.generation_json if isinstance(attempt.generation_json, dict) else {}
+    return FinalExamAttemptOut(
+        id=attempt.id,
+        enrollment_id=attempt.enrollment_id,
+        title=exam.title,
+        passing_score=exam.passing_score,
+        status=attempt.status,
+        attempt_number=attempt_number(db, attempt),
+        questions=public_questions(attempt_snapshot_questions(attempt)),
+        generation_method=str(metadata.get("method") or "approved_fallback"),
+        created_at=attempt.created_at,
+        submitted_at=attempt.submitted_at,
+    )
+
+
+def _final_exam_state_out(db: Session, enrollment: UserCourseEnrollment) -> FinalExamStateOut:
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not version or version.course_id != enrollment.course_id:
+        raise HTTPException(status_code=409, detail="نسخه دوره با ثبت‌نام کاربر همخوانی ندارد.")
+    if not version.requires_final_exam:
+        return FinalExamStateOut(enrollment_id=enrollment.id, status="not_required")
+
+    try:
+        exam = published_final_exam(db, enrollment)
+    except FinalExamStateError as exc:
+        if enrollment.status in {"awaiting_final_exam", "completed"}:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return FinalExamStateOut(enrollment_id=enrollment.id, status="locked")
+
+    certificate = issued_certificate(db, enrollment)
+    if certificate and certificate.status == "issued":
+        return FinalExamStateOut(
+            enrollment_id=enrollment.id,
+            status="passed",
+            title=exam.title,
+            passing_score=exam.passing_score,
+            certificate=_certificate_out(certificate),
+        )
+
+    if enrollment.status == "completed":
+        return FinalExamStateOut(
+            enrollment_id=enrollment.id,
+            status="passed",
+            title=exam.title,
+            passing_score=exam.passing_score,
+        )
+
+    active_attempt = latest_attempt(db, enrollment, exam)
+    if enrollment.status == "awaiting_final_exam" and active_attempt and active_attempt.status == "in_progress":
+        return FinalExamStateOut(
+            enrollment_id=enrollment.id,
+            status="in_progress",
+            title=exam.title,
+            passing_score=exam.passing_score,
+            attempt=_final_exam_attempt_out(db, attempt=active_attempt, exam=exam),
+        )
+    if enrollment.status == "awaiting_final_exam":
+        return FinalExamStateOut(
+            enrollment_id=enrollment.id,
+            status="available",
+            title=exam.title,
+            passing_score=exam.passing_score,
+        )
+    return FinalExamStateOut(
+        enrollment_id=enrollment.id,
+        status="locked",
+        title=exam.title,
+        passing_score=exam.passing_score,
+    )
 
 
 def _requires_final_exam(db: Session, enrollment: UserCourseEnrollment) -> bool:
@@ -1289,6 +1411,125 @@ def get_learning_path(
     _sync_enrollment_progress(enrollment, progress_rows)
     db.commit()
     return _learning_path_out(db, enrollment, stages, progress_rows)
+
+
+@router.get(
+    "/api/learning/enrollments/{enrollment_id}/final-exam",
+    response_model=FinalExamStateOut,
+)
+def get_final_exam_state(
+    enrollment_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> FinalExamStateOut:
+    enrollment = _owned_enrollment(db, enrollment_id, user.id)
+    return _final_exam_state_out(db, enrollment)
+
+
+@router.post(
+    "/api/learning/enrollments/{enrollment_id}/final-exam/start",
+    response_model=FinalExamAttemptOut,
+)
+async def begin_final_exam(
+    enrollment_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> FinalExamAttemptOut:
+    enrollment = _owned_enrollment(db, enrollment_id, user.id, for_update=True)
+    try:
+        session = await start_final_exam(db, user=user, enrollment=enrollment)
+        db.commit()
+        db.refresh(session.attempt)
+    except FinalExamStateError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _final_exam_attempt_out(db, attempt=session.attempt, exam=session.exam)
+
+
+@router.post(
+    "/api/learning/enrollments/{enrollment_id}/final-exam/attempts/{attempt_id}/submit",
+    response_model=FinalExamResultOut,
+)
+async def submit_final_exam(
+    enrollment_id: int,
+    attempt_id: int,
+    payload: FinalExamSubmitIn,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> FinalExamResultOut:
+    enrollment = _owned_enrollment(db, enrollment_id, user.id, for_update=True)
+    try:
+        result = await grade_final_exam(
+            db,
+            user=user,
+            enrollment=enrollment,
+            attempt_id=attempt_id,
+            raw_answers=payload.answers,
+        )
+        db.commit()
+        db.refresh(result.attempt)
+        if result.certificate:
+            db.refresh(result.certificate)
+    except FinalExamStateError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except FinalExamAIError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    certificate = (
+        _certificate_out(result.certificate)
+        if result.certificate and result.certificate.status == "issued"
+        else None
+    )
+    return FinalExamResultOut(
+        attempt=_final_exam_attempt_out(db, attempt=result.attempt, exam=result.exam),
+        score=result.score,
+        passed=result.passed,
+        feedback=result.feedback,
+        question_feedback=result.question_feedback,
+        certificate=certificate,
+    )
+
+
+@router.get(
+    "/api/learning/enrollments/{enrollment_id}/certificate",
+    response_model=CertificateOut,
+)
+def get_my_course_certificate(
+    enrollment_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> CertificateOut:
+    enrollment = _owned_enrollment(db, enrollment_id, user.id)
+    certificate = issued_certificate(db, enrollment)
+    if not certificate or certificate.status != "issued":
+        raise HTTPException(status_code=404, detail="گواهی پایان دوره هنوز صادر نشده است.")
+    return _certificate_out(certificate)
+
+
+@router.get("/api/certificates/{certificate_number}", response_model=CertificateVerificationOut)
+def verify_certificate(certificate_number: str, db: Session = Depends(get_db)) -> CertificateVerificationOut:
+    certificate = db.scalars(
+        select(Certificate).where(
+            Certificate.certificate_number == certificate_number.strip(),
+            Certificate.status == "issued",
+        )
+    ).first()
+    if not certificate:
+        raise HTTPException(status_code=404, detail="گواهی معتبر پیدا نشد.")
+    data = _certificate_out(certificate)
+    return CertificateVerificationOut(
+        certificate_number=data.certificate_number,
+        recipient_name=data.recipient_name,
+        course_title=data.course_title,
+        course_version_number=data.course_version_number,
+        score=data.score,
+        passing_score=data.passing_score,
+        status=data.status,
+        issued_at=data.issued_at,
+        valid=True,
+    )
 
 
 @router.get(

@@ -161,5 +161,6 @@ class Phase2SeedTests(unittest.TestCase):
         self.assertTrue(all(item.source_type == "mock_markdown" for item in active_kb_docs))
         self.assertEqual(exam.passing_score, 70)
         self.assertEqual(len(exam.questions_json), 2)
-        self.assertEqual(active_exam.status, "draft")
-        self.assertEqual(active_exam.questions_json, [])
+        self.assertEqual(active_exam.status, "published")
+        self.assertEqual(len(active_exam.questions_json), 3)
+        self.assertEqual(sum(item["max_score"] for item in active_exam.questions_json), 100)

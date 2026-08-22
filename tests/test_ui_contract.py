@@ -146,6 +146,27 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("/landing-static/zito-mascot.svg", html)
         self.assertIn("/api/courses/${course.id}/enroll", html)
 
+    def test_final_exam_and_certificate_have_dedicated_ui_contracts(self) -> None:
+        with TestClient(app) as client:
+            chat_response = client.get("/app/")
+            certificate_response = client.get("/certificate/ZITO-2026-DEMO")
+
+        self.assertEqual(chat_response.status_code, 200)
+        self.assertEqual(certificate_response.status_code, 200)
+        chat = chat_response.text
+        certificate = certificate_response.text
+        self.assertIn('id="finalExamModal"', chat)
+        self.assertIn('id="finalExamBody"', chat)
+        self.assertIn("requestFinalExamStart", chat)
+        self.assertIn("submitFinalExam", chat)
+        self.assertIn("/final-exam/start", chat)
+        self.assertIn("/final-exam/attempts/", chat)
+        self.assertIn("مشاهده و چاپ مدرک", chat)
+        self.assertIn("@media print", certificate)
+        self.assertIn("/api/certificates/", certificate)
+        self.assertIn("window.print()", certificate)
+        self.assertIn("گواهی پایان دوره زیتو", certificate)
+
     def test_admin_renders_canonical_profile_without_legacy_answers(self) -> None:
         admin_template = Path("src/templates/admin.html").read_text(encoding="utf-8")
         admin_login_template = Path("src/templates/admin_login.html").read_text(encoding="utf-8")

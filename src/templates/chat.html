@@ -1224,6 +1224,58 @@
     .assessment-feedback { margin-top: 15px; padding: 12px 14px; border-radius: 13px; background: rgba(239, 233, 249, .74); color: #62526f; line-height: 1.9; font-size: 12px; }
     .assessment-feedback.passed { color: #34725d; background: rgba(226, 245, 234, .82); }
     .final-exam-note { margin-top: 16px; padding: 14px 16px; color: #5d4a76; border: 1px solid rgba(121, 90, 183, .2); border-radius: 14px; background: rgba(241, 234, 250, .72); line-height: 1.9; }
+    .final-exam-note strong { display: block; color: #583f78; font-size: 14px; }
+    .final-exam-note p { margin: 5px 0 0; color: #75617f; font-size: 12px; }
+    .final-exam-open-button,
+    .final-exam-primary,
+    .final-exam-retry {
+      width: auto;
+      min-width: 174px;
+      height: 44px;
+      margin-top: 13px;
+      padding: 0 18px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .final-exam-modal { z-index: 42; }
+    .final-exam-modal .modal-chat { width: min(760px, 100%); max-height: min(790px, 94svh); grid-template-rows: auto minmax(270px, 1fr); }
+    .final-exam-body { min-height: 0; overflow-y: auto; padding: clamp(18px, 3vw, 28px); color: #4b4059; direction: rtl; }
+    .final-exam-intro { position: relative; overflow: hidden; padding: 19px 20px; border: 1px solid rgba(124, 88, 175, .20); border-radius: 20px; background: linear-gradient(135deg, rgba(243, 234, 250, .94), rgba(232, 246, 245, .88)); }
+    .final-exam-intro::after { content: ""; position: absolute; left: -38px; bottom: -48px; width: 132px; height: 132px; border: 1px solid rgba(95, 160, 174, .18); border-radius: 50%; box-shadow: 0 0 0 19px rgba(129, 91, 178, .05); }
+    .final-exam-kicker { position: relative; z-index: 1; display: block; color: #8964a7; font-size: 11px; font-weight: 900; }
+    .final-exam-intro h3 { position: relative; z-index: 1; margin: 5px 0 8px; color: #4f3a65; font-size: clamp(19px, 3vw, 25px); }
+    .final-exam-intro p { position: relative; z-index: 1; margin: 0; color: #73677e; line-height: 2; font-size: 13px; }
+    .final-exam-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .final-exam-meta span { padding: 6px 10px; color: #675577; border: 1px solid rgba(122, 96, 162, .16); border-radius: 999px; background: rgba(255, 253, 251, .70); font-size: 11px; font-weight: 900; }
+    .final-exam-form { display: grid; gap: 15px; margin-top: 18px; }
+    .final-exam-question { padding: 17px; border: 1px solid rgba(132, 108, 165, .16); border-radius: 18px; background: rgba(255, 253, 250, .76); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .78); }
+    .final-exam-question-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #856b99; font-size: 11px; font-weight: 900; }
+    .final-exam-question-head span:last-child { color: #5c9b94; }
+    .final-exam-question p { margin: 10px 0 12px; color: #4d445a; line-height: 2; font-size: 14px; font-weight: 800; }
+    .final-exam-question textarea { width: 100%; min-height: 116px; resize: vertical; padding: 12px 13px; color: #3f3950; border: 1px solid rgba(128, 105, 158, .22); border-radius: 14px; outline: 0; background: rgba(255, 254, 252, .94); font: inherit; font-size: 13px; line-height: 1.9; transition: border-color .16s ease, box-shadow .16s ease; }
+    .final-exam-question textarea:focus { border-color: rgba(92, 148, 192, .58); box-shadow: 0 0 0 4px rgba(104, 153, 201, .10); }
+    .final-exam-question textarea::placeholder { color: #a094a4; }
+    .final-exam-submit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 2px; }
+    .final-exam-submit-row small { color: #887c91; line-height: 1.8; font-size: 11px; }
+    .final-exam-result { display: grid; gap: 15px; }
+    .final-exam-score { display: grid; place-items: center; width: 126px; aspect-ratio: 1; margin: 2px auto 4px; color: #654280; border: 8px solid rgba(136, 102, 196, .20); border-radius: 50%; background: radial-gradient(circle, rgba(255, 253, 250, .95), rgba(241, 231, 250, .72)); box-shadow: 0 14px 30px rgba(128, 93, 150, .15); }
+    .final-exam-score strong { font-size: 30px; line-height: 1; }
+    .final-exam-score span { margin-top: 3px; color: #8b7897; font-size: 10px; font-weight: 900; }
+    .final-exam-feedback { padding: 16px; border-radius: 17px; background: rgba(246, 239, 249, .84); color: #655970; line-height: 2; font-size: 13px; }
+    .final-exam-feedback.passed { color: #31725d; background: rgba(226, 245, 234, .88); }
+    .final-exam-feedback strong { display: block; margin-bottom: 4px; color: inherit; }
+    .final-exam-feedback-list { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+    .final-exam-feedback-list li { padding: 11px 12px; border: 1px solid rgba(131, 107, 164, .13); border-radius: 13px; background: rgba(255, 253, 250, .68); color: #70647b; font-size: 12px; line-height: 1.85; }
+    .certificate-link { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 18px; color: #fff; border-radius: 14px; background: linear-gradient(135deg, #956bd0, #4b9bd0); box-shadow: 0 13px 29px rgba(132, 101, 191, .20); font-size: 13px; font-weight: 900; text-decoration: none; }
+    .final-exam-loading { display: grid; place-items: center; min-height: 250px; color: #806d90; text-align: center; line-height: 2; }
+    @media (max-width: 560px) {
+      .final-exam-modal { padding: 10px; }
+      .final-exam-modal .modal-chat { max-height: 96svh; border-radius: 22px; }
+      .final-exam-body { padding: 15px; }
+      .final-exam-submit-row { align-items: stretch; flex-direction: column; }
+      .final-exam-primary, .final-exam-retry { width: 100%; margin-top: 0; }
+    }
     .media-slots { display: grid; gap: 10px; margin-top: 14px; }
     .media-slot {
       min-height: 108px;
@@ -1624,6 +1676,19 @@
     </section>
   </div>
 
+  <div id="finalExamModal" class="answer-modal final-exam-modal" aria-hidden="true">
+    <section class="modal-chat" role="dialog" aria-modal="true" aria-labelledby="finalExamTitle">
+      <div class="modal-head">
+        <div>
+          <div id="finalExamTitle" class="modal-title">آزمون نهایی زیتو</div>
+          <div class="subtitle">نتیجه آزمون فقط بر اساس پاسخ‌های همین آزمون ارزیابی می‌شود.</div>
+        </div>
+        <button id="finalExamClose" class="modal-close" type="button" aria-label="بستن آزمون">×</button>
+      </div>
+      <div id="finalExamBody" class="final-exam-body" aria-live="polite"></div>
+    </section>
+  </div>
+
   <script>
     let userId = null;
     let currentLesson = null;
@@ -1676,6 +1741,9 @@
     const coachInput = document.querySelector("#coachInput");
     const coachSend = document.querySelector("#coachSend");
     const coachAvailability = document.querySelector("#coachAvailability");
+    const finalExamModal = document.querySelector("#finalExamModal");
+    const finalExamClose = document.querySelector("#finalExamClose");
+    const finalExamBody = document.querySelector("#finalExamBody");
 
     const TRACKS = {
       accounting: {
@@ -1933,7 +2001,7 @@
         }).join("");
       }
       coachMessage.textContent = path.status === "awaiting_final_exam"
-        ? "همه سرفصل‌ها کامل شده‌اند. آزمون نهایی دوره در مرحله بعدی آماده می‌شود."
+        ? "همه سرفصل‌ها کامل شده‌اند. آزمون نهایی آماده است و من تا پایان مسیر کنارت هستم."
         : path.status === "completed"
         ? "آفرین! این مسیر را کامل کردی. من برای مرور هم کنارت می‌مانم."
         : path.modules?.find((module) => module.is_current)
@@ -2011,7 +2079,7 @@
           if (!handleMissingUser(error)) addModalMessage("تاریخچه کوچینگ فعلاً در دسترس نیست.");
         }
       } else if (result.course_completed || result.path?.final_exam_available) {
-        addModalMessage("سرفصل‌های دوره را کامل کردی. آزمون نهایی و گواهی پایان دوره در اسپرینت مربوط به خودشان فعال می‌شوند.");
+        addModalMessage("سرفصل‌های دوره را کامل کردی. آزمون نهایی آماده است و می‌توانی آن را از صفحه آموزش شروع کنی.");
       }
       coachContinue.textContent = result.course_completed
         ? "دیدن جمع‌بندی"
@@ -2032,6 +2100,163 @@
       pendingNextStage = false;
       await loadLearningStage();
     }
+
+    function finalExamIntroMarkup(title, passingScore, attemptNumber) {
+      const attemptLabel = attemptNumber ? `تلاش ${attemptNumber}` : "آماده شروع";
+      return `<section class="final-exam-intro">
+        <span class="final-exam-kicker">پایان مسیر آموزشی</span>
+        <h3>${escapeHtml(title || "آزمون نهایی دوره")}</h3>
+        <p>سه پاسخ تشریحی کوتاه می‌نویسی تا جمع‌بندی یادگیریت بررسی شود. معیار عبور این آزمون ${escapeHtml(passingScore || 70)} از ۱۰۰ است.</p>
+        <div class="final-exam-meta"><span>${escapeHtml(attemptLabel)}</span><span>ارزیابی هوشمند</span><span>بدون محدودیت زمانی</span></div>
+      </section>`;
+    }
+
+    function certificateMarkup(certificate) {
+      if (!certificate?.certificate_number) return "";
+      const href = `/certificate/${encodeURIComponent(certificate.certificate_number)}`;
+      return `<a class="certificate-link" href="${href}" target="_blank" rel="noopener">مشاهده و چاپ مدرک</a>`;
+    }
+
+    function renderFinalExamAttempt(attempt) {
+      const questions = Array.isArray(attempt?.questions) ? attempt.questions : [];
+      if (!questions.length) {
+        finalExamBody.innerHTML = '<div class="final-exam-loading">سؤال‌های این تلاش قابل بازیابی نیستند. صفحه را ببند و دوباره آزمون را شروع کن.</div>';
+        return;
+      }
+      finalExamBody.innerHTML = `${finalExamIntroMarkup(attempt.title, attempt.passing_score, attempt.attempt_number)}
+        <form id="finalExamForm" class="final-exam-form">
+          ${questions.map((question, index) => `<section class="final-exam-question">
+            <div class="final-exam-question-head"><span>سؤال ${index + 1}</span><span>${escapeHtml(question.max_score)} امتیاز</span></div>
+            <p>${escapeHtml(question.question)}</p>
+            <textarea data-final-exam-answer="${escapeHtml(question.id)}" maxlength="2500" required placeholder="پاسخ خودت را با توضیح و یک گام عملی بنویس..."></textarea>
+          </section>`).join("")}
+          <div class="final-exam-submit-row">
+            <small>بعد از ثبت، نتیجه و بازخورد همین تلاش را می‌بینی. در صورت نیاز می‌توانی دوباره تلاش کنی.</small>
+            <button class="final-exam-primary" type="submit">ثبت و تصحیح آزمون</button>
+          </div>
+        </form>`;
+      finalExamBody.querySelector("#finalExamForm").addEventListener("submit", (event) => submitFinalExam(event, attempt));
+    }
+
+    function renderFinalExamResult(result) {
+      const feedbackRows = Array.isArray(result.question_feedback) ? result.question_feedback : [];
+      const passed = Boolean(result.passed);
+      finalExamBody.innerHTML = `<div class="final-exam-result">
+        <div class="final-exam-score"><strong>${escapeHtml(result.score)}</strong><span>از ۱۰۰</span></div>
+        <section class="final-exam-feedback ${passed ? "passed" : ""}">
+          <strong>${passed ? "آفرین، دوره را با موفقیت تمام کردی." : "این تلاش هنوز به حدنصاب نرسیده است."}</strong>
+          ${escapeHtml(result.feedback || "نتیجه آزمون ثبت شد.")}
+        </section>
+        ${feedbackRows.length ? `<ul class="final-exam-feedback-list">${feedbackRows.map((item, index) => `<li><strong>سؤال ${index + 1}${item.score === null || item.score === undefined ? "" : ` · ${escapeHtml(item.score)} امتیاز`}</strong><br>${escapeHtml(item.feedback || "بازخورد این بخش ثبت شد.")}</li>`).join("")}</ul>` : ""}
+        ${passed ? certificateMarkup(result.certificate) : '<button class="final-exam-retry" type="button" data-retry-final-exam>شروع تلاش تازه</button>'}
+      </div>`;
+      const retryButton = finalExamBody.querySelector("[data-retry-final-exam]");
+      if (retryButton) retryButton.addEventListener("click", requestFinalExamStart);
+    }
+
+    function renderFinalExamState(examState) {
+      if (examState.status === "in_progress" && examState.attempt) {
+        renderFinalExamAttempt(examState.attempt);
+        return;
+      }
+      if (examState.status === "passed") {
+        finalExamBody.innerHTML = `<div class="final-exam-result">
+          <div class="final-exam-score"><strong>${escapeHtml(examState.certificate?.score ?? "✓")}</strong><span>${examState.certificate ? "از ۱۰۰" : "تکمیل شد"}</span></div>
+          <section class="final-exam-feedback passed"><strong>این دوره را با موفقیت تمام کرده‌ای.</strong>مدرک این نسخه از دوره آماده مشاهده است.</section>
+          ${certificateMarkup(examState.certificate)}
+        </div>`;
+        return;
+      }
+      if (examState.status === "available") {
+        finalExamBody.innerHTML = `${finalExamIntroMarkup(examState.title, examState.passing_score)}
+          <button class="final-exam-primary" type="button" data-start-final-exam>شروع آزمون نهایی</button>`;
+        finalExamBody.querySelector("[data-start-final-exam]").addEventListener("click", requestFinalExamStart);
+        return;
+      }
+      const message = examState.status === "not_required"
+        ? "این نسخه از دوره آزمون نهایی ندارد."
+        : "برای باز شدن آزمون نهایی، ابتدا همه سرفصل‌های دوره را کامل کن.";
+      finalExamBody.innerHTML = `<div class="final-exam-loading">${escapeHtml(message)}</div>`;
+    }
+
+    function closeFinalExamModal() {
+      finalExamModal.classList.remove("show");
+      finalExamModal.setAttribute("aria-hidden", "true");
+    }
+
+    async function openFinalExam() {
+      if (!currentEnrollmentId) return;
+      finalExamModal.classList.add("show");
+      finalExamModal.setAttribute("aria-hidden", "false");
+      finalExamBody.innerHTML = '<div class="final-exam-loading">در حال بررسی وضعیت آزمون نهایی...</div>';
+      try {
+        const examState = await api(`/api/learning/enrollments/${currentEnrollmentId}/final-exam`);
+        renderFinalExamState(examState);
+      } catch (error) {
+        if (!handleMissingUser(error)) {
+          finalExamBody.innerHTML = `<div class="final-exam-loading">${escapeHtml(error.message)}</div>`;
+        }
+      }
+    }
+
+    async function requestFinalExamStart() {
+      if (!currentEnrollmentId) return;
+      finalExamBody.innerHTML = '<div class="final-exam-loading">زیتو در حال آماده‌سازی آزمون نهایی بر اساس محتوای تاییدشده دوره است...</div>';
+      try {
+        const attempt = await api(`/api/learning/enrollments/${currentEnrollmentId}/final-exam/start`, { method: "POST" });
+        renderFinalExamAttempt(attempt);
+        setStatus("آزمون نهایی فعال");
+      } catch (error) {
+        if (!handleMissingUser(error)) {
+          finalExamBody.innerHTML = `<div class="final-exam-loading">${escapeHtml(error.message)}</div>`;
+        }
+      }
+    }
+
+    async function submitFinalExam(event, attempt) {
+      event.preventDefault();
+      const answers = {};
+      const fields = finalExamBody.querySelectorAll("[data-final-exam-answer]");
+      let hasIncompleteAnswer = false;
+      fields.forEach((field) => {
+        const answer = field.value.trim();
+        answers[field.dataset.finalExamAnswer] = answer;
+        if (answer.length < 2) hasIncompleteAnswer = true;
+      });
+      if (hasIncompleteAnswer) {
+        const firstEmpty = Array.from(fields).find((field) => field.value.trim().length < 2);
+        if (firstEmpty) firstEmpty.focus();
+        return;
+      }
+      const submitButton = finalExamBody.querySelector(".final-exam-primary");
+      submitButton.disabled = true;
+      submitButton.textContent = "در حال تصحیح...";
+      try {
+        const result = await api(
+          `/api/learning/enrollments/${currentEnrollmentId}/final-exam/attempts/${attempt.id}/submit`,
+          { method: "POST", body: JSON.stringify({ answers }) },
+        );
+        renderFinalExamResult(result);
+        if (result.passed) {
+          setStatus("دوره کامل شد");
+          coachMessage.textContent = "آفرین! آزمون نهایی را گذراندی و مدرکت آماده است.";
+          const path = await api("/api/learning/enrollments/current");
+          renderLearningPath(path);
+        } else {
+          setStatus("نیاز به تلاش دوباره");
+        }
+      } catch (error) {
+        if (!handleMissingUser(error)) {
+          submitButton.disabled = false;
+          submitButton.textContent = "ثبت و تصحیح آزمون";
+          const note = document.createElement("p");
+          note.className = "profile-error";
+          note.textContent = error.message;
+          finalExamBody.querySelector("#finalExamForm")?.appendChild(note);
+        }
+      }
+    }
+
     const PROFILE_STEPS = [
       {
         key: "work_or_study_field",
@@ -2357,8 +2582,10 @@
       const templateLabel = stageLabel(lesson.stage_type);
       const moduleStageCount = lesson.module_stage_count || 20;
       const finalExamNote = waitingForFinalExam
-        ? '<div class="final-exam-note">همه سرفصل‌ها را کامل کرده‌ای. آزمون نهایی و گواهی پایان دوره در اسپرینت بعدی این بخش فعال می‌شوند.</div>'
-        : "";
+        ? `<div class="final-exam-note"><strong>آزمون نهایی آماده است</strong><p>مسیر سرفصل‌ها کامل شده. با سه پاسخ تشریحی، یادگیریت را جمع‌بندی کن.</p><button class="final-exam-open-button" type="button" data-open-final-exam>شروع آزمون نهایی</button></div>`
+        : lesson.course_completed && currentLearningPath?.final_exam_required
+          ? `<div class="final-exam-note"><strong>دوره را کامل کرده‌ای</strong><p>نتیجه آزمون و مدرک پایان دوره‌ات از اینجا در دسترس است.</p><button class="final-exam-open-button" type="button" data-open-final-exam>مشاهده مدرک</button></div>`
+          : "";
       lessonPanel.innerHTML = `
         <article class="lesson-article" data-stage-type="${escapeHtml(lesson.stage_type)}">
           <header class="stage-header">
@@ -2390,6 +2617,7 @@
         </article>`;
       const completeButton = lessonPanel.querySelector("[data-complete-stage]");
       if (!terminal) completeButton.addEventListener("click", completeCurrentStage);
+      lessonPanel.querySelector("[data-open-final-exam]")?.addEventListener("click", openFinalExam);
       bindFlashcards();
       if (lesson.stage_type === "personalized_work_example") loadPersonalizedExample(lesson);
       coachMessage.textContent = waitingForFinalExam
@@ -2549,8 +2777,15 @@
     coachContinue.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
     coachForm.addEventListener("submit", sendCoachQuestion);
     changeCourse.addEventListener("click", () => showCourseCatalog().catch((error) => { coachMessage.textContent = error.message; }));
+    finalExamClose.addEventListener("click", () => {
+      closeFinalExamModal();
+      if (currentLearningPath?.status === "completed") loadLearningStage().catch((error) => { coachMessage.textContent = error.message; });
+    });
     answerModal.addEventListener("click", (event) => {
       if (event.target === answerModal) continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; });
+    });
+    finalExamModal.addEventListener("click", (event) => {
+      if (event.target === finalExamModal) closeFinalExamModal();
     });
 
     start().catch((error) => addMessage(error.message));

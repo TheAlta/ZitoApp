@@ -28,6 +28,9 @@ htmlcov/
 *.db-journal
 *.log
 
+# Locally downloaded certificate previews
+knowledge_base/certificate.pdf
+
 # Build artifacts
 dist/
 build/

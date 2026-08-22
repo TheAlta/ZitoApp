@@ -80,6 +80,31 @@ class UiContractTests(unittest.TestCase):
         self.assertNotIn("fullName.split(/\\s+/)", html)
         self.assertLess(html.index('id="phoneInput"'), html.index('id="fullNameInput"'))
 
+    def test_landing_has_a_continuous_zito_introduction_view(self) -> None:
+        with TestClient(app) as client:
+            response = client.get("/")
+            ambient_script = client.get("/landing-static/ambient-audio.js")
+            ambient_track = client.get("/landing-static/zito-ambient.mp3")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ambient_script.status_code, 200)
+        self.assertEqual(ambient_track.status_code, 200)
+        self.assertIn("audio/mpeg", ambient_track.headers["content-type"])
+        self.assertIn('id="introView"', response.text)
+        self.assertIn('id="introStart"', response.text)
+        self.assertIn('id="soundToggle"', response.text)
+        self.assertIn("زیتو چیه؟", response.text)
+        self.assertIn("زیتو یه همراه هوشمند تو در مسیر یادگیریه.", response.text)
+        self.assertIn("آماده‌ای برای شروع", response.text)
+        self.assertIn("showIntro", response.text)
+        self.assertIn("startAmbientSound", response.text)
+        self.assertIn("stopAmbientSound", response.text)
+        self.assertIn('rel="preload" href="/landing-static/zito-ambient.mp3"', response.text)
+        self.assertIn("/landing-static/zito-ambient.mp3", ambient_script.text)
+        self.assertIn("track.loop = true", ambient_script.text)
+        self.assertIn("attemptAutoplay();", ambient_script.text)
+        self.assertIn("zito:landing-sound-muted", ambient_script.text)
+
     def test_chat_personalizes_avatar_welcome_without_second_greeting(self) -> None:
         with TestClient(app) as client:
             response = client.get("/app/")

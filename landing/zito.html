@@ -7,6 +7,8 @@
   <title>ZITO | Z Generation Intelligent</title>
 
   <link href="https://cdn.jsdelivr.net/gh/hemedani/yekan@v3.0.0/font-face.css" rel="stylesheet" type="text/css">
+  <link rel="preload" href="/landing-static/zito-ambient.mp3" as="audio" type="audio/mpeg">
+  <script src="/landing-static/ambient-audio.js"></script>
 
   <style>
     :root {
@@ -1109,6 +1111,240 @@
       border-color: rgba(154, 121, 181, .34);
       -webkit-box-shadow: 0 0 0 1000px #fff8f2 inset, 0 0 0 4px rgba(139, 148, 209, .08) !important;
     }
+
+    .sound-toggle {
+      position: fixed;
+      top: 20px;
+      inset-inline-start: 20px;
+      z-index: 12;
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(143, 107, 183, .26);
+      border-radius: 50%;
+      background: rgba(255, 253, 250, .66);
+      color: #625b7a;
+      box-shadow: 0 10px 28px rgba(118, 87, 132, .12), inset 0 1px 0 rgba(255, 255, 255, .9);
+      backdrop-filter: blur(12px);
+      cursor: pointer;
+      transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+    }
+
+    .sound-toggle:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, .9);
+      box-shadow: 0 14px 32px rgba(118, 87, 132, .18), inset 0 1px 0 rgba(255, 255, 255, .96);
+    }
+
+    .sound-toggle:focus-visible,
+    .intro-action:focus-visible {
+      outline: 3px solid rgba(102, 139, 212, .35);
+      outline-offset: 3px;
+    }
+
+    .sound-icon {
+      width: 19px;
+      height: 19px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sound-toggle[data-muted="true"] .sound-wave {
+      display: none;
+    }
+
+    .sound-toggle[data-muted="true"] .sound-muted-line {
+      display: block;
+    }
+
+    .sound-muted-line {
+      display: none;
+    }
+
+    .brand,
+    .avatar-wrap,
+    .chat-bubble,
+    .cta-wrap {
+      transition: opacity .48s ease, transform .48s ease;
+    }
+
+    body.is-intro .brand,
+    body.is-intro .chat-bubble,
+    body.is-intro .cta-wrap {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-26px) scale(.97);
+    }
+
+    body.is-intro .avatar-wrap {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 18px) scale(.9);
+    }
+
+    .intro-view {
+      position: fixed;
+      inset: 0;
+      z-index: 6;
+      display: grid;
+      place-items: center;
+      padding: 40px 24px 30px;
+      overflow-y: auto;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(18px);
+      transition: opacity .48s ease, transform .48s ease;
+    }
+
+    .intro-view.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .intro-content {
+      width: min(660px, 100%);
+      display: grid;
+      justify-items: center;
+      gap: 20px;
+      text-align: center;
+    }
+
+    .intro-avatar-shell {
+      position: relative;
+      width: min(250px, 56vw);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      animation: introFloat 5.8s ease-in-out infinite;
+    }
+
+    .intro-avatar-shell::before {
+      content: '';
+      position: absolute;
+      inset: 12% 4%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(168, 123, 218, .22) 0%, rgba(105, 167, 205, .13) 42%, transparent 70%);
+      filter: blur(8px);
+    }
+
+    .intro-avatar {
+      position: relative;
+      z-index: 1;
+      width: 86%;
+      height: 86%;
+      object-fit: contain;
+      filter: drop-shadow(0 20px 22px rgba(92, 75, 148, .18));
+    }
+
+    .intro-copy {
+      display: grid;
+      justify-items: center;
+      gap: 13px;
+    }
+
+    .intro-title {
+      margin: 0;
+      font-size: 44px;
+      line-height: 1.22;
+      font-weight: 900;
+      letter-spacing: 0;
+      background: linear-gradient(105deg, #8b5fc4 4%, #4e9bd2 54%, #a86cc0 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 8px 28px rgba(126, 103, 190, .14);
+    }
+
+    .intro-description {
+      max-width: 500px;
+      margin: 0;
+      color: #59546e;
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 2.05;
+      text-wrap: pretty;
+    }
+
+    .intro-action {
+      min-width: 228px;
+      margin-top: 4px;
+      border: 0;
+      border-radius: 999px;
+      padding: 16px 30px;
+      color: #fff;
+      background: linear-gradient(90deg, #9868cf 0%, #4d98d0 100%);
+      box-shadow: 0 14px 32px rgba(115, 102, 189, .26), inset 0 1px 0 rgba(255, 255, 255, .22);
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .intro-action:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 38px rgba(105, 123, 196, .34), inset 0 1px 0 rgba(255, 255, 255, .26);
+    }
+
+    .intro-action:active {
+      transform: translateY(0) scale(.98);
+    }
+
+    @keyframes introFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-9px); }
+    }
+
+    @media (max-width: 640px) {
+      .sound-toggle {
+        top: 16px;
+        inset-inline-start: 16px;
+      }
+
+      .intro-view {
+        padding: 48px 20px 24px;
+      }
+
+      .intro-content {
+        gap: 17px;
+      }
+
+      .intro-avatar-shell {
+        width: min(230px, 68vw);
+      }
+
+      .intro-title {
+        font-size: 34px;
+      }
+
+      .intro-description {
+        max-width: 330px;
+        font-size: 15px;
+        line-height: 2;
+      }
+
+      .intro-action {
+        width: min(100%, 300px);
+        padding-block: 14px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .intro-avatar-shell,
+      .intro-view,
+      .brand,
+      .avatar-wrap,
+      .chat-bubble,
+      .cta-wrap {
+        animation: none;
+        transition-duration: .01ms;
+      }
+    }
   </style>
 </head>
 
@@ -1163,6 +1399,27 @@
       </svg>
     </span></button>
   </div>
+
+  <button class="sound-toggle" id="soundToggle" type="button" data-muted="false" aria-pressed="true" aria-label="قطع کردن صدای پس‌زمینه" title="قطع کردن صدا">
+    <svg class="sound-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 10v4h4l5 4V6L8 10H4Z"></path>
+      <path class="sound-wave" d="M16 9.5a4 4 0 0 1 0 5M18.5 7a7.5 7.5 0 0 1 0 10"></path>
+      <path class="sound-muted-line" d="m16 10 5 5m0-5-5 5"></path>
+    </svg>
+  </button>
+
+  <section class="intro-view" id="introView" aria-hidden="true" aria-labelledby="introTitle">
+    <div class="intro-content">
+      <div class="intro-avatar-shell" aria-hidden="true">
+        <img class="intro-avatar" src="/landing-static/zito-mascot.svg" alt="">
+      </div>
+      <div class="intro-copy">
+        <h1 class="intro-title" id="introTitle">زیتو چیه؟</h1>
+        <p class="intro-description">زیتو یه همراه هوشمند تو در مسیر یادگیریه.<br>با آموزش های شخصی سازی شده تمرین های هوشمند و بازی سازی یادگیری رو برات ساده جذاب و موثر می کنه</p>
+      </div>
+      <button class="intro-action" id="introStart" type="button">آماده‌ای برای شروع</button>
+    </div>
+  </section>
 
   <div class="phone-modal" id="phoneModal" aria-hidden="true">
     <div class="phone-card">
@@ -1227,6 +1484,9 @@
     const bubble = document.getElementById('chatBubble');
     const textEl = document.getElementById('chatText');
     const ctaWrap = document.getElementById('ctaWrap');
+    const introView = document.getElementById('introView');
+    const introStart = document.getElementById('introStart');
+    const soundToggle = document.getElementById('soundToggle');
     const phoneModal = document.getElementById('phoneModal');
     const phoneForm = document.getElementById('phoneForm');
     const nameForm = document.getElementById('nameForm');
@@ -1246,6 +1506,29 @@
     let pendingFullName = '';
     let pendingOtpRequest = null;
     const fullText = 'سلام من زیتو هستم و قراره به تمام سوالاتی که تو حوزه کاریت داری جواب بدم. اگه آماده ای شروع کنیم؟';
+
+    function updateSoundToggle(state) {
+      const muted = Boolean(state?.muted);
+      soundToggle.dataset.muted = String(muted);
+      soundToggle.setAttribute('aria-pressed', String(!muted));
+      soundToggle.setAttribute('aria-label', muted ? 'پخش صدای پس‌زمینه' : 'قطع کردن صدای پس‌زمینه');
+      soundToggle.title = muted ? 'پخش صدا' : 'قطع کردن صدا';
+    }
+
+    window.ZitoAmbient?.onStateChange(updateSoundToggle);
+    updateSoundToggle(window.ZitoAmbient?.getState());
+
+    async function startAmbientSound() {
+      return await window.ZitoAmbient?.start();
+    }
+
+    function stopAmbientSound() {
+      window.ZitoAmbient?.stop();
+    }
+
+    soundToggle.addEventListener('click', async () => {
+      await window.ZitoAmbient?.toggle();
+    });
 
     function typeWriter(text, el, speed) {
       return new Promise(resolve => {
@@ -1281,25 +1564,40 @@
       }, 800);
     });
 
-    document.querySelector('.cta').addEventListener('click', () => {
-      alert('فاز بعدی: مسیر ورود به زیتو از اینجا شروع می‌شه 🚀');
-    });
+    function showIntro() {
+      document.body.classList.add('is-intro');
+      introView.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => introView.classList.add('show'));
+      setTimeout(() => introStart.focus(), 240);
+    }
+
+    function showLoginModal() {
+      phoneModal.classList.add('show');
+      phoneModal.setAttribute('aria-hidden', 'false');
+      phoneInput.focus();
+    }
+
     document.querySelector('.cta').addEventListener('click', async (event) => {
       event.preventDefault();
-      event.stopImmediatePropagation();
+      const soundStarted = await startAmbientSound();
+      if (soundStarted) await new Promise(resolve => setTimeout(resolve, 180));
+      showIntro();
+    });
+
+    introStart.addEventListener('click', async () => {
+      await startAmbientSound();
       try {
         const sessionResponse = await fetch('/api/me');
         if (sessionResponse.ok) {
+          stopAmbientSound();
           window.location.href = '/app/';
           return;
         }
       } catch (_) {
         // The login modal remains available when session lookup is unavailable.
       }
-      phoneModal.classList.add('show');
-      phoneModal.setAttribute('aria-hidden', 'false');
-      phoneInput.focus();
-    }, true);
+      showLoginModal();
+    });
 
     phoneModal.addEventListener('click', (event) => {
       if (event.target === phoneModal) {
@@ -1471,6 +1769,7 @@
         const data = await readApiResponse(response);
         if (!response.ok) throw new Error(getErrorMessage(data, 'کد تایید درست نیست یا منقضی شده.'));
         localStorage.setItem('zito_display_name', data.display_name || pendingFullName);
+        stopAmbientSound();
         window.location.href = data.redirect_url;
       } catch (error) {
         phoneError.textContent = error.message;

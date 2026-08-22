@@ -31,6 +31,9 @@ htmlcov/
 # Locally downloaded certificate previews
 knowledge_base/certificate.pdf
 
+# Local media drop zone; the selected optimized asset lives in landing/.
+zito music/
+
 # Build artifacts
 dist/
 build/

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>معرفی دوره | زیتو</title>
+  <script defer src="/landing-static/course-mascot.js?v=20260831-9"></script>
   <style>
     @font-face {
       font-family: "YekanZito";
@@ -112,10 +113,9 @@
     .orbit-dot.one { top: 25px; right: 59px; }
     .orbit-dot.two { bottom: 52px; left: 23px; width: 10px; height: 10px; background: linear-gradient(145deg, #72bdba, #7699d0); }
     .orbit-dot.three { top: 48%; left: -4px; width: 8px; height: 8px; }
-    .mascot-station { position: relative; z-index: 1; display: grid; place-items: center; width: 235px; height: 255px; }
+    .mascot-station { position: relative; z-index: 1; display: grid; place-items: center; width: 258px; height: 302px; }
     .mascot-station::after { content: ""; position: absolute; right: 50%; bottom: 12px; width: 145px; height: 16px; border-radius: 50%; transform: translateX(50%); background: radial-gradient(ellipse, rgba(125, 93, 193, .27), transparent 70%); filter: blur(3px); }
-    .mascot-station img { position: relative; z-index: 1; width: 210px; height: 230px; object-fit: contain; filter: drop-shadow(0 18px 20px rgba(93, 69, 143, .20)); animation: mascotFloat 5.2s ease-in-out infinite; }
-    @keyframes mascotFloat { 50% { transform: translateY(-10px); } }
+    .mascot-station zito-course-mascot { position: relative; z-index: 1; width: 250px; height: 300px; filter: drop-shadow(0 18px 20px rgba(93, 69, 143, .20)); }
 
     .section { margin-top: clamp(62px, 9vw, 108px); }
     .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .55fr); gap: 30px; align-items: end; margin-bottom: 28px; }
@@ -170,8 +170,8 @@
       .course-hero { grid-template-columns: 1fr; min-height: 0; gap: 19px; padding: 31px 22px 26px; border-radius: 23px; }
       .hero-visual { min-height: 220px; order: -1; }
       .constellation { width: 210px; }
-      .mascot-station { width: 172px; height: 200px; }
-      .mascot-station img { width: 165px; height: 187px; }
+      .mascot-station { width: 184px; height: 224px; }
+      .mascot-station zito-course-mascot { width: 180px; height: 220px; }
       h1 { font-size: clamp(31px, 9.5vw, 46px); }
       .course-facts { grid-template-columns: 1fr; }
       .course-fact { display: grid; grid-template-columns: minmax(110px, .8fr) 1fr; align-items: center; padding: 11px 0; border-right: 0; border-top: 1px solid var(--line); }
@@ -266,7 +266,7 @@
           <div class="hero-visual" aria-hidden="true">
             <div class="constellation"></div>
             <i class="orbit-dot one"></i><i class="orbit-dot two"></i><i class="orbit-dot three"></i>
-            <div class="mascot-station"><img src="/landing-static/zito-mascot.svg" alt=""></div>
+            <div class="mascot-station"><zito-course-mascot aria-label="زیتو در حال آماده‌سازی مسیر دوره"></zito-course-mascot></div>
           </div>
         </section>
 

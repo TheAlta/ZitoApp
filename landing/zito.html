@@ -9,6 +9,8 @@
   <link href="https://cdn.jsdelivr.net/gh/hemedani/yekan@v3.0.0/font-face.css" rel="stylesheet" type="text/css">
   <link rel="preload" href="/landing-static/zito-ambient.mp3" as="audio" type="audio/mpeg">
   <script src="/landing-static/ambient-audio.js"></script>
+  <script defer src="/landing-static/zito-mascot.js"></script>
+  <script defer src="/landing-static/zito-intro-mascot.js"></script>
 
   <style>
     :root {
@@ -427,54 +429,21 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 2;
-      will-change: transform;
-      animation: floaty 5.8s cubic-bezier(.45, 0, .55, 1) infinite;
-    }
-
-    @keyframes floaty {
-
-      0%,
-      100% {
-        transform: translateX(-50%) translateY(0) scale(1);
-      }
-
-      50% {
-        transform: translateX(-50%) translateY(-12px) scale(1.018);
-      }
-    }
-
-    .avatar-img {
-      width: auto;
-      height: 132px;
-      max-width: 110px;
       display: block;
-      object-fit: contain;
-      will-change: filter;
-      animation: mascot-glow 5.8s ease-in-out infinite;
     }
 
-    @keyframes mascot-glow {
-      0%,
-      100% {
-        filter: drop-shadow(0 4px 10px rgba(75, 94, 255, .12));
-      }
-
-      50% {
-        filter: drop-shadow(0 9px 18px rgba(104, 91, 255, .32));
-      }
-    }
-
-    /* ---------- چت‌باکس (سمت راست) ---------- */
+    /* ---------- چت‌باکس (سمت چپ، رو به دهان زیتو) ---------- */
     .chat-bubble {
       position: absolute;
-      left: calc(50% + 56px);
-      right: auto;
-      bottom: 42vh;
-      transform: translateY(-20px);
+      --bubble-fill: rgba(10, 10, 30, 0.9);
+      left: auto;
+      right: calc(50% + 52px);
+      bottom: 37vh;
+      transform: translateY(0);
       z-index: 4;
       max-width: 210px;
       min-width: 180px;
-      background: rgba(10, 10, 30, 0.9);
+      background: var(--bubble-fill);
       backdrop-filter: blur(8px);
       border: 1px solid rgba(138, 107, 255, 0.4);
       border-radius: 16px 16px 16px 4px;
@@ -486,20 +455,22 @@
 
     .chat-bubble.show {
       opacity: 1;
-      transform: translateY(-20px);
+      transform: translateY(0);
     }
 
     .chat-bubble::after {
       content: '';
       position: absolute;
-      bottom: -16px;
-      left: 25px;
+      bottom: 16px;
+      right: -16px;
+      left: auto;
       width: 0;
       height: 0;
-      border-left: 12px solid transparent;
-      border-right: 12px solid transparent;
-      border-top: 16px solid rgba(10, 10, 30, 0.9);
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+      border-top: 9px solid transparent;
+      border-bottom: 9px solid transparent;
+      border-right: 0;
+      border-left: 16px solid var(--bubble-fill);
+      filter: drop-shadow(2px 1px 3px rgba(0, 0, 0, 0.28));
     }
 
     .chat-name {
@@ -511,6 +482,8 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      direction: rtl;
+      text-align: right;
     }
 
     .chat-name .dot {
@@ -534,6 +507,7 @@
       font-kerning: normal;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
+      text-align: right;
     }
 
     .typed-copy {
@@ -836,18 +810,14 @@
         font-size: 17px;
       }
 
-      .avatar-img {
-        height: 188px;
-        max-width: 150px;
-      }
-
       .avatar-wrap {
         bottom: 28vh;
       }
 
       .chat-bubble {
-        left: calc(50% + 72px);
-        bottom: 32vh;
+        left: auto;
+        right: calc(50% + 56px);
+        bottom: calc(31vh + 50px);
         max-width: 260px;
         min-width: 220px;
       }
@@ -892,26 +862,23 @@
         margin-top: 0;
       }
 
-      .avatar-img {
-        height: 168px;
-        max-width: 140px;
-      }
-
       .avatar-wrap {
         bottom: 25vh;
       }
 
       .chat-bubble {
         left: auto;
-        right: 4vw;
-        bottom: 33vh;
+        right: calc(50% + 40px);
+        bottom: 32vh;
         max-width: 120px;
         min-width: 120px;
         padding: 10px 14px;
       }
 
       .chat-bubble::after {
-        left: 14px;
+        bottom: 14px;
+        right: -14px;
+        left: auto;
       }
 
       .chat-text {
@@ -942,8 +909,7 @@
       .ambient-star,
       .galaxy-glow .orb,
       .meteor,
-      .avatar-wrap,
-      .avatar-img {
+      .avatar-wrap {
         animation: none;
       }
     }
@@ -1035,13 +1001,13 @@
     .sub-en { color: #766e88; }
 
     .chat-bubble {
-      background: rgba(255, 253, 250, .86);
+      --bubble-fill: rgba(255, 253, 250, .86);
       border-color: rgba(157, 117, 177, .26);
       box-shadow: 0 12px 32px rgba(126, 94, 131, .14), inset 0 1px 0 rgba(255, 255, 255, .90);
     }
 
     .chat-bubble::after {
-      border-top-color: rgba(255, 253, 250, .86);
+      border-left-color: var(--bubble-fill);
       filter: drop-shadow(0 2px 4px rgba(126, 94, 131, .14));
     }
 
@@ -1216,11 +1182,10 @@
 
     .intro-avatar-shell {
       position: relative;
-      width: min(250px, 56vw);
-      aspect-ratio: 1;
+      width: min(244px, 56vw, 28vh);
+      aspect-ratio: 2052 / 3918;
       display: grid;
       place-items: center;
-      animation: introFloat 5.8s ease-in-out infinite;
     }
 
     .intro-avatar-shell::before {
@@ -1233,13 +1198,11 @@
       filter: blur(8px);
     }
 
-    .intro-avatar {
+    zito-intro-lottie-mascot {
       position: relative;
       z-index: 1;
-      width: 86%;
-      height: 86%;
-      object-fit: contain;
-      filter: drop-shadow(0 20px 22px rgba(92, 75, 148, .18));
+      width: 100%;
+      height: 100%;
     }
 
     .intro-copy {
@@ -1295,11 +1258,6 @@
       transform: translateY(0) scale(.98);
     }
 
-    @keyframes introFloat {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-9px); }
-    }
-
     @media (max-width: 640px) {
       .sound-toggle {
         top: 16px;
@@ -1315,7 +1273,7 @@
       }
 
       .intro-avatar-shell {
-        width: min(230px, 68vw);
+        width: min(218px, 66vw, 27vh);
       }
 
       .intro-title {
@@ -1335,7 +1293,6 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .intro-avatar-shell,
       .intro-view,
       .brand,
       .avatar-wrap,
@@ -1377,7 +1334,7 @@
 
   <!-- آواتار -->
   <div class="avatar-wrap">
-    <img class="avatar-img" src="/landing-static/zito-mascot.svg" alt="آواتار زیتو">
+    <zito-lottie-mascot aria-label="زیتو، همراه هوشمند یادگیری"></zito-lottie-mascot>
   </div>
 
   <!-- چت‌باکس -->
@@ -1411,7 +1368,7 @@
   <section class="intro-view" id="introView" aria-hidden="true" aria-labelledby="introTitle">
     <div class="intro-content">
       <div class="intro-avatar-shell" aria-hidden="true">
-        <img class="intro-avatar" src="/landing-static/zito-mascot.svg" alt="">
+        <zito-intro-lottie-mascot></zito-intro-lottie-mascot>
       </div>
       <div class="intro-copy">
         <h1 class="intro-title" id="introTitle">زیتو چیه؟</h1>
@@ -1486,6 +1443,8 @@
     const ctaWrap = document.getElementById('ctaWrap');
     const introView = document.getElementById('introView');
     const introStart = document.getElementById('introStart');
+    const landingMascot = document.querySelector('zito-lottie-mascot');
+    const introMascot = document.querySelector('zito-intro-lottie-mascot');
     const soundToggle = document.getElementById('soundToggle');
     const phoneModal = document.getElementById('phoneModal');
     const phoneForm = document.getElementById('phoneForm');
@@ -1567,7 +1526,11 @@
     function showIntro() {
       document.body.classList.add('is-intro');
       introView.setAttribute('aria-hidden', 'false');
-      requestAnimationFrame(() => introView.classList.add('show'));
+      requestAnimationFrame(() => {
+        introView.classList.add('show');
+        landingMascot?.suspend();
+        introMascot?.activate();
+      });
       setTimeout(() => introStart.focus(), 240);
     }
 
@@ -1589,6 +1552,7 @@
       try {
         const sessionResponse = await fetch('/api/me');
         if (sessionResponse.ok) {
+          introMascot?.deactivate();
           stopAmbientSound();
           window.location.href = '/app/';
           return;

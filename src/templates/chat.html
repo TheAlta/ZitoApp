@@ -1573,7 +1573,7 @@
       <div id="chat" class="chat">
         <div class="welcome">
           <div class="zito-orb" aria-hidden="true">
-            <img src="/landing-static/zito-mascot.svg" alt="">
+            <img src="/landing-static/zito-mascot.svg?v=20260831-static-2" alt="">
           </div>
           <h2 id="welcomeTitle" class="welcome-title">سلام، من زیتو هستم</h2>
           <p id="welcomeSub" class="welcome-sub">برای ساختن مسیر آموزشی هوشمند، چند سوال کوتاه ازت می‌پرسم.</p>
@@ -1593,7 +1593,7 @@
     <section id="planetStage" class="planet-stage" aria-live="polite">
       <div class="planet-card">
         <div class="course-coach">
-          <img src="/landing-static/zito-mascot.svg" alt="زیتو، همراه مسیر یادگیری">
+          <img src="/landing-static/zito-mascot.svg?v=20260831-static-2" alt="زیتو، همراه مسیر یادگیری">
           <div class="coach-bubble">
             <strong>زیتو کنار توست</strong>
             <p id="coachMessage">چه دوره‌ای می‌خواهی انتخاب کنی؟</p>
@@ -2064,7 +2064,7 @@
     }
     async function showCoachingCheckpoint(result) {
       pendingNextStage = true;
-      modalMessages.innerHTML = '<img class="checkpoint-avatar" src="/landing-static/zito-mascot.svg" alt="زیتو">';
+      modalMessages.innerHTML = '<img class="checkpoint-avatar" src="/landing-static/zito-mascot.svg?v=20260831-static-2" alt="زیتو">';
       const coaching = result.coaching || {};
       coachingStageNumber = Number(coaching.stage_number || result.completed_stage_number || currentLesson?.stage_number || 0) || null;
       coachForm.hidden = !coaching.enabled;

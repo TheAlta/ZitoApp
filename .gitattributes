@@ -1,0 +1,7 @@
+# Keep deployable source files stable across Windows and Linux checkouts.
+*.py text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf

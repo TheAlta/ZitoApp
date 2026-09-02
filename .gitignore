@@ -27,6 +27,7 @@ htmlcov/
 *.db
 *.db-journal
 *.log
+/.tmp/
 
 # Locally downloaded certificate previews
 knowledge_base/certificate.pdf

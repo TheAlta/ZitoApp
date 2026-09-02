@@ -1555,8 +1555,9 @@
       .stage-header { padding: 17px 15px; }
     }
   </style>
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260902-scroll-position-1">
 </head>
-<body>
+<body class="zito-glass zito-glass-app">
   <main id="appShell" class="phone-shell mode-onboarding">
     <header class="topbar">
       <div class="brand">
@@ -1583,10 +1584,14 @@
     </section>
 
     <section class="composer">
-      <div id="hint" class="hint">جواب را دقیق بنویس؛ زیتو ارتباط پاسخ را با AI بررسی می‌کند.</div>
       <form id="form">
-        <input id="answer" autocomplete="off" placeholder="پیام خود را بنویس..." />
-        <button id="send" type="submit" aria-label="ارسال">›</button>
+        <textarea id="answer" rows="1" autocomplete="off" aria-label="پیام خود را بنویس" placeholder="پیام خود را بنویس..."></textarea>
+        <div id="hint" class="hint">جواب را دقیق بنویس؛ زیتو ارتباط پاسخ را با AI بررسی می‌کند.</div>
+        <button id="send" type="submit" aria-label="ارسال">
+          <svg class="send-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 19V5M12 5 6.5 10.5M12 5l5.5 5.5" />
+          </svg>
+        </button>
       </form>
     </section>
 
@@ -1666,8 +1671,12 @@
       </div>
       <div id="modalMessages" class="modal-messages coaching-messages"></div>
       <form id="coachForm" class="coach-input-row" hidden>
-        <input id="coachInput" type="text" maxlength="1500" autocomplete="off" placeholder="سؤالت درباره همین مرحله را بنویس...">
-        <button id="coachSend" type="submit">بپرس</button>
+        <textarea id="coachInput" rows="1" maxlength="1500" autocomplete="off" aria-label="سؤال از زیتو" placeholder="سؤالت درباره همین مرحله را بنویس..."></textarea>
+        <button id="coachSend" type="submit" aria-label="ارسال سؤال">
+          <svg class="coach-send-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 19V5M12 5 6.5 10.5M12 5l5.5 5.5" />
+          </svg>
+        </button>
       </form>
       <div class="coaching-actions">
         <span id="coachAvailability" aria-live="polite">کوچینگ هوشمند در حال آماده‌سازی است.</span>
@@ -1809,7 +1818,22 @@
       setTimeout(() => { window.location.href = "/"; }, 900);
       return true;
     }
-    function setBusy(isBusy) { button.disabled = isBusy; typing.classList.toggle("show", isBusy); chat.appendChild(typing); chat.scrollTop = chat.scrollHeight; }
+    let composerIsBusy = false;
+    function syncComposerControls() { button.disabled = composerIsBusy || !input.value.trim(); }
+    function resizeComposerInput() {
+      const maxHeight = 116;
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`;
+      input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
+      syncComposerControls();
+    }
+    function setBusy(isBusy) {
+      composerIsBusy = isBusy;
+      syncComposerControls();
+      typing.classList.toggle("show", isBusy);
+      chat.appendChild(typing);
+      chat.scrollTop = chat.scrollHeight;
+    }
     function addMessage(text, who = "bot") { const div = document.createElement("div"); div.className = `msg ${who}`; div.textContent = text; chat.insertBefore(div, typing); chat.scrollTop = chat.scrollHeight; }
     function addModalMessage(text, who = "bot") { const div = document.createElement("div"); div.className = `msg ${who}`; div.textContent = text; modalMessages.appendChild(div); modalMessages.scrollTop = modalMessages.scrollHeight; }
     function escapeHtml(value) { return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
@@ -2025,19 +2049,30 @@
       });
     }
     let coachBusyTimer = null;
+    let coachIsBusy = false;
+    function syncCoachControls() {
+      coachSend.disabled = coachIsBusy || !coachInput.value.trim();
+    }
+    function resizeCoachInput() {
+      const maxHeight = 108;
+      coachInput.style.height = "auto";
+      coachInput.style.height = `${Math.min(coachInput.scrollHeight, maxHeight)}px`;
+      coachInput.style.overflowY = coachInput.scrollHeight > maxHeight ? "auto" : "hidden";
+      syncCoachControls();
+    }
     function setCoachBusy(isBusy) {
+      coachIsBusy = isBusy;
       coachInput.disabled = isBusy;
-      coachSend.disabled = isBusy;
+      coachSend.classList.toggle("is-loading", isBusy);
+      syncCoachControls();
       if (coachBusyTimer) window.clearTimeout(coachBusyTimer);
       if (isBusy) {
-        coachSend.textContent = "در حال بررسی";
         coachAvailability.textContent = "در حال یافتن منابع تاییدشده...";
         coachBusyTimer = window.setTimeout(() => {
           coachAvailability.textContent = "منبع پیدا شد؛ در حال آماده‌سازی پاسخ شخصی‌سازی‌شده...";
         }, 900);
         return;
       }
-      coachSend.textContent = "بپرس";
       coachAvailability.textContent = "پاسخ‌ها فقط از منابع تاییدشده همین دوره ساخته می‌شوند.";
     }
     async function sendCoachQuestion(event) {
@@ -2046,6 +2081,7 @@
       if (!message || !currentEnrollmentId || !coachingStageNumber) return;
       addModalMessage(message, "user");
       coachInput.value = "";
+      resizeCoachInput();
       setCoachBusy(true);
       try {
         const reply = await api(`/api/learning/enrollments/${currentEnrollmentId}/coach/messages`, {
@@ -2073,6 +2109,7 @@
         : "کوچینگ این نسخه هنوز در حالت پیش‌نمایش است.";
       addModalMessage(coaching.prompt || "درباره این مرحله سوالی داری؟");
       if (coaching.enabled) {
+        resizeCoachInput();
         try {
           await loadCoachHistory();
         } catch (error) {
@@ -2765,6 +2802,7 @@
       if (!value) return;
       addMessage(value, "user");
       input.value = "";
+      resizeComposerInput();
       setBusy(true);
       try {
         await submitProfileAnswer(value);
@@ -2773,9 +2811,24 @@
       finally { setBusy(false); input.focus(); }
     });
 
+    input.addEventListener("input", resizeComposerInput);
+    input.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+      event.preventDefault();
+      form.requestSubmit();
+    });
+    resizeComposerInput();
+
     modalClose.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
     coachContinue.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
     coachForm.addEventListener("submit", sendCoachQuestion);
+    coachInput.addEventListener("input", resizeCoachInput);
+    coachInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+      event.preventDefault();
+      coachForm.requestSubmit();
+    });
+    resizeCoachInput();
     changeCourse.addEventListener("click", () => showCourseCatalog().catch((error) => { coachMessage.textContent = error.message; }));
     finalExamClose.addEventListener("click", () => {
       closeFinalExamModal();

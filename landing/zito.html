@@ -1303,7 +1303,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260902-scroll-position-1">
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260905-login-actions-1">
 </head>
 
 <body class="zito-glass zito-glass-landing">
@@ -1385,31 +1385,40 @@
         <img src="/landing-static/zito-mascot.svg?v=20260831-static-2" alt="">
       </div>
       <div class="phone-title">ورود به زیتو</div>
-      <div class="phone-copy" id="phoneCopy">شماره موبایلت را وارد کن تا ورودت را بررسی کنیم.</div>
-      <form class="phone-form" id="phoneForm">
+      <div class="phone-copy" id="phoneCopy" aria-live="polite">نام و شماره موبایلت را وارد کن تا کد ورود را بفرستیم.</div>
+      <form class="phone-form" id="phoneForm" data-step="details">
         <div class="phone-field">
-          <label for="phoneInput">شماره موبایل</label>
-          <input class="phone-input" id="phoneInput" data-numeric="true" inputmode="numeric" autocomplete="tel" placeholder="09123456789" maxlength="20">
-        </div>
-        <button class="phone-submit" id="phoneSubmit" type="submit">ادامه</button>
-      </form>
-      <form class="phone-form is-hidden" id="nameForm">
-        <div class="phone-field">
-          <label for="fullNameInput">اسمی که دوست داری صدات کنیم</label>
+          <div class="phone-field-heading">
+            <label for="fullNameInput">اسمی که دوست داری صدات کنیم</label>
+          </div>
           <input class="phone-input" id="fullNameInput" autocomplete="name" placeholder="مثلا شایان" maxlength="80">
         </div>
-        <button class="phone-submit" id="nameSubmit" type="submit">ادامه</button>
-      </form>
-      <form class="phone-form is-hidden" id="otpForm">
         <div class="phone-field">
-          <label for="otpInput">کد تایید</label>
-          <input class="phone-input" id="otpInput" data-numeric="true" inputmode="numeric" autocomplete="one-time-code" placeholder="کد پیامک‌شده" maxlength="8">
+          <div class="phone-field-heading">
+            <label for="phoneInput">شماره موبایل</label>
+            <button class="phone-edit-link is-hidden" id="changePhone" type="button">ویرایش</button>
+          </div>
+          <input class="phone-input" id="phoneInput" data-numeric="true" inputmode="numeric" autocomplete="tel" placeholder="09123456789" maxlength="20">
         </div>
-        <button class="phone-submit" id="otpSubmit" type="submit">ورود</button>
+        <div class="phone-action-slot" id="phoneActionSlot">
+          <button class="phone-submit" id="phoneSubmit" type="submit">
+            <span>ارسال کد</span>
+            <svg class="phone-submit-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M5 12h13M13 6l6 6-6 6" />
+            </svg>
+          </button>
+          <div class="otp-entry" id="otpEntry" hidden>
+            <button class="otp-confirm" id="otpSubmit" type="submit" aria-label="تایید کد و ورود">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="m6.5 12.5 3.5 3.5 7.5-8" />
+              </svg>
+            </button>
+            <input class="phone-input" id="otpInput" data-numeric="true" inputmode="numeric" autocomplete="one-time-code" aria-label="کد تایید" placeholder="کد تایید را وارد کن" maxlength="8">
+          </div>
+        </div>
       </form>
-      <div class="phone-helper" id="phoneHelper"></div>
-      <div class="phone-error" id="phoneError"></div>
-      <button class="phone-link is-hidden" id="changePhone" type="button">تغییر شماره موبایل</button>
+      <div class="phone-helper" id="phoneHelper" aria-live="polite"></div>
+      <div class="phone-error" id="phoneError" aria-live="assertive"></div>
       <button class="phone-link is-hidden" id="resendOtp" type="button">ارسال دوباره کد</button>
     </div>
   </div>
@@ -1452,13 +1461,11 @@
     const soundToggle = document.getElementById('soundToggle');
     const phoneModal = document.getElementById('phoneModal');
     const phoneForm = document.getElementById('phoneForm');
-    const nameForm = document.getElementById('nameForm');
-    const otpForm = document.getElementById('otpForm');
     const fullNameInput = document.getElementById('fullNameInput');
     const phoneInput = document.getElementById('phoneInput');
     const otpInput = document.getElementById('otpInput');
     const phoneSubmit = document.getElementById('phoneSubmit');
-    const nameSubmit = document.getElementById('nameSubmit');
+    const otpEntry = document.getElementById('otpEntry');
     const otpSubmit = document.getElementById('otpSubmit');
     const phoneCopy = document.getElementById('phoneCopy');
     const phoneHelper = document.getElementById('phoneHelper');
@@ -1467,7 +1474,6 @@
     const resendOtp = document.getElementById('resendOtp');
     let pendingPhone = '';
     let pendingFullName = '';
-    let pendingOtpRequest = null;
     const fullText = 'سلام من زیتو هستم و قراره به تمام سوالاتی که تو حوزه کاریت داری جواب بدم. اگه آماده ای شروع کنیم؟';
 
     function updateSoundToggle(state) {
@@ -1541,7 +1547,8 @@
     function showLoginModal() {
       phoneModal.classList.add('show');
       phoneModal.setAttribute('aria-hidden', 'false');
-      phoneInput.focus();
+      const focusTarget = phoneForm.dataset.step === 'otp' ? otpInput : fullNameInput;
+      setTimeout(() => focusTarget.focus(), 120);
     }
 
     document.querySelector('.cta').addEventListener('click', async (event) => {
@@ -1611,9 +1618,13 @@
 
     function showOtpStep(phone, data) {
       pendingPhone = phone;
-      phoneForm.classList.add('is-hidden');
-      nameForm.classList.add('is-hidden');
-      otpForm.classList.remove('is-hidden');
+      phoneForm.dataset.step = 'otp';
+      phoneSubmit.hidden = true;
+      otpEntry.hidden = false;
+      fullNameInput.readOnly = true;
+      phoneInput.readOnly = true;
+      fullNameInput.tabIndex = -1;
+      phoneInput.tabIndex = -1;
       changePhone.classList.remove('is-hidden');
       resendOtp.classList.remove('is-hidden');
       resendOtp.disabled = false;
@@ -1626,46 +1637,34 @@
       otpInput.focus();
     }
 
-    function showNameStep(phone) {
-      pendingPhone = phone;
-      phoneForm.classList.add('is-hidden');
-      nameForm.classList.remove('is-hidden');
-      otpForm.classList.add('is-hidden');
-      changePhone.classList.remove('is-hidden');
-      resendOtp.classList.add('is-hidden');
-      phoneCopy.textContent = 'خوش آمدی به زیتو. اسمی را وارد کن که دوست داری با آن صدات کنیم.';
-      phoneHelper.textContent = '';
-      fullNameInput.value = '';
-      fullNameInput.focus();
-    }
-
-    function showPhoneStep() {
+    function showDetailsStep() {
       pendingPhone = '';
-      pendingFullName = '';
-      pendingOtpRequest = null;
-      otpForm.classList.add('is-hidden');
-      nameForm.classList.add('is-hidden');
-      phoneForm.classList.remove('is-hidden');
+      phoneForm.dataset.step = 'details';
+      phoneSubmit.hidden = false;
+      otpEntry.hidden = true;
+      fullNameInput.readOnly = false;
+      phoneInput.readOnly = false;
+      fullNameInput.tabIndex = 0;
+      phoneInput.tabIndex = 0;
       changePhone.classList.add('is-hidden');
       resendOtp.classList.add('is-hidden');
-      phoneCopy.textContent = 'شماره موبایلت را وارد کن تا ورودت را بررسی کنیم.';
+      phoneCopy.textContent = 'نام و شماره موبایلت را وارد کن تا کد ورود را بفرستیم.';
       phoneHelper.textContent = '';
       phoneError.textContent = '';
       phoneInput.focus();
     }
 
-    changePhone.addEventListener('click', showPhoneStep);
+    changePhone.addEventListener('click', showDetailsStep);
 
     resendOtp.addEventListener('click', async () => {
       if (!pendingPhone) {
-        showPhoneStep();
+        showDetailsStep();
         return;
       }
       phoneError.textContent = '';
       resendOtp.disabled = true;
       try {
         const data = await requestOtpCode(pendingPhone);
-        pendingOtpRequest = data;
         showOtpStep(pendingPhone, data);
       } catch (error) {
         phoneError.textContent = error.message;
@@ -1677,72 +1676,50 @@
     phoneForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       phoneError.textContent = '';
+      if (phoneForm.dataset.step === 'otp') {
+        otpSubmit.disabled = true;
+        try {
+          if (!pendingPhone) {
+            showDetailsStep();
+            throw new Error('اول نام و شماره موبایل را وارد کن.');
+          }
+          const response = await fetch('/api/auth/otp/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: pendingPhone,
+              code: normalizeDigits(otpInput.value).trim(),
+              display_name: pendingFullName || null
+            })
+          });
+          const data = await readApiResponse(response);
+          if (!response.ok) throw new Error(getErrorMessage(data, 'کد تایید درست نیست یا منقضی شده.'));
+          localStorage.setItem('zito_display_name', data.display_name || pendingFullName);
+          stopAmbientSound();
+          window.location.href = data.redirect_url;
+        } catch (error) {
+          phoneError.textContent = error.message;
+        } finally {
+          otpSubmit.disabled = false;
+        }
+        return;
+      }
+
       phoneHelper.textContent = '';
       phoneSubmit.disabled = true;
       try {
+        const fullName = fullNameInput.value.trim();
+        if (!fullName) throw new Error('یک نام وارد کن.');
         const phone = normalizeDigits(phoneInput.value).trim();
         phoneInput.value = phone;
         pendingPhone = phone;
-        pendingFullName = '';
+        pendingFullName = fullName;
         const data = await requestOtpCode(phone);
-        pendingOtpRequest = data;
-        if (data.requires_display_name) {
-          showNameStep(phone);
-        } else {
-          showOtpStep(phone, data);
-        }
+        showOtpStep(phone, data);
       } catch (error) {
         phoneError.textContent = error.message;
       } finally {
         phoneSubmit.disabled = false;
-      }
-    });
-
-    nameForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      phoneError.textContent = '';
-      nameSubmit.disabled = true;
-      try {
-        const fullName = fullNameInput.value.trim();
-        if (!fullName) throw new Error('یک نام وارد کن.');
-        if (!pendingPhone) {
-          showPhoneStep();
-          return;
-        }
-        pendingFullName = fullName;
-        const data = pendingOtpRequest || await requestOtpCode(pendingPhone);
-        pendingOtpRequest = data;
-        showOtpStep(pendingPhone, data);
-      } catch (error) {
-        phoneError.textContent = error.message;
-      } finally {
-        nameSubmit.disabled = false;
-      }
-    });
-
-    otpForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      phoneError.textContent = '';
-      otpSubmit.disabled = true;
-      try {
-        const response = await fetch('/api/auth/otp/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: pendingPhone,
-            code: normalizeDigits(otpInput.value).trim(),
-            display_name: pendingFullName || null
-          })
-        });
-        const data = await readApiResponse(response);
-        if (!response.ok) throw new Error(getErrorMessage(data, 'کد تایید درست نیست یا منقضی شده.'));
-        localStorage.setItem('zito_display_name', data.display_name || pendingFullName);
-        stopAmbientSound();
-        window.location.href = data.redirect_url;
-      } catch (error) {
-        phoneError.textContent = error.message;
-      } finally {
-        otpSubmit.disabled = false;
       }
     });
   </script>

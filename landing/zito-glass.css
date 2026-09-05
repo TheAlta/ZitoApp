@@ -373,6 +373,42 @@ body.zito-glass-certificate {
   gap: 6px;
 }
 
+.zito-glass-landing .phone-field-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.zito-glass-landing .phone-edit-link {
+  min-height: 27px;
+  margin: 0;
+  padding: 3px 9px;
+  border: 1px solid rgba(128, 103, 180, .20);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .38);
+  color: #6c5f85;
+  font-family: var(--font-fa);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.zito-glass-landing .phone-edit-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(93, 157, 190, .36);
+  background: rgba(255, 255, 255, .66);
+}
+
+.zito-glass-landing .phone-form[data-step="otp"] .phone-input[readonly] {
+  color: #716780 !important;
+  border-color: rgba(255, 255, 255, .56) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .36), rgba(232, 237, 250, .28)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72) !important;
+  cursor: default;
+}
+
 .zito-glass-landing .phone-input {
   height: 52px;
   border-radius: 18px;
@@ -381,6 +417,98 @@ body.zito-glass-certificate {
 .zito-glass-landing .phone-submit {
   height: 52px;
   border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.zito-glass-landing .phone-submit-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.zito-glass-landing .phone-action-slot {
+  min-height: 52px;
+}
+
+.zito-glass-landing .otp-entry {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-areas: "confirm code";
+  align-items: stretch;
+  gap: 9px;
+  min-height: 52px;
+  direction: ltr;
+  animation: zito-otp-entry .24s cubic-bezier(.2, .78, .2, 1) both;
+}
+
+.zito-glass-landing .otp-entry[hidden] {
+  display: none !important;
+}
+
+.zito-glass-landing .otp-entry .phone-input {
+  grid-area: code;
+  min-width: 0;
+  height: 52px;
+  padding-inline: 18px;
+  direction: ltr;
+  text-align: center;
+  letter-spacing: .28em;
+  font-family: var(--font-en);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.zito-glass-landing .otp-confirm {
+  grid-area: confirm;
+  width: 48px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 18px;
+  color: #fff;
+  background: linear-gradient(140deg, #8063c6, #54a9b8);
+  box-shadow: 0 10px 22px rgba(87, 98, 180, .25), inset 0 1px 0 rgba(255, 255, 255, .44);
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+
+.zito-glass-landing .otp-confirm:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.025);
+  filter: brightness(1.05);
+  box-shadow: 0 14px 28px rgba(87, 98, 180, .33), inset 0 1px 0 rgba(255, 255, 255, .58);
+}
+
+.zito-glass-landing .otp-confirm:disabled {
+  cursor: wait;
+  opacity: .62;
+}
+
+.zito-glass-landing .otp-confirm svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+@keyframes zito-otp-entry {
+  from { opacity: 0; transform: translateY(5px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zito-glass-landing .otp-entry { animation: none; }
 }
 
 .zito-glass-landing :is(.phone-helper, .phone-error) {
@@ -439,6 +567,97 @@ body.zito-glass-certificate {
   .card button[type="submit"]
 ):hover:not(:disabled) {
   box-shadow: 0 20px 36px rgba(95, 80, 177, .31), inset 0 1px 0 rgba(255, 255, 255, .56), inset 0 -2px 0 rgba(54, 75, 153, .13) !important;
+}
+
+/* Login actions stay deliberate: one clear primary action, quiet utility controls. */
+.zito-glass-landing .phone-submit {
+  width: 100%;
+  padding: 0 18px;
+  border: 1px solid rgba(74, 94, 156, .34) !important;
+  border-radius: 16px;
+  outline: none !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #665eaa 0%, #4e91a8 100%) !important;
+  box-shadow: 0 8px 18px rgba(77, 85, 151, .19), inset 0 1px 0 rgba(255, 255, 255, .28) !important;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.zito-glass-landing .phone-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #5f57a0 0%, #47889f 100%) !important;
+  box-shadow: 0 11px 22px rgba(77, 85, 151, .23), inset 0 1px 0 rgba(255, 255, 255, .32) !important;
+}
+
+.zito-glass-landing .phone-submit:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 5px 12px rgba(77, 85, 151, .18), inset 0 1px 0 rgba(255, 255, 255, .24) !important;
+}
+
+.zito-glass-landing :is(.phone-submit, .otp-confirm, .phone-edit-link, .phone-link):focus-visible {
+  outline: 3px solid rgba(81, 146, 181, .28) !important;
+  outline-offset: 3px;
+}
+
+.zito-glass-landing .phone-submit:disabled {
+  opacity: .58;
+  box-shadow: none !important;
+}
+
+.zito-glass-landing .phone-edit-link {
+  min-height: auto;
+  padding: 1px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #5f5a91;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(95, 90, 145, .35);
+  text-underline-offset: 3px;
+}
+
+.zito-glass-landing .phone-edit-link:hover {
+  transform: none;
+  border-color: transparent;
+  background: transparent;
+  color: #477e9f;
+  text-decoration-color: currentColor;
+}
+
+.zito-glass-landing .otp-confirm {
+  border: 1px solid rgba(74, 94, 156, .30);
+  border-radius: 16px;
+  background: #5c689e;
+  box-shadow: 0 6px 14px rgba(77, 85, 151, .16), inset 0 1px 0 rgba(255, 255, 255, .24);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.zito-glass-landing .otp-confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: none;
+  background: #526092;
+  box-shadow: 0 9px 18px rgba(77, 85, 151, .20), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+
+.zito-glass-landing .otp-confirm:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.zito-glass-landing .phone-link {
+  width: max-content;
+  margin: 10px auto 0;
+  padding: 2px 0;
+  color: #625d8b;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(98, 93, 139, .32);
+  text-underline-offset: 4px;
+}
+
+.zito-glass-landing .phone-link:hover:not(:disabled) {
+  color: #477e9f;
+  text-decoration-color: currentColor;
 }
 
 /* Chat composer: one calm liquid surface, with the message field living inside it. */

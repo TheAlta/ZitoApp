@@ -4,9 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Zito Chat</title>
-  <link href="https://cdn.jsdelivr.net/gh/hemedani/yekan@v3.0.0/font-face.css" rel="stylesheet" type="text/css">
+  <link rel="preload" href="/landing-static/fonts/Yekan.woff2" as="font" type="font/woff2" crossorigin>
   <style>
-    @font-face { font-family: "YekanZito"; src: local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan"); font-display: swap; }
+    @font-face {
+      font-family: "YekanZito";
+      src: url("/landing-static/fonts/Yekan.woff2") format("woff2"), local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan");
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+    }
     * { box-sizing: border-box; }
     :root {
       color-scheme: light;
@@ -1555,7 +1561,7 @@
       .stage-header { padding: 17px 15px; }
     }
   </style>
-  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260902-scroll-position-1">
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260905-sidebar-account-1">
 </head>
 <body class="zito-glass zito-glass-app">
   <main id="appShell" class="phone-shell mode-onboarding">
@@ -1567,7 +1573,16 @@
           <div class="subtitle">همراه هوشمند مسیر یادگیری تو</div>
         </div>
       </div>
-      <div id="status" class="status-pill">شروع مسیر</div>
+      <div class="topbar-tools">
+        <button id="learningSidebarToggle" class="learning-sidebar-toggle" type="button" aria-label="نمایش یا پنهان‌کردن سرفصل‌ها" title="نمایش یا پنهان‌کردن سرفصل‌ها" aria-controls="planetStage" aria-expanded="false" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v16H7.5A2.5 2.5 0 0 0 5 21.5v-16Z" />
+            <path d="M5 5.5v16M9 7h6M9 11h6" />
+          </svg>
+          <span>سرفصل‌ها</span>
+        </button>
+        <div id="status" class="status-pill">شروع مسیر</div>
+      </div>
     </header>
 
     <section class="hero">
@@ -1614,13 +1629,15 @@
 
         <section id="learningPath" class="learning-path" hidden>
           <div class="path-course-head">
+            <button id="closeLearningSidebar" class="learning-sidebar-close" type="button" aria-label="بستن فهرست سرفصل‌ها" title="بستن فهرست سرفصل‌ها">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" /></svg>
+            </button>
             <span class="section-kicker">دوره فعال</span>
             <h2 id="activeCourseTitle">مسیر آموزشی</h2>
             <div id="pathProgressText" class="path-progress-text">۰ از ۲۰ مرحله</div>
             <div class="meter"><div id="pathProgressBar" class="bar" style="width: 0%"></div></div>
-            <button id="changeCourse" class="path-switch-course" type="button">انتخاب دوره یا نسخه دیگر</button>
           </div>
-          <div id="stagePathList" class="stage-path-list" aria-label="مراحل دوره"></div>
+          <div id="stagePathList" class="stage-path-list" role="list" aria-label="سرفصل‌های دوره"></div>
           <section id="activeModuleStages" class="module-stage-overview" aria-labelledby="activeModuleTitle" hidden>
             <div class="module-stage-heading">
               <div>
@@ -1648,6 +1665,26 @@
               <div id="moduleStageRail" class="module-stage-rail" role="list" aria-label="مراحل این سرفصل"></div>
             </details>
           </section>
+          <footer class="learning-sidebar-footer">
+            <div class="sidebar-actions">
+              <button id="changeCourse" class="sidebar-action sidebar-action-course" type="button">
+                <svg class="sidebar-action-icon course-switch-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="5" width="6" height="6" rx="1.5"/><rect x="14" y="5" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><path d="M14 16h6m-3-3 3 3-3 3"/></svg>
+                <span>بازگشت به دوره‌ها</span>
+              </button>
+              <button id="logoutFromLearning" class="sidebar-action sidebar-action-logout" type="button">
+                <svg class="sidebar-action-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/><path d="M14 8l4 4-4 4M18 12H9"/></svg>
+                <span>خروج از حساب</span>
+              </button>
+            </div>
+            <section class="sidebar-account" aria-label="حساب کاربری">
+              <span id="sidebarUserInitial" class="sidebar-account-avatar" aria-hidden="true">ز</span>
+              <span class="sidebar-account-copy">
+                <small>حساب کاربری</small>
+                <strong id="sidebarUserName">حساب کاربری</strong>
+                <span id="sidebarUserPhone" dir="ltr" hidden></span>
+              </span>
+            </section>
+          </footer>
         </section>
       </div>
     </section>
@@ -1660,14 +1697,19 @@
     </aside>
   </main>
 
-  <div id="answerModal" class="answer-modal" aria-hidden="true">
+  <button id="learningSidebarScrim" class="learning-sidebar-scrim" type="button" aria-label="بستن فهرست سرفصل‌ها" hidden></button>
+  <div id="learningToast" class="learning-toast" role="status" aria-live="polite" hidden></div>
+
+  <div id="answerModal" class="answer-modal coaching-modal" aria-hidden="true">
     <section class="modal-chat" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modal-head">
         <div>
           <div id="modalTitle" class="modal-title">ایستگاه کوچینگ زیتو</div>
           <div class="subtitle">زیتو بعد از هر مرحله برای پرسش و مرور کنار تو می‌ماند.</div>
         </div>
-        <button id="modalClose" class="modal-close" type="button" aria-label="بستن">×</button>
+        <button id="modalClose" class="modal-close" type="button" aria-label="بستن" title="بستن">
+          <svg class="modal-close-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" /></svg>
+        </button>
       </div>
       <div id="modalMessages" class="modal-messages coaching-messages"></div>
       <form id="coachForm" class="coach-input-row" hidden>
@@ -1680,7 +1722,10 @@
       </form>
       <div class="coaching-actions">
         <span id="coachAvailability" aria-live="polite">کوچینگ هوشمند در حال آماده‌سازی است.</span>
-        <button id="coachContinue" type="button">ادامه مسیر</button>
+        <button id="coachContinue" type="button">
+          <svg class="coach-continue-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 12h8m-4-4 4 4-4 4" /></svg>
+          <span id="coachContinueLabel">ادامه مسیر</span>
+        </button>
       </div>
     </section>
   </div>
@@ -1692,7 +1737,9 @@
           <div id="finalExamTitle" class="modal-title">آزمون نهایی زیتو</div>
           <div class="subtitle">نتیجه آزمون فقط بر اساس پاسخ‌های همین آزمون ارزیابی می‌شود.</div>
         </div>
-        <button id="finalExamClose" class="modal-close" type="button" aria-label="بستن آزمون">×</button>
+        <button id="finalExamClose" class="modal-close" type="button" aria-label="بستن آزمون" title="بستن آزمون">
+          <svg class="modal-close-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" /></svg>
+        </button>
       </div>
       <div id="finalExamBody" class="final-exam-body" aria-live="polite"></div>
     </section>
@@ -1705,10 +1752,9 @@
     let stage = "onboarding";
     let selectedTrack = localStorage.getItem("zito_track") || "accounting";
     let currentEnrollmentId = null;
-    let pendingNextStage = false;
     let coachingStageNumber = null;
     let currentLearningPath = null;
-    let inspectedModuleId = null;
+    let learningToastTimer = null;
     const savedDisplayName = localStorage.getItem("zito_display_name") || "";
 
     const appShell = document.querySelector("#appShell");
@@ -1719,6 +1765,10 @@
     const input = document.querySelector("#answer");
     const button = document.querySelector("#send");
     const statusBox = document.querySelector("#status");
+    const learningSidebarToggle = document.querySelector("#learningSidebarToggle");
+    const closeLearningSidebar = document.querySelector("#closeLearningSidebar");
+    const learningSidebarScrim = document.querySelector("#learningSidebarScrim");
+    const learningToast = document.querySelector("#learningToast");
     const hint = document.querySelector("#hint");
     const typing = document.querySelector("#typing");
     const lessonPanel = document.querySelector("#lessonPanel");
@@ -1731,21 +1781,16 @@
     const pathProgressText = document.querySelector("#pathProgressText");
     const pathProgressBar = document.querySelector("#pathProgressBar");
     const stagePathList = document.querySelector("#stagePathList");
-    const activeModuleStages = document.querySelector("#activeModuleStages");
-    const activeModuleEyebrow = document.querySelector("#activeModuleEyebrow");
-    const activeModuleTitle = document.querySelector("#activeModuleTitle");
-    const activeModuleProgress = document.querySelector("#activeModuleProgress");
-    const activeModuleDescription = document.querySelector("#activeModuleDescription");
-    const moduleCurrentLabel = document.querySelector("#moduleCurrentLabel");
-    const moduleCurrentStage = document.querySelector("#moduleCurrentStage");
-    const moduleNextStage = document.querySelector("#moduleNextStage");
-    const moduleStageMap = document.querySelector("#moduleStageMap");
-    const moduleStageRail = document.querySelector("#moduleStageRail");
     const changeCourse = document.querySelector("#changeCourse");
+    const logoutFromLearning = document.querySelector("#logoutFromLearning");
+    const sidebarUserInitial = document.querySelector("#sidebarUserInitial");
+    const sidebarUserName = document.querySelector("#sidebarUserName");
+    const sidebarUserPhone = document.querySelector("#sidebarUserPhone");
     const answerModal = document.querySelector("#answerModal");
     const modalMessages = document.querySelector("#modalMessages");
     const modalClose = document.querySelector("#modalClose");
     const coachContinue = document.querySelector("#coachContinue");
+    const coachContinueLabel = document.querySelector("#coachContinueLabel");
     const coachForm = document.querySelector("#coachForm");
     const coachInput = document.querySelector("#coachInput");
     const coachSend = document.querySelector("#coachSend");
@@ -1796,6 +1841,18 @@
     };
 
     function setStatus(text) { statusBox.textContent = text; }
+    function showLearningAdvanceToast(message) {
+      window.clearTimeout(learningToastTimer);
+      learningToast.textContent = message;
+      learningToast.hidden = false;
+      requestAnimationFrame(() => learningToast.classList.add("show"));
+      learningToastTimer = window.setTimeout(() => {
+        learningToast.classList.remove("show");
+        window.setTimeout(() => {
+          if (!learningToast.classList.contains("show")) learningToast.hidden = true;
+        }, 180);
+      }, 2600);
+    }
     function clearSavedSession() {
       localStorage.removeItem("zito_user_id");
       localStorage.removeItem("zito_username");
@@ -1806,10 +1863,19 @@
       currentLesson = null;
       currentEnrollmentId = null;
       currentLearningPath = null;
-      inspectedModuleId = null;
       profileBuilder = null;
       selectedTrack = "accounting";
+      setSidebarAccount(null);
       window.history.replaceState({}, "", "/app/");
+    }
+
+    function setSidebarAccount(account) {
+      const displayName = String(account?.display_name || "حساب کاربری").trim() || "حساب کاربری";
+      const phone = String(account?.phone || "").trim();
+      sidebarUserName.textContent = displayName;
+      sidebarUserInitial.textContent = Array.from(displayName).find((character) => character.trim()) || "ز";
+      sidebarUserPhone.textContent = phone;
+      sidebarUserPhone.hidden = !phone;
     }
     function handleMissingUser(error) {
       if (![401, 403].includes(error.status)) return false;
@@ -1837,9 +1903,22 @@
     function addMessage(text, who = "bot") { const div = document.createElement("div"); div.className = `msg ${who}`; div.textContent = text; chat.insertBefore(div, typing); chat.scrollTop = chat.scrollHeight; }
     function addModalMessage(text, who = "bot") { const div = document.createElement("div"); div.className = `msg ${who}`; div.textContent = text; modalMessages.appendChild(div); modalMessages.scrollTop = modalMessages.scrollHeight; }
     function escapeHtml(value) { return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
+    function setLearningSidebarOpen(open) {
+      const isOpen = Boolean(open) && appShell.classList.contains("mode-lesson");
+      appShell.classList.toggle("learning-sidebar-open", isOpen);
+      learningSidebarToggle.setAttribute("aria-expanded", String(isOpen));
+      learningSidebarScrim.hidden = !isOpen;
+    }
     function setMode(mode) {
+      const wasLesson = appShell.classList.contains("mode-lesson");
       appShell.classList.remove("mode-onboarding", "mode-planet", "mode-lesson");
       appShell.classList.add(`mode-${mode}`);
+      learningSidebarToggle.hidden = mode !== "lesson";
+      if (mode !== "lesson") {
+        setLearningSidebarOpen(false);
+      } else if (!wasLesson) {
+        setLearningSidebarOpen(!window.matchMedia("(max-width: 1020px)").matches);
+      }
     }
     function normalizeDigits(value) {
       const fa = "۰۱۲۳۴۵۶۷۸۹";
@@ -1905,7 +1984,6 @@
       currentLesson = null;
       currentEnrollmentId = null;
       currentLearningPath = null;
-      inspectedModuleId = null;
       courseCatalog.hidden = false;
       learningPath.hidden = true;
       coachMessage.textContent = "چه دوره‌ای می‌خواهی انتخاب کنی؟";
@@ -1915,60 +1993,24 @@
       renderCourseCatalog(courses);
     }
 
+    async function logoutToLanding() {
+      logoutFromLearning.disabled = true;
+      try {
+        const response = await fetch("/api/auth/logout", { method: "POST" });
+        if (!response.ok && ![401, 403].includes(response.status)) {
+          throw new Error("خروج از حساب انجام نشد.");
+        }
+        clearSavedSession();
+        window.location.assign("/");
+      } catch (error) {
+        logoutFromLearning.disabled = false;
+        setStatus("خروج انجام نشد");
+        showLearningAdvanceToast(error.message || "خروج از حساب انجام نشد. دوباره تلاش کن.");
+      }
+    }
+
     function stageLabel(stageType) {
       return STAGE_LABELS[stageType] || String(stageType || "مرحله آموزشی").replaceAll("_", " ");
-    }
-
-    function renderModuleStageOverview(path, moduleId) {
-      const modules = Array.isArray(path.modules) ? path.modules : [];
-      const module = modules.find((item) => String(item.module_id) === String(moduleId));
-      if (!module) {
-        activeModuleStages.hidden = true;
-        return;
-      }
-
-      const stages = (Array.isArray(path.stages) ? path.stages : [])
-        .filter((item) => String(item.module_id) === String(module.module_id))
-        .sort((a, b) => Number(a.module_stage_number) - Number(b.module_stage_number));
-      const currentIndex = stages.findIndex((item) => item.is_current);
-      const currentItem = currentIndex >= 0 ? stages[currentIndex] : module.status === "completed" ? stages.at(-1) : null;
-      const nextItem = currentIndex >= 0 ? stages[currentIndex + 1] : module.status === "locked" ? stages[0] : null;
-
-      activeModuleStages.hidden = false;
-      activeModuleEyebrow.textContent = `سرفصل ${module.module_number} از ${modules.length}`;
-      activeModuleTitle.textContent = module.title;
-      activeModuleProgress.textContent = `${module.completed_stage_count} از ${module.total_stage_count}`;
-      activeModuleDescription.textContent = module.description || "در این سرفصل، مفهوم‌ها را قدم‌به‌قدم مرور و تمرین می‌کنی.";
-      moduleCurrentLabel.textContent = currentIndex >= 0 ? "الان اینجایی" : module.status === "completed" ? "آخرین قدم" : "وضعیت سرفصل";
-      moduleCurrentStage.textContent = currentItem ? currentItem.title : "هنوز شروع نشده";
-      moduleNextStage.textContent = nextItem ? nextItem.title : module.status === "completed" ? "این سرفصل کامل شده" : "پس از شروع مشخص می‌شود";
-
-      moduleStageRail.innerHTML = stages.map((item) => {
-        const stateClass = item.status === "completed" ? "completed" : item.is_current ? "current" : "locked";
-        const typeLabel = stageLabel(item.stage_type);
-        const detail = typeLabel !== item.title ? `<small>${escapeHtml(typeLabel)}</small>` : "";
-        return `<div class="module-stage-item ${stateClass}" role="listitem" ${item.is_current ? 'aria-current="step"' : ""} title="${escapeHtml(item.title)}">
-          <span class="module-stage-index">${item.module_stage_number}</span>
-          <span class="module-stage-copy"><strong>${escapeHtml(item.title)}</strong>${detail}</span>
-          <span class="module-stage-state" aria-hidden="true">${item.status === "completed" ? "✓" : item.is_current ? "●" : ""}</span>
-        </div>`;
-      }).join("");
-
-      requestAnimationFrame(() => {
-        const currentStage = moduleStageRail.querySelector(".module-stage-item.current");
-        if (currentStage && moduleStageMap.open) currentStage.scrollIntoView({ block: "nearest", inline: "center" });
-      });
-    }
-
-    function inspectModule(moduleId) {
-      if (!currentLearningPath) return;
-      inspectedModuleId = moduleId;
-      stagePathList.querySelectorAll("[data-module-id]").forEach((buttonItem) => {
-        const isSelected = String(buttonItem.dataset.moduleId) === String(moduleId);
-        buttonItem.classList.toggle("selected", isSelected);
-        buttonItem.setAttribute("aria-pressed", String(isSelected));
-      });
-      renderModuleStageOverview(currentLearningPath, moduleId);
     }
 
     function renderLearningPath(path) {
@@ -1982,38 +2024,25 @@
       courseCatalog.hidden = true;
       learningPath.hidden = false;
       activeCourseTitle.textContent = path.course_title;
-      const unitLabel = path.module_count ? "بخش آموزشی" : "مرحله";
-      pathProgressText.textContent = `${path.completed_stage_count} از ${path.total_stage_count} ${unitLabel} · ${path.progress_percentage}٪`;
+      pathProgressText.textContent = `${path.completed_stage_count} / ${path.total_stage_count}`;
+      pathProgressText.setAttribute("aria-label", `${path.completed_stage_count} مرحله از ${path.total_stage_count} مرحله تکمیل شده`);
       pathProgressBar.style.width = `${path.progress_percentage}%`;
       if (Array.isArray(path.modules) && path.modules.length) {
         stagePathList.classList.add("module-path-list");
         const activeModule = path.modules.find((module) => module.is_current)
           || (["completed", "awaiting_final_exam"].includes(path.status) ? path.modules.at(-1) : path.modules[0]);
-        inspectedModuleId = activeModule?.module_id ?? null;
         stagePathList.innerHTML = path.modules.map((module) => {
-          const total = Number(module.total_stage_count) || 20;
-          const completed = Number(module.completed_stage_count) || 0;
-          const modulePercentage = Math.max(0, Math.min(100, Math.round(completed * 100 / total)));
           const statusLabel = module.status === "completed" ? "تکمیل‌شده" : module.is_current ? "در حال یادگیری" : "در ادامه مسیر";
-          const isSelected = String(module.module_id) === String(inspectedModuleId);
-          return `<button type="button" class="path-module ${module.status} ${isSelected ? "selected" : ""}" data-module-id="${module.module_id}" aria-pressed="${isSelected}">
+          const isActive = String(module.module_id) === String(activeModule?.module_id);
+          const state = module.status === "completed" ? "completed" : module.is_current ? "current" : "upcoming";
+          return `<div class="path-module ${module.status} ${isActive ? "selected" : ""}" role="listitem" ${isActive ? 'aria-current="step"' : ""} aria-label="${escapeHtml(`${module.title}، ${statusLabel}`)}">
             <span class="path-stage-number">${module.module_number}</span>
-            <span class="path-module-copy">
-              <span class="path-module-kicker">سرفصل ${module.module_number} · ${statusLabel}</span>
-              <strong>${escapeHtml(module.title)}</strong>
-              <small>${escapeHtml(module.description || "چند قدم کوتاه برای یادگیری و تمرین")}</small>
-              <span class="path-module-meter" aria-hidden="true"><i style="width:${modulePercentage}%"></i></span>
-            </span>
-            <span class="path-module-count"><strong>${completed}</strong><small>از ${total}</small></span>
-          </button>`;
+            <strong class="path-module-title">${escapeHtml(module.title)}</strong>
+            <span class="path-module-state" data-state="${state}" aria-hidden="true"></span>
+          </div>`;
         }).join("");
-        stagePathList.querySelectorAll("[data-module-id]").forEach((buttonItem) => {
-          buttonItem.addEventListener("click", () => inspectModule(buttonItem.dataset.moduleId));
-        });
-        renderModuleStageOverview(path, inspectedModuleId);
       } else {
         stagePathList.classList.remove("module-path-list");
-        activeModuleStages.hidden = true;
         stagePathList.innerHTML = path.stages.map((item) => {
           const stateIcon = item.status === "completed" ? "✓" : item.is_current ? "●" : "○";
           const stateClass = item.status === "completed" ? "completed" : item.is_current ? "current" : "locked";
@@ -2098,31 +2127,26 @@
         coachInput.focus();
       }
     }
-    async function showCoachingCheckpoint(result) {
-      pendingNextStage = true;
+    async function openCoachForCurrentLesson() {
+      if (!currentLesson || !currentEnrollmentId) return;
       modalMessages.innerHTML = '<img class="checkpoint-avatar" src="/landing-static/zito-mascot.svg?v=20260831-static-2" alt="زیتو">';
-      const coaching = result.coaching || {};
-      coachingStageNumber = Number(coaching.stage_number || result.completed_stage_number || currentLesson?.stage_number || 0) || null;
+      const coaching = currentLesson.coaching || {};
+      coachingStageNumber = Number(coaching.stage_number || currentLesson.stage_number || 0) || null;
       coachForm.hidden = !coaching.enabled;
       coachAvailability.textContent = coaching.enabled
         ? "پاسخ‌ها فقط از منابع تاییدشده همین دوره ساخته می‌شوند."
         : "کوچینگ این نسخه هنوز در حالت پیش‌نمایش است.";
       addModalMessage(coaching.prompt || "درباره این مرحله سوالی داری؟");
       if (coaching.enabled) {
+        coachInput.value = "";
         resizeCoachInput();
         try {
           await loadCoachHistory();
         } catch (error) {
           if (!handleMissingUser(error)) addModalMessage("تاریخچه کوچینگ فعلاً در دسترس نیست.");
         }
-      } else if (result.course_completed || result.path?.final_exam_available) {
-        addModalMessage("سرفصل‌های دوره را کامل کردی. آزمون نهایی آماده است و می‌توانی آن را از صفحه آموزش شروع کنی.");
       }
-      coachContinue.textContent = result.course_completed
-        ? "دیدن جمع‌بندی"
-        : result.path?.final_exam_available
-          ? "دیدن وضعیت آزمون نهایی"
-          : "ادامه مسیر";
+      coachContinueLabel.textContent = "بازگشت به درس";
       answerModal.classList.add("show");
       answerModal.setAttribute("aria-hidden", "false");
       if (coaching.enabled) coachInput.focus();
@@ -2133,9 +2157,6 @@
     }
     async function continueAfterCoaching() {
       closeAnswerModal();
-      if (!pendingNextStage) return;
-      pendingNextStage = false;
-      await loadLearningStage();
     }
 
     function finalExamIntroMarkup(title, passingScore, attemptNumber) {
@@ -2500,10 +2521,18 @@
       return `<section class="content-block block-${escapeHtml(kind)}">${title}<p>${escapeHtml(block.body || "محتوای این بخش در CMS تکمیل می‌شود.")}</p></section>`;
     }
 
+    function mediaSlotIcon(kind) {
+      const icons = {
+        image: `<svg class="media-slot-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.5"/><path d="m5.5 17 4.2-4 3.1 2.7 2.2-2 3.2 3.3"/></svg>`,
+        video: `<svg class="media-slot-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="6" width="13.5" height="12" rx="3"/><path d="m17 10 4-2.2v8.4L17 14"/><path d="m9.5 10.2 3.2 1.8-3.2 1.8Z"/></svg>`,
+        audio: `<svg class="media-slot-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 10v4h3l4 3V7l-4 3H4Z"/><path d="M15 9.2a4 4 0 0 1 0 5.6M18 6.5a7.8 7.8 0 0 1 0 11"/></svg>`,
+      };
+      return icons[kind] || `<svg class="media-slot-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3.5h7l4 4v13H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/><path d="M14 3.5v4h4M8.5 13h7M8.5 16h5"/></svg>`;
+    }
+
     function renderMediaSlots(slots) {
       if (!Array.isArray(slots) || !slots.length) return "";
-      const icons = { image: "▧", video: "▷", audio: "◖" };
-      return `<div class="media-slots">${slots.map((slot) => `<div class="media-slot" data-media-kind="${escapeHtml(slot.kind || "file")}"><div><span class="media-slot-icon" aria-hidden="true">${icons[slot.kind] || "□"}</span><strong>${escapeHtml(slot.label || "رسانه مرحله")}</strong><small>جایگاه آماده است؛ فایل بعداً از CMS منتشر می‌شود.</small></div></div>`).join("")}</div>`;
+      return `<div class="media-slots">${slots.map((slot) => `<div class="media-slot" data-media-kind="${escapeHtml(slot.kind || "file")}"><div><span class="media-slot-icon">${mediaSlotIcon(slot.kind)}</span><strong>${escapeHtml(slot.label || "رسانه مرحله")}</strong><small>جایگاه آماده است؛ فایل بعداً از CMS منتشر می‌شود.</small></div></div>`).join("")}</div>`;
     }
 
     function assessmentFeedbackMarkup(assessment) {
@@ -2623,6 +2652,18 @@
         : lesson.course_completed && currentLearningPath?.final_exam_required
           ? `<div class="final-exam-note"><strong>دوره را کامل کرده‌ای</strong><p>نتیجه آزمون و مدرک پایان دوره‌ات از اینجا در دسترس است.</p><button class="final-exam-open-button" type="button" data-open-final-exam>مشاهده مدرک</button></div>`
           : "";
+      const coachAssist = lesson.coaching?.enabled
+        ? `<section class="lesson-assist">
+            <div>
+              <span>همراه این مرحله</span>
+              <strong>درباره این بخش سوالی داری؟</strong>
+            </div>
+            <button class="lesson-coach-trigger" type="button" data-open-coach>
+              <svg class="lesson-coach-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.48 8.6 8.6 0 0 1-3.1-.58L4 20l1.52-4.34A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg>
+              <span>از زیتو بپرس</span>
+            </button>
+          </section>`
+        : "";
       lessonPanel.innerHTML = `
         <article class="lesson-article" data-stage-type="${escapeHtml(lesson.stage_type)}">
           <header class="stage-header">
@@ -2642,6 +2683,7 @@
             <p>${escapeHtml(activity.prompt || "وقتی مرور این مرحله تمام شد، مسیر را ادامه بده.")}</p>
           </section>
           ${assessmentFeedbackMarkup(lesson.assessment)}
+          ${coachAssist}
           ${finalExamNote}
           <div class="stage-progress-footer">
             <span>پیشرفت کل مسیر</span>
@@ -2655,6 +2697,7 @@
       const completeButton = lessonPanel.querySelector("[data-complete-stage]");
       if (!terminal) completeButton.addEventListener("click", completeCurrentStage);
       lessonPanel.querySelector("[data-open-final-exam]")?.addEventListener("click", openFinalExam);
+      lessonPanel.querySelector("[data-open-coach]")?.addEventListener("click", () => openCoachForCurrentLesson().catch((error) => { coachMessage.textContent = error.message; }));
       bindFlashcards();
       if (lesson.stage_type === "personalized_work_example") loadPersonalizedExample(lesson);
       coachMessage.textContent = waitingForFinalExam
@@ -2682,14 +2725,16 @@
       const completeButton = lessonPanel.querySelector("[data-complete-stage]");
       completeButton.disabled = true;
       completeButton.textContent = "در حال ثبت...";
+      let stageCompleted = false;
       try {
         const response = collectStageResponse();
         const result = await api(`/api/learning/enrollments/${currentEnrollmentId}/stages/${currentLesson.stage_number}/complete`, {
           method: "POST",
           body: JSON.stringify({ response }),
         });
+        stageCompleted = result.stage_completed !== false;
         renderLearningPath(result.path);
-        if (result.stage_completed === false) {
+        if (!stageCompleted) {
           currentLesson.assessment = result.assessment;
           renderLesson(currentLesson);
           setStatus("آزمونک نیاز به تلاش دوباره دارد");
@@ -2697,10 +2742,25 @@
         }
         const finalExamAvailable = Boolean(result.path?.final_exam_available);
         setStatus(result.course_completed ? "مسیر کامل شد" : finalExamAvailable ? "آماده آزمون نهایی" : `مرحله ${result.next_stage_number} آماده است`);
-        await showCoachingCheckpoint(result);
+        completeButton.textContent = "در حال باز کردن قدم بعدی...";
+        showLearningAdvanceToast(
+          result.course_completed
+            ? "مسیر با موفقیت کامل شد."
+            : finalExamAvailable
+              ? "همه مرحله‌ها ثبت شدند؛ آزمون نهایی آماده است."
+              : `مرحله ثبت شد؛ قدم ${result.next_stage_number} باز شد.`
+        );
+        if (!result.course_completed && !finalExamAvailable) {
+          await new Promise((resolve) => window.setTimeout(resolve, 340));
+        }
+        await loadLearningStage();
       } catch (error) {
-        completeButton.disabled = false;
-        completeButton.textContent = "تکمیل مرحله و ادامه";
+        if (stageCompleted) {
+          completeButton.textContent = "مرحله ثبت شد؛ صفحه را تازه‌سازی کن";
+        } else {
+          completeButton.disabled = false;
+          completeButton.textContent = "تکمیل مرحله و ادامه";
+        }
         coachMessage.textContent = error.message;
       }
     }
@@ -2734,6 +2794,7 @@
       try {
         const me = await api("/api/me");
         userId = me.id;
+        setSidebarAccount(me);
         localStorage.setItem("zito_display_name", me.display_name);
         personalizeWelcome(me.display_name);
         await startPhase2();
@@ -2819,6 +2880,17 @@
     });
     resizeComposerInput();
 
+    learningSidebarToggle.addEventListener("click", () => {
+      setLearningSidebarOpen(!appShell.classList.contains("learning-sidebar-open"));
+    });
+    closeLearningSidebar.addEventListener("click", () => setLearningSidebarOpen(false));
+    learningSidebarScrim.addEventListener("click", () => setLearningSidebarOpen(false));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && appShell.classList.contains("learning-sidebar-open")) {
+        setLearningSidebarOpen(false);
+      }
+    });
+
     modalClose.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
     coachContinue.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));
     coachForm.addEventListener("submit", sendCoachQuestion);
@@ -2830,6 +2902,7 @@
     });
     resizeCoachInput();
     changeCourse.addEventListener("click", () => showCourseCatalog().catch((error) => { coachMessage.textContent = error.message; }));
+    logoutFromLearning.addEventListener("click", () => logoutToLanding());
     finalExamClose.addEventListener("click", () => {
       closeFinalExamModal();
       if (currentLearningPath?.status === "completed") loadLearningStage().catch((error) => { coachMessage.textContent = error.message; });

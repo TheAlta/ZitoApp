@@ -1005,7 +1005,7 @@ body.zito-glass-certificate {
 }
 
 /* Secondary buttons become calm translucent controls. */
-.zito-glass :is(.modal-close, .path-switch-course, .final-exam-retry, .coaching-actions button, button.ghost) {
+.zito-glass :is(.modal-close, .final-exam-retry, .coaching-actions button, button.ghost) {
   border-color: rgba(255, 255, 255, .70) !important;
   outline: 1px solid rgba(126, 102, 176, .16);
   outline-offset: -1px;
@@ -1046,18 +1046,46 @@ body.zito-glass-certificate {
 }
 
 .zito-glass-app #coachContinue {
-  min-height: 40px;
-  color: #fff !important;
-  border: 1px solid rgba(255, 255, 255, .50) !important;
-  outline: 1px solid rgba(83, 100, 171, .24);
+  display: inline-flex;
+  min-width: 144px;
+  max-width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: #564867 !important;
+  border: 1px solid rgba(255, 255, 255, .68) !important;
+  outline: 1px solid rgba(108, 89, 156, .16);
   outline-offset: -1px;
-  background: linear-gradient(135deg, #7165b9, #559eae) !important;
-  box-shadow: 0 9px 18px rgba(82, 74, 154, .24), inset 0 1px 0 rgba(255, 255, 255, .34) !important;
+  background: linear-gradient(128deg, rgba(255, 255, 255, .62), rgba(229, 244, 249, .38)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .84), 0 5px 12px rgba(87, 70, 126, .08) !important;
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .zito-glass-app #coachContinue:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 12px 22px rgba(82, 74, 154, .29), inset 0 1px 0 rgba(255, 255, 255, .40) !important;
+  color: #493b5d !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .92), 0 8px 16px rgba(87, 70, 126, .13) !important;
+}
+
+.zito-glass-app #coachContinue span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zito-glass-app .coach-continue-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
 }
 
 .zito-glass-app #coachContinue:focus-visible,
@@ -1169,16 +1197,42 @@ body.zito-glass-certificate {
   animation: zito-coach-spin .72s linear infinite;
 }
 
-.zito-glass-app .coaching-actions {
-  margin: 0 14px 14px;
-  padding: 0 !important;
-  border: 0 !important;
-  background: transparent !important;
+.zito-glass-app .coaching-modal .modal-chat {
+  grid-template-rows: auto minmax(180px, 1fr) auto auto;
 }
 
-.zito-glass-app .coaching-actions span {
+.zito-glass-app .coaching-modal .modal-head {
+  padding: 14px 16px;
+  border-bottom-color: rgba(124, 102, 165, .12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, 0));
+}
+
+.zito-glass-app .coaching-modal .modal-head > div {
   min-width: 0;
-  line-height: 1.7;
+}
+
+/* Coaching footer belongs to the modal surface instead of floating as a separate box. */
+.zito-glass-app .coaching-modal .coaching-actions {
+  display: grid;
+  min-height: 64px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 11px 14px !important;
+  border-top: 1px solid rgba(124, 102, 165, .13) !important;
+  background:
+    linear-gradient(122deg, rgba(255, 255, 255, .38), rgba(255, 255, 255, .08) 58%),
+    rgba(231, 237, 249, .38) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .56);
+}
+
+.zito-glass-app .coaching-modal .coaching-actions span {
+  min-width: 0;
+  color: #70657d !important;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.75;
 }
 
 @keyframes zito-coach-spin {
@@ -1193,6 +1247,12 @@ body.zito-glass-certificate {
 }
 
 /* Course page: preserve the editorial layout while giving its major sections glass volume. */
+.zito-glass-course .topbar {
+  min-height: 64px;
+  padding: 7px 16px;
+  border-radius: 24px;
+}
+
 .zito-glass-course .course-hero::before {
   opacity: .42;
 }
@@ -1216,6 +1276,12 @@ body.zito-glass-certificate {
 }
 
 @media (max-width: 720px) {
+  .zito-glass-course .topbar {
+    min-height: 58px;
+    padding: 6px 12px;
+    border-radius: 20px;
+  }
+
   .zito-glass :is(
     .topbar,
     .top,
@@ -1325,5 +1391,987 @@ body.zito-glass-certificate {
     box-shadow: none !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
+  }
+}
+
+/* Focused course workspace: one lesson canvas with a compact syllabus sidebar. */
+.zito-glass-app .topbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.zito-glass-app .learning-sidebar-toggle,
+.zito-glass-app .learning-sidebar-close {
+  border: 1px solid rgba(255, 255, 255, .68);
+  color: #51496a;
+  background: rgba(255, 255, 255, .28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .76), 0 6px 14px rgba(95, 75, 135, .08);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  backdrop-filter: blur(14px) saturate(125%);
+}
+
+.zito-glass-app .learning-sidebar-toggle {
+  display: none;
+  width: 36px;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.zito-glass-app .learning-sidebar-toggle:not([hidden]) {
+  display: inline-flex;
+}
+
+.zito-glass-app .learning-sidebar-toggle span {
+  display: none;
+}
+
+.zito-glass-app .learning-sidebar-toggle svg,
+.zito-glass-app .learning-sidebar-close svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.zito-glass-app .learning-sidebar-close {
+  display: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson {
+  position: relative;
+  isolation: isolate;
+  width: min(1440px, 100%);
+  height: 100svh;
+  grid-template-columns: minmax(0, 1fr) clamp(248px, 20vw, 292px);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "topbar planet"
+    "lesson planet";
+  gap: 14px;
+  padding: 14px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson::before {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 56% 60% at 10% 14%, rgba(226, 146, 198, .48), transparent 72%),
+    radial-gradient(ellipse 52% 58% at 93% 82%, rgba(90, 193, 211, .41), transparent 72%),
+    radial-gradient(ellipse 44% 42% at 84% 9%, rgba(176, 142, 224, .34), transparent 74%),
+    linear-gradient(136deg, #f5cadf 0%, #efcce5 42%, #d5def0 73%, #c2e8ec 100%);
+}
+
+.zito-glass-app .phone-shell.mode-lesson > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* The lesson header uses the same calm, framed glass plane as its canvas. */
+.zito-glass-app .phone-shell.mode-lesson .topbar {
+  position: relative;
+  min-height: 62px;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 8px 12px !important;
+  border: 1px solid rgba(255, 255, 255, .74) !important;
+  outline: 1px solid rgba(119, 98, 164, .12) !important;
+  border-radius: 20px !important;
+  background:
+    linear-gradient(125deg, rgba(255, 255, 255, .52), rgba(255, 255, 255, .12) 54%, rgba(226, 244, 249, .22)),
+    rgba(243, 235, 248, .38) !important;
+  box-shadow: 0 10px 24px rgba(104, 78, 137, .10), inset 0 1px 0 rgba(255, 255, 255, .82) !important;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .topbar::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 1px;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 52% 120% at 96% 0%, rgba(175, 135, 221, .18), transparent 72%);
+  pointer-events: none;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .topbar :is(.brand, .topbar-tools) {
+  position: relative;
+  z-index: 1;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .topbar .subtitle {
+  color: #766b84;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .topbar .status-pill {
+  min-width: 0;
+  max-width: min(190px, 29vw);
+  padding: 6px 10px;
+  overflow: hidden;
+  color: #5c506d !important;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .28) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), 0 4px 10px rgba(96, 75, 132, .05) !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-dock {
+  grid-area: lesson;
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  height: auto !important;
+  padding: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  border: 0 !important;
+  outline: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-article {
+  width: min(880px, 100%);
+  min-height: calc(100% - 2px);
+  margin: 0 auto;
+  padding: clamp(25px, 3.4vw, 48px) clamp(22px, 3.6vw, 54px) 38px;
+  border: 1px solid rgba(255, 255, 255, .76);
+  outline: 1px solid rgba(130, 105, 177, .10);
+  outline-offset: -1px;
+  border-radius: 30px;
+  background:
+    linear-gradient(128deg, rgba(255, 255, 255, .47), rgba(255, 255, 255, .16) 48%, rgba(235, 248, 255, .28)),
+    linear-gradient(150deg, rgba(255, 249, 252, .58), rgba(244, 240, 252, .44));
+  box-shadow: 0 22px 48px rgba(104, 75, 132, .13), inset 0 1px 0 rgba(255, 255, 255, .82);
+  -webkit-backdrop-filter: blur(26px) saturate(132%);
+  backdrop-filter: blur(26px) saturate(132%);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .planet-stage {
+  grid-area: planet;
+  display: block !important;
+  min-width: 0;
+  min-height: 0;
+  height: 100% !important;
+  align-self: stretch;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  outline: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .planet-stage::before {
+  display: none !important;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .planet-card {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  min-height: 0;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  padding: 13px 12px 14px;
+  overflow: hidden;
+  direction: rtl;
+  border: 1px solid rgba(255, 255, 255, .58);
+  outline: 0;
+  border-radius: 20px;
+  background:
+    linear-gradient(128deg, rgba(255, 255, 255, .36), rgba(255, 255, 255, .08) 56%, rgba(220, 245, 250, .16)),
+    rgba(239, 233, 247, .18);
+  box-shadow: 0 12px 26px rgba(98, 74, 128, .08), inset 0 1px 0 rgba(255, 255, 255, .78);
+  -webkit-backdrop-filter: blur(34px) saturate(145%);
+  backdrop-filter: blur(34px) saturate(145%);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .planet-card > * {
+  direction: rtl;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .course-coach {
+  display: none !important;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .learning-path {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .learning-path[hidden] {
+  display: none !important;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-course-head {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  margin: -13px -12px 0;
+  padding: 13px 52px 11px 12px;
+  border-bottom: 1px solid rgba(129, 105, 166, .10);
+  background: linear-gradient(180deg, rgba(247, 242, 251, .74), rgba(247, 242, 251, .36));
+  -webkit-backdrop-filter: blur(26px) saturate(142%);
+  backdrop-filter: blur(26px) saturate(142%);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-course-head .section-kicker {
+  display: none;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-course-head h2 {
+  margin: 0;
+  overflow: hidden;
+  color: #4a405c;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.7;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-progress-text {
+  margin-top: 2px;
+  color: #83758e;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-course-head .meter {
+  height: 2px;
+  margin-top: 8px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .module-path-list {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  margin: 9px -3px 0;
+  padding: 0 3px 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .module-path-list::before {
+  display: none;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-module {
+  display: grid;
+  min-height: 46px;
+  grid-template-columns: 28px minmax(0, 1fr) 12px;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  color: #655a70;
+  border: 1px solid transparent !important;
+  border-radius: 12px;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  cursor: default;
+  text-align: right;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-module.selected {
+  color: #4b405c;
+  border-color: rgba(255, 255, 255, .56) !important;
+  background: linear-gradient(130deg, rgba(255, 255, 255, .38), rgba(226, 244, 249, .20)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .74), 0 5px 13px rgba(102, 78, 139, .06) !important;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-stage-number {
+  width: 28px;
+  height: 28px;
+  color: #82728f;
+  background: rgba(255, 255, 255, .22);
+  font-size: 9px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-module.selected .path-stage-number {
+  color: #fff;
+  background: linear-gradient(145deg, rgba(134, 102, 200, .94), rgba(80, 170, 188, .88));
+  box-shadow: 0 4px 10px rgba(104, 84, 163, .17);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-module-title {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-module-state {
+  position: relative;
+  display: grid;
+  width: 12px;
+  height: 12px;
+  place-items: center;
+  border: 1.5px solid rgba(121, 103, 151, .30);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .20);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-module-state[data-state="current"] {
+  border-color: transparent;
+  background: linear-gradient(135deg, #8067c4, #59aebe);
+  box-shadow: 0 3px 8px rgba(89, 137, 184, .22);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-module-state[data-state="completed"] {
+  border-color: #56a480;
+  background: #56a480;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .path-module-state[data-state="completed"]::after {
+  content: "";
+  width: 5px;
+  height: 3px;
+  border-bottom: 1.6px solid #fff;
+  border-left: 1.6px solid #fff;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .module-stage-overview {
+  display: none !important;
+}
+
+/* A full-height sidebar keeps navigation, account, and exit actions in one calm place. */
+.zito-glass-app .phone-shell.mode-lesson .learning-sidebar-footer {
+  flex: none;
+  margin: 0 -12px -14px;
+  padding: 11px 12px 13px;
+  border-top: 1px solid rgba(124, 102, 165, .12);
+  background:
+    linear-gradient(124deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .08)),
+    rgba(239, 236, 248, .34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .58);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-actions {
+  display: grid;
+  gap: 7px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-action {
+  width: 100%;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  color: #584a69;
+  border: 1px solid rgba(255, 255, 255, .64);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .26);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .73), 0 4px 10px rgba(89, 70, 126, .05);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: right;
+  transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, .42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .84), 0 7px 13px rgba(89, 70, 126, .09);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-action-logout {
+  color: #765564;
+  border-color: rgba(187, 126, 147, .16);
+  background: rgba(255, 247, 249, .20);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-action-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-account {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(124, 102, 165, .10);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-account-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .54);
+  border-radius: 11px;
+  background: linear-gradient(145deg, #8068c3, #5caeba);
+  box-shadow: 0 5px 11px rgba(88, 105, 174, .18), inset 0 1px 0 rgba(255, 255, 255, .34);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-account-copy {
+  min-width: 0;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-account-copy small,
+.zito-glass-app .phone-shell.mode-lesson .sidebar-account-copy strong,
+.zito-glass-app .phone-shell.mode-lesson .sidebar-account-copy > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-account-copy small {
+  color: #8b7d99;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-account-copy strong {
+  margin-top: 1px;
+  color: #51445f;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .sidebar-account-copy > span {
+  margin-top: 1px;
+  color: #887a93;
+  font-family: Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .module-path-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(108, 91, 144, .42) transparent;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .module-path-list::-webkit-scrollbar {
+  width: 7px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .module-path-list::-webkit-scrollbar-track {
+  margin: 5px 0;
+  background: transparent;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .module-path-list::-webkit-scrollbar-thumb {
+  min-height: 32px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(142, 114, 194, .60), rgba(75, 173, 188, .56)) padding-box;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .stage-header {
+  margin-bottom: 23px;
+  padding: 21px 23px;
+  border-color: rgba(255, 255, 255, .62);
+  background:
+    linear-gradient(130deg, rgba(255, 255, 255, .44), rgba(255, 255, 255, .14) 62%, rgba(230, 247, 252, .24)) padding-box,
+    linear-gradient(115deg, rgba(166, 119, 193, .34), rgba(80, 174, 181, .28), rgba(85, 145, 204, .25)) border-box;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .76);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .stage-header h2 {
+  font-size: clamp(21px, 2vw, 27px);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-assist {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 255, 255, .65);
+  border-radius: 16px;
+  background: linear-gradient(130deg, rgba(255, 255, 255, .38), rgba(231, 245, 250, .28));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .78);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-assist > div {
+  min-width: 0;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-assist span,
+.zito-glass-app .phone-shell.mode-lesson .lesson-assist strong {
+  display: block;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-assist span {
+  color: #89799a;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-assist strong {
+  margin-top: 3px;
+  color: #544561;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-coach-trigger {
+  display: inline-flex;
+  min-width: 124px;
+  max-width: 100%;
+  min-height: 38px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 11px;
+  color: #5b4780;
+  border: 1px solid rgba(137, 107, 189, .23);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .40);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .74);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-coach-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-coach-trigger svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .lesson-actions {
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 17px;
+  border-top: 1px solid rgba(129, 105, 166, .12);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .stage-complete-button {
+  min-width: 216px;
+  max-width: 100%;
+  height: 46px;
+  border-radius: 14px;
+}
+
+/* Choice controls read as controls, not removable labels. */
+.zito-glass-app .phone-shell.mode-lesson .choice-list {
+  gap: 8px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.choice-option, .check-option) {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-height: 46px;
+  align-items: start;
+  gap: 10px;
+  padding: 11px 12px;
+  color: #5d536b;
+  border: 1px solid rgba(121, 101, 162, .15) !important;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .22) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .50);
+  transform: none !important;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.choice-option, .check-option):hover {
+  border-color: rgba(112, 91, 164, .29) !important;
+  background: rgba(255, 255, 255, .34) !important;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.choice-option, .check-option) > span {
+  min-width: 0;
+  line-height: 1.8;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.choice-option, .check-option) input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  flex: none;
+  place-content: center;
+  cursor: pointer;
+  border: 1.5px solid rgba(103, 85, 145, .43);
+  background: rgba(255, 255, 255, .50);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .70);
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .choice-option input {
+  border-radius: 50%;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .check-option input {
+  border-radius: 5px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .choice-option input::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  transform: scale(0);
+  transition: transform .14s ease;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .check-option input::after {
+  content: "";
+  width: 8px;
+  height: 4px;
+  border-bottom: 1.8px solid #fff;
+  border-left: 1.8px solid #fff;
+  transform: translateY(-1px) rotate(-45deg) scale(0);
+  transition: transform .14s ease;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.choice-option, .check-option) input:checked {
+  border-color: transparent;
+  background: linear-gradient(135deg, #7c65c1, #53abb9);
+  box-shadow: 0 3px 8px rgba(92, 121, 183, .24), inset 0 1px 0 rgba(255, 255, 255, .34);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .choice-option input:checked::after {
+  transform: scale(1);
+}
+
+.zito-glass-app .phone-shell.mode-lesson .check-option input:checked::after {
+  transform: translateY(-1px) rotate(-45deg) scale(1);
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.choice-option, .check-option):has(input:checked) {
+  color: #4f4363;
+  border-color: rgba(103, 119, 182, .30) !important;
+  background: linear-gradient(122deg, rgba(255, 255, 255, .38), rgba(220, 243, 248, .28)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72), 0 5px 12px rgba(91, 79, 132, .07);
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.choice-option, .check-option) input:focus-visible {
+  outline: 3px solid rgba(78, 159, 187, .32);
+  outline-offset: 2px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .media-slot-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  margin: 0 auto 7px;
+  place-items: center;
+}
+
+.zito-glass-app .phone-shell.mode-lesson .media-slot-icon svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: #6f5c91;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+
+.zito-glass-app .modal-close {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.zito-glass-app .modal-close-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-card) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(108, 91, 144, .42) transparent;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-card)::-webkit-scrollbar {
+  width: 8px;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-card)::-webkit-scrollbar-track {
+  margin: 13px 0;
+  background: transparent;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-card)::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(142, 114, 194, .64), rgba(75, 173, 188, .60)) padding-box;
+}
+
+.zito-glass-app .learning-toast {
+  position: fixed;
+  z-index: 130;
+  left: 50%;
+  bottom: 25px;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 11px 15px;
+  color: #423653;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 14px;
+  background: rgba(252, 249, 255, .78);
+  box-shadow: 0 14px 30px rgba(84, 65, 116, .18), inset 0 1px 0 rgba(255, 255, 255, .82);
+  -webkit-backdrop-filter: blur(20px) saturate(132%);
+  backdrop-filter: blur(20px) saturate(132%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+  transition: opacity .18s ease, transform .18s ease;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.zito-glass-app .learning-toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.zito-glass-app .learning-sidebar-scrim:not([hidden]) {
+  display: none;
+}
+
+.zito-glass-app :is(.learning-sidebar-toggle, .learning-sidebar-close, .lesson-coach-trigger, .sidebar-action):focus-visible {
+  outline: 3px solid rgba(88, 141, 220, .30);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1021px) {
+  .zito-glass-app .phone-shell.mode-lesson:not(.learning-sidebar-open) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "topbar"
+      "lesson";
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson:not(.learning-sidebar-open) .planet-stage {
+    display: none !important;
+  }
+
+  .zito-glass-app .learning-sidebar-close {
+    position: absolute;
+    z-index: 3;
+    top: 16px;
+    left: 14px;
+    display: grid;
+    place-items: center;
+  }
+}
+
+@media (max-width: 1020px) {
+  .zito-glass-app .phone-shell.mode-lesson {
+    width: 100%;
+    height: 100svh;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "topbar"
+      "lesson";
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .lesson-dock {
+    height: auto !important;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .planet-stage {
+    position: fixed;
+    z-index: 120;
+    inset: 0 0 0 auto;
+    width: min(88vw, 360px);
+    padding: 10px !important;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transform: translateX(108%);
+    transition: transform .24s ease, opacity .18s ease, visibility 0s linear .24s;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson.learning-sidebar-open .planet-stage {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+    transform: translateX(0);
+    transition-delay: 0s;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .planet-card {
+    height: 100%;
+    max-height: none;
+    padding: 13px 12px 14px;
+    border-radius: 24px;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .path-course-head {
+    margin: -13px -12px 0;
+    padding-left: 52px;
+  }
+
+  .zito-glass-app .learning-sidebar-close {
+    position: absolute;
+    z-index: 3;
+    top: 16px;
+    left: 14px;
+    display: grid;
+    place-items: center;
+  }
+
+  .zito-glass-app .learning-sidebar-scrim:not([hidden]) {
+    position: fixed;
+    z-index: 110;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(55, 47, 77, .28);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+  }
+}
+
+@media (max-width: 600px) {
+  .zito-glass-app .phone-shell.mode-lesson .topbar {
+    min-height: 58px;
+    padding: 7px 9px !important;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .topbar .status-pill {
+    max-width: 132px;
+    padding: 6px 8px;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .lesson-article {
+    min-height: auto;
+    padding: 20px 16px 28px;
+    border-radius: 24px;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .stage-header {
+    align-items: flex-start;
+    gap: 11px;
+    margin-bottom: 18px;
+    padding: 17px 15px;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .stage-header h2 {
+    font-size: 20px;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .lesson-assist {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .lesson-coach-trigger,
+  .zito-glass-app .phone-shell.mode-lesson .stage-complete-button {
+    width: 100%;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .lesson-assist strong {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .zito-glass-app .coaching-modal .coaching-actions {
+    grid-template-columns: 1fr;
+    text-align: right;
+  }
+
+  .zito-glass-app #coachContinue {
+    width: 100%;
+  }
+
+  .zito-glass-app .phone-shell.mode-lesson .lesson-actions {
+    justify-content: stretch;
+  }
+
+  .zito-glass-app .learning-toast {
+    bottom: 16px;
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zito-glass-app .phone-shell.mode-lesson .planet-stage,
+  .zito-glass-app .learning-toast {
+    transition: none;
   }
 }

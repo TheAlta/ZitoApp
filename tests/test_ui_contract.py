@@ -50,6 +50,8 @@ class UiContractTests(unittest.TestCase):
         self.assertEqual(asset_response.headers["content-type"], "image/svg+xml")
         self.assertEqual(logo_response.status_code, 200)
         self.assertEqual(logo_response.headers["content-type"], "image/svg+xml")
+        self.assertIn('viewBox="0 0 795.78 889.5"', logo_response.text)
+        self.assertIn('id="linear-gradient"', logo_response.text)
         self.assertEqual(lottie_response.status_code, 200)
         self.assertEqual(runtime_response.status_code, 200)
         self.assertEqual(fallback_response.status_code, 200)
@@ -253,6 +255,7 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("data-flashcard", html)
         self.assertIn("flashcard-stack", html)
         self.assertIn("flashcard-shadow", html)
+        self.assertIn('class="flashcard-logo"', html)
         self.assertIn("data-flashcards", html)
         self.assertIn("data-flashcard-front", html)
         self.assertIn("flashcard-deal", html)
@@ -262,6 +265,7 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("A full-height sidebar keeps navigation", glass_css)
         self.assertIn("learning-sidebar-open", glass_css)
         self.assertIn("Mobile sidebar preserves the desktop hierarchy", glass_css)
+        self.assertIn("New Z stays optically centered", glass_css)
         self.assertIn("calc(100vw - 20px)", glass_css)
         self.assertIn("Choice controls read as controls", glass_css)
         self.assertIn("Coaching footer belongs to the modal surface", glass_css)
@@ -332,6 +336,7 @@ class UiContractTests(unittest.TestCase):
 
         self.assertIn('"phone-pose-breathing-and-face"', mascot_lottie.text)
         self.assertIn('"laptop-pose-breathing-and-face"', mascot_lottie.text)
+        self.assertEqual(mascot_lottie.text.count('"hd": true'), 4)
         self.assertIn('"soft-handoff-phone-to-laptop"', mascot_lottie.text)
         self.assertIn('"p": "zito-state-a.png"', mascot_lottie.text)
         self.assertIn('"p": "zito-state-b.png"', mascot_lottie.text)
@@ -362,6 +367,8 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("/api/certificates/", certificate)
         self.assertIn("window.print()", certificate)
         self.assertIn("گواهی پایان دوره زیتو", certificate)
+        self.assertIn('class="seal"><img src="/landing-static/zito-logo.svg?v=20260905-unified-z-1"', certificate)
+        self.assertNotIn('<div class="seal">Z</div>', certificate)
 
     def test_admin_renders_canonical_profile_without_legacy_answers(self) -> None:
         admin_template = Path("src/templates/admin.html").read_text(encoding="utf-8")

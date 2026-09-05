@@ -1086,6 +1086,7 @@
       "ind": 6,
       "ty": 2,
       "nm": "Laptop pose - open smile",
+      "hd": true,
       "refId": "zito-state-b-mouth-open",
       "sr": 1,
       "ks": {
@@ -2195,6 +2196,7 @@
       "ind": 5,
       "ty": 2,
       "nm": "Laptop pose - open eyes",
+      "hd": true,
       "refId": "zito-state-b-eyes-open",
       "sr": 1,
       "ks": {
@@ -3404,6 +3406,7 @@
       "ind": 4,
       "ty": 2,
       "nm": "Phone pose - open smile",
+      "hd": true,
       "refId": "zito-state-a-mouth-open",
       "sr": 1,
       "ks": {
@@ -4596,6 +4599,7 @@
       "ind": 3,
       "ty": 2,
       "nm": "Phone pose - open eyes",
+      "hd": true,
       "refId": "zito-state-a-eyes-open",
       "sr": 1,
       "ks": {

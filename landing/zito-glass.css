@@ -860,6 +860,15 @@ body.zito-glass-certificate {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62), 0 7px 16px rgba(101, 76, 148, .10) !important;
 }
 
+/* New Z stays optically centered within the learning header's square mark. */
+.zito-glass-app .phone-shell .topbar .mark img {
+  width: 30px !important;
+  height: 34px !important;
+  max-width: none;
+  margin: 0;
+  object-fit: contain;
+}
+
 .zito-glass-app .phone-shell .topbar .mark::after {
   border-color: rgba(255, 255, 255, .36) !important;
 }

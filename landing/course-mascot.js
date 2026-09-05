@@ -4,7 +4,7 @@
 
   const ROOT = "/landing-static/course-mascot-lottie";
   const RUNTIME_URL = "/landing-static/zito-lottie/lottie_canvas.min.js";
-  const ASSET_VERSION = "20260831-9";
+  const ASSET_VERSION = "20260905-clean-face-1";
 
   function loadLottieRuntime() {
     if (window.lottie) {

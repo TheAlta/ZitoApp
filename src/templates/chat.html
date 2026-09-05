@@ -1168,7 +1168,7 @@
       box-shadow: 0 13px 27px rgba(91, 67, 136, .10);
       transform-origin: 50% 100%;
     }
-    .flashcard-shadow::after { content: "Z"; position: absolute; inset: 12px; display: grid; place-items: center; border: 1px solid rgba(122, 92, 166, .14); border-radius: 18px; color: rgba(118, 83, 163, .18); font: 900 44px/1 Arial, sans-serif; }
+    .flashcard-shadow::after { content: ""; position: absolute; inset: 12px; border: 1px solid rgba(122, 92, 166, .14); border-radius: 18px; }
     .flashcard-shadow.layer-1 { z-index: 7; transform: translate(-4px, 8px) rotate(-2deg); }
     .flashcard-shadow.layer-2 { z-index: 6; transform: translate(8px, 13px) rotate(2.4deg); opacity: .95; }
     .flashcard-shadow.layer-3 { z-index: 5; transform: translate(-11px, 18px) rotate(-4deg); opacity: .89; }
@@ -1209,11 +1209,12 @@
     .flashcard.is-arriving { pointer-events: none; animation: flashcard-arrive .30s cubic-bezier(.2, .9, .25, 1) both; }
     .flashcard-corner { position: absolute; top: 21px; right: 23px; display: grid; gap: 1px; min-width: 37px; color: #805daa; font: 900 11px/1 Arial, sans-serif; text-align: center; }
     .flashcard-corner::after { content: "✦"; color: #de966f; font-size: 13px; }
+    .flashcard-logo { position: absolute; z-index: 2; left: clamp(18px, 4vw, 24px); bottom: clamp(18px, 4vw, 24px); width: 31px; height: 35px; display: block; object-fit: contain; pointer-events: none; filter: drop-shadow(0 5px 9px rgba(54, 77, 187, .17)); }
     .flashcard-body { position: relative; z-index: 1; display: grid; align-content: center; gap: 13px; min-height: 0; padding: 18px 12px 10px; }
     .flashcard-kicker { color: #8a66aa; font-size: 11px; font-weight: 900; letter-spacing: .01em; }
     .flashcard-front { display: block; color: #49385a; font-size: clamp(22px, 4.1vw, 31px); line-height: 1.7; }
     .flashcard-back { display: block; color: #6c6275; font-size: clamp(13px, 2.3vw, 15px); line-height: 2.05; }
-    .flashcard-action { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 13px; color: #765a95; border-top: 1px solid rgba(121, 91, 165, .14); font-size: 11px; font-weight: 900; }
+    .flashcard-action { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 13px; padding-left: 50px; color: #765a95; border-top: 1px solid rgba(121, 91, 165, .14); font-size: 11px; font-weight: 900; }
     .flashcard-action::after { content: "←"; font-family: Arial, sans-serif; font-size: 15px; }
     .flashcard-footer { display: flex; align-items: center; justify-content: space-between; width: min(100%, 408px); padding: 0 4px; color: #85778e; font-size: 11px; }
     .flashcard-count { color: #765996; font-weight: 900; }
@@ -1567,7 +1568,7 @@
   <main id="appShell" class="phone-shell mode-onboarding">
     <header class="topbar">
       <div class="brand">
-        <div class="mark"><img src="/landing-static/zito-logo.svg" alt="لوگوی زیتو"></div>
+        <div class="mark"><img src="/landing-static/zito-logo.svg?v=20260905-unified-z-1" alt="لوگوی زیتو"></div>
         <div>
           <h1>زیتو</h1>
           <div class="subtitle">همراه هوشمند مسیر یادگیری تو</div>
@@ -2465,6 +2466,7 @@
             ${layers}
             <button class="flashcard is-active" type="button" data-flashcard data-flashcard-index="0" aria-label="کارت 1 از ${normalizedCards.length}; برای رفتن به کارت بعدی انتخاب کن">
               <span class="flashcard-corner" data-flashcard-corner>01</span>
+              <img class="flashcard-logo" src="/landing-static/zito-logo.svg?v=20260905-unified-z-1" alt="" aria-hidden="true">
               <span class="flashcard-body">
                 <span class="flashcard-kicker" data-flashcard-kicker>کارت 1 از ${normalizedCards.length}</span>
                 <strong class="flashcard-front" data-flashcard-front>${escapeHtml(firstCard.front)}</strong>

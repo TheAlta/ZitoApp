@@ -21,7 +21,8 @@
     .certificate::before { top: -138px; right: -108px; width: 310px; height: 310px; border: 1px solid rgba(133, 91, 179, .16); box-shadow: 0 0 0 28px rgba(133, 91, 179, .04), 0 0 0 57px rgba(91, 158, 175, .035); }
     .certificate::after { bottom: -160px; left: -108px; width: 330px; height: 330px; border: 1px solid rgba(91, 158, 175, .15); box-shadow: 0 0 0 31px rgba(233, 162, 127, .04); }
     .certificate-inner { position: relative; z-index: 1; display: grid; align-content: center; min-height: 500px; }
-    .seal { display: grid; place-items: center; width: 91px; height: 91px; margin: 0 auto 17px; color: #fff; border: 7px solid rgba(255,255,255,.75); border-radius: 50%; background: linear-gradient(145deg, #8e6dca, #59a2b0); box-shadow: 0 14px 33px rgba(124, 91, 172, .24); font-size: 35px; font-weight: 900; }
+    .seal { display: grid; place-items: center; width: 91px; height: 91px; margin: 0 auto 17px; border: 7px solid rgba(255,255,255,.75); border-radius: 50%; background: linear-gradient(145deg, #8e6dca, #59a2b0); box-shadow: 0 14px 33px rgba(124, 91, 172, .24); }
+    .seal img { width: 42px; height: 48px; display: block; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(38, 42, 126, .24)); }
     .eyebrow { margin: 0; color: #7c5c9c; font-size: 12px; font-weight: 900; letter-spacing: .06em; }
     h1 { margin: 12px 0 7px; color: #463354; font-size: clamp(31px, 5vw, 54px); line-height: 1.35; }
     .intro { max-width: 620px; margin: 0 auto; color: var(--soft); line-height: 2; font-size: clamp(14px, 1.7vw, 17px); }
@@ -47,7 +48,7 @@
 <body class="zito-glass zito-glass-certificate">
   <main class="page">
     <header class="topbar">
-      <a class="brand" href="/app/" aria-label="بازگشت به زیتو"><img src="/landing-static/zito-logo.svg" alt=""><strong>ZITO</strong></a>
+      <a class="brand" href="/app/" aria-label="بازگشت به زیتو"><img src="/landing-static/zito-logo.svg?v=20260905-unified-z-1" alt=""><strong>ZITO</strong></a>
       <a class="back-link" href="/app/">بازگشت به مسیر یادگیری</a>
     </header>
     <section id="certificate" class="certificate" aria-live="polite"><div class="loading">در حال بررسی اعتبار گواهی...</div></section>
@@ -62,7 +63,7 @@
     };
     function renderCertificate(data) {
       root.innerHTML = `<div class="certificate-inner">
-        <div class="seal">Z</div>
+        <div class="seal"><img src="/landing-static/zito-logo.svg?v=20260905-unified-z-1" alt="نشان زیتو"></div>
         <p class="eyebrow">گواهی پایان دوره زیتو</p>
         <h1>با افتخار به</h1>
         <h2 class="recipient">${escapeHtml(data.recipient_name)}</h2>

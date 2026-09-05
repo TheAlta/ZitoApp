@@ -2248,16 +2248,26 @@ body.zito-glass-certificate {
     height: auto !important;
   }
 
+  /* Mobile sidebar preserves the desktop hierarchy: lesson, blurred backdrop, focused drawer. */
   .zito-glass-app .phone-shell.mode-lesson .planet-stage {
     position: fixed;
     z-index: 120;
-    inset: 0 0 0 auto;
-    width: min(88vw, 360px);
-    padding: 10px !important;
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    left: auto;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    width: min(360px, calc(100vw - 20px));
+    height: auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
-    transform: translateX(108%);
+    transform: translateX(calc(100% + 22px));
+    will-change: transform, opacity;
     transition: transform .24s ease, opacity .18s ease, visibility 0s linear .24s;
   }
 
@@ -2272,8 +2282,15 @@ body.zito-glass-certificate {
   .zito-glass-app .phone-shell.mode-lesson .planet-card {
     height: 100%;
     max-height: none;
-    padding: 13px 12px 14px;
-    border-radius: 24px;
+    padding: clamp(12px, 3vw, 15px) clamp(11px, 3vw, 14px) 14px;
+    border: 1px solid rgba(255, 255, 255, .76);
+    border-radius: clamp(22px, 6vw, 28px);
+    background:
+      linear-gradient(128deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, .16) 55%, rgba(219, 244, 250, .28)),
+      rgba(239, 233, 248, .30);
+    box-shadow: 0 30px 68px rgba(78, 58, 111, .22), 0 10px 24px rgba(54, 143, 166, .12), inset 0 1px 0 rgba(255, 255, 255, .88);
+    -webkit-backdrop-filter: blur(38px) saturate(145%) brightness(1.05);
+    backdrop-filter: blur(38px) saturate(145%) brightness(1.05);
   }
 
   .zito-glass-app .phone-shell.mode-lesson .path-course-head {
@@ -2299,9 +2316,9 @@ body.zito-glass-certificate {
     height: 100%;
     padding: 0;
     border: 0;
-    background: rgba(55, 47, 77, .28);
-    -webkit-backdrop-filter: blur(3px);
-    backdrop-filter: blur(3px);
+    background: rgba(243, 238, 250, .12);
+    -webkit-backdrop-filter: blur(16px) saturate(118%) brightness(1.05);
+    backdrop-filter: blur(16px) saturate(118%) brightness(1.05);
   }
 }
 

@@ -4,11 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>معرفی دوره | زیتو</title>
+  <link rel="preload" href="/landing-static/fonts/Yekan.woff2" as="font" type="font/woff2" crossorigin>
   <script defer src="/landing-static/course-mascot.js?v=20260831-9"></script>
   <style>
     @font-face {
       font-family: "YekanZito";
-      src: local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan");
+      src: url("/landing-static/fonts/Yekan.woff2") format("woff2"), local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan");
+      font-weight: 400;
+      font-style: normal;
       font-display: swap;
     }
 
@@ -28,13 +31,15 @@
     }
 
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; font-size: 16px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body {
       min-width: 320px;
       min-height: 100vh;
       margin: 0;
       color: var(--ink);
       font-family: var(--font-yekan);
+      font-size: 16px;
+      line-height: 1.6;
       background: linear-gradient(180deg, #fff9f4 0%, #fffdf9 39%, #fbf5fb 100%);
     }
     body * { font-family: inherit; }
@@ -53,7 +58,7 @@
       mask-image: linear-gradient(to bottom, black, transparent 82%);
     }
     button, a { -webkit-tap-highlight-color: transparent; }
-    button { font: inherit; }
+    button, input, textarea, select { font: inherit; }
 
     .page { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 20px 0 76px; }
     .topbar { display: flex; align-items: center; justify-content: space-between; min-height: 56px; gap: 18px; }
@@ -154,6 +159,154 @@
     .stage-track span { height: 5px; border-radius: 999px; background: linear-gradient(90deg, rgba(143, 112, 202, .88), rgba(97, 172, 185, .64)); }
     .stage-track span:nth-child(3n) { background: linear-gradient(90deg, rgba(239, 169, 132, .84), rgba(143, 112, 202, .76)); }
 
+    .destination-section { margin-top: clamp(62px, 9vw, 108px); }
+    .destination-panel {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(180px, .46fr) minmax(0, 1fr);
+      gap: clamp(18px, 3vw, 42px);
+      align-items: center;
+      padding: clamp(24px, 4.5vw, 48px);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .74);
+      border-radius: 30px;
+      background:
+        radial-gradient(58% 100% at 50% 48%, rgba(129, 111, 201, .12), transparent 70%),
+        linear-gradient(135deg, rgba(255, 255, 255, .64), rgba(255, 247, 245, .42) 52%, rgba(227, 241, 251, .46));
+      box-shadow: 0 20px 46px rgba(85, 67, 124, .10), inset 0 1px 0 rgba(255, 255, 255, .88);
+    }
+    .destination-panel::before {
+      content: "";
+      position: absolute;
+      inset: auto 14% 50%;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(235, 157, 156, .22), rgba(119, 96, 191, .42), rgba(74, 179, 182, .25));
+      pointer-events: none;
+    }
+    .destination-card, .destination-avatar { position: relative; z-index: 1; min-width: 0; }
+    .destination-card {
+      min-height: 255px;
+      padding: clamp(20px, 3vw, 29px);
+      border: 1px solid rgba(255, 255, 255, .70);
+      border-radius: 23px;
+      background: rgba(255, 255, 255, .42);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82);
+    }
+    .destination-card.before { background: linear-gradient(145deg, rgba(255, 245, 244, .72), rgba(252, 235, 239, .45)); }
+    .destination-card.after { background: linear-gradient(145deg, rgba(246, 255, 251, .68), rgba(229, 247, 249, .48)); }
+    .destination-kicker { display: block; font-size: 11px; font-weight: 900; }
+    .before .destination-kicker { color: #b86c82; }
+    .after .destination-kicker { color: #438d88; }
+    .destination-card h3 { margin: 8px 0 17px; color: #4d3b59; font-size: clamp(18px, 2.1vw, 22px); line-height: 1.65; }
+    .destination-list { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; }
+    .destination-list li { position: relative; padding-right: 23px; color: #70647a; font-size: 13px; line-height: 1.9; }
+    .destination-list li::before { content: ""; position: absolute; right: 0; top: .65em; width: 11px; height: 11px; border-radius: 50%; }
+    .before .destination-list li::before { background: radial-gradient(circle at 35% 30%, #fff 0 17%, transparent 20%), #dd8294; box-shadow: 0 0 0 4px rgba(221, 130, 148, .10); }
+    .after .destination-list li::before { background: radial-gradient(circle at 35% 30%, #fff 0 17%, transparent 20%), #55a996; box-shadow: 0 0 0 4px rgba(85, 169, 150, .10); }
+    .destination-avatar { min-height: 266px; display: grid; place-items: center; align-content: center; }
+    .destination-avatar::before { content: ""; position: absolute; width: 178px; aspect-ratio: 1; border: 1px dashed rgba(116, 91, 181, .36); border-radius: 50%; transform: rotate(-16deg); }
+    .destination-avatar::after { content: ""; position: absolute; bottom: 31px; width: 126px; height: 16px; border-radius: 50%; background: radial-gradient(ellipse, rgba(105, 85, 178, .26), transparent 70%); filter: blur(3px); }
+    .destination-avatar zito-course-mascot { position: relative; z-index: 1; width: 188px; height: 222px; filter: drop-shadow(0 16px 17px rgba(80, 64, 137, .20)); }
+    .destination-direction { position: relative; z-index: 2; margin-top: -4px; padding: 6px 11px; color: #6e5d96; border: 1px solid rgba(122, 98, 179, .18); border-radius: 999px; background: rgba(255, 255, 255, .57); font-size: 10px; font-weight: 900; }
+
+    .route-section { margin-top: clamp(66px, 9vw, 108px); }
+    .zito-glass-course .course-route.learning-map {
+      position: relative;
+      padding: clamp(23px, 4vw, 42px) !important;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .73) !important;
+      border-radius: 30px;
+      outline: 1px solid rgba(126, 102, 176, .14);
+      outline-offset: -1px;
+      background:
+        radial-gradient(65% 90% at 12% 100%, rgba(239, 169, 132, .14), transparent 70%),
+        radial-gradient(57% 78% at 92% 4%, rgba(100, 180, 196, .14), transparent 68%),
+        linear-gradient(135deg, rgba(255, 255, 255, .62), rgba(255, 248, 245, .36) 53%, rgba(225, 238, 255, .42)) !important;
+      box-shadow: 0 19px 38px rgba(87, 69, 131, .09), inset 0 1px 0 rgba(255, 255, 255, .86) !important;
+    }
+    .zito-glass-course .course-route.learning-map::before { display: none; }
+    .route-legend { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 14px; color: #776889; font-size: 11px; font-weight: 800; }
+    .route-legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .route-legend span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(145deg, var(--violet), var(--sky)); box-shadow: 0 0 0 4px rgba(132, 107, 193, .10); }
+    .route-track { position: relative; min-width: 0; padding: 39px 0 6px; }
+    .route-road { position: absolute; z-index: 0; top: 0; right: 0; width: 100%; height: 150px; overflow: visible; pointer-events: none; }
+    .route-road-shadow { fill: none; stroke: rgba(109, 87, 169, .11); stroke-width: 20; stroke-linecap: round; filter: drop-shadow(0 8px 9px rgba(91, 73, 146, .09)); }
+    .route-road-surface { fill: none; stroke: rgba(255, 255, 255, .53); stroke-width: 13; stroke-linecap: round; }
+    .route-road-lane { fill: none; stroke: rgba(113, 89, 180, .74); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 2 13; animation: route-road-flow 5.8s linear infinite; }
+    .route-traveler { stroke: rgba(255, 255, 255, .92); stroke-width: 2; filter: drop-shadow(0 4px 5px rgba(83, 67, 146, .25)); }
+    .route-traveler-secondary { opacity: .76; }
+    .route-track::before, .route-track::after { display: none; }
+    .route-stops { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(var(--route-count), minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+    .route-stop { position: relative; display: grid; justify-items: center; min-width: 0; }
+    .route-stop:nth-child(even) { padding-top: 28px; }
+    .route-node { width: 56px; height: 56px; display: grid; place-items: center; color: #fff; border: 6px solid rgba(255, 253, 249, .94); border-radius: 50%; background: linear-gradient(145deg, #8364c5, #58aabd); box-shadow: 0 8px 18px rgba(102, 79, 163, .22); font-size: 14px; font-weight: 900; animation: route-node-bob 4.6s ease-in-out infinite; }
+    .route-stop:nth-child(3n + 2) .route-node { animation-delay: -1.35s; }
+    .route-stop:nth-child(3n) .route-node { animation-delay: -2.7s; }
+    .route-stop:nth-child(3n) .route-node { background: linear-gradient(145deg, #b27cca, #7aa9cd); }
+    .route-card { width: 100%; min-height: 165px; margin-top: 15px; padding: 17px 16px 15px; border: 1px solid rgba(255, 255, 255, .76); border-radius: 19px; background: rgba(255, 255, 255, .44); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .78); }
+    .route-card span { display: block; color: #836d99; font-size: 10px; font-weight: 900; }
+    .route-card h3 { margin: 7px 0 0; color: #503e5b; font-size: 15px; line-height: 1.75; }
+    .route-card p { margin: 6px 0 0; color: #786b81; font-size: 11px; line-height: 1.9; }
+    .route-card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 11px; }
+    .route-card-tags span { padding: 4px 7px; color: #71607f; border: 1px solid rgba(124, 101, 179, .13); border-radius: 999px; background: rgba(255, 255, 255, .47); font-size: 9px; line-height: 1.5; }
+    .route-stage-dots { display: grid; grid-template-columns: repeat(var(--stage-count), minmax(0, 1fr)); gap: 3px; margin-top: 12px; }
+    .route-stage-dots i { height: 4px; border-radius: 999px; background: linear-gradient(90deg, rgba(135, 105, 197, .76), rgba(90, 169, 184, .63)); }
+    .route-stage-dots i:nth-child(3n) { background: linear-gradient(90deg, rgba(236, 166, 135, .76), rgba(139, 110, 198, .70)); }
+    .route-finish { position: relative; z-index: 1; display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 18px; color: #715e8a; font-size: 11px; font-weight: 900; }
+    .route-finish::before { content: ""; width: 16px; height: 20px; border-radius: 3px 3px 3px 0; background: linear-gradient(145deg, var(--violet), var(--sky)); clip-path: polygon(0 0, 100% 20%, 0 42%, 100% 63%, 0 84%); }
+    @keyframes route-road-flow { to { stroke-dashoffset: -90; } }
+    @keyframes route-node-bob {
+      0%, 100% { transform: translateY(0); box-shadow: 0 8px 18px rgba(102, 79, 163, .22); }
+      50% { transform: translateY(-4px); box-shadow: 0 13px 22px rgba(102, 79, 163, .28); }
+    }
+
+    .impact-section { margin-top: clamp(66px, 9vw, 108px); }
+    .impact-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; }
+    .impact-card { position: relative; min-height: 208px; padding: 24px 23px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .76); border-radius: 23px; background: linear-gradient(145deg, rgba(255, 255, 255, .57), rgba(250, 244, 250, .34)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .84), 0 11px 22px rgba(101, 81, 144, .06); }
+    .impact-card:nth-child(2) { background: linear-gradient(145deg, rgba(253, 246, 254, .65), rgba(235, 235, 255, .38)); }
+    .impact-card:nth-child(3) { background: linear-gradient(145deg, rgba(244, 253, 253, .65), rgba(229, 243, 251, .39)); }
+    .impact-number { display: inline-grid; width: 34px; height: 34px; place-items: center; color: #725da0; border: 1px solid rgba(127, 98, 183, .14); border-radius: 12px; background: rgba(255, 255, 255, .56); font-size: 11px; font-weight: 900; }
+    .impact-card h3 { margin: 19px 0 8px; color: #51405d; font-size: 18px; line-height: 1.65; }
+    .impact-card p { max-width: 240px; margin: 0; color: #756a7d; font-size: 13px; line-height: 2; }
+    .impact-mascot { position: absolute; left: 10px; bottom: -17px; width: 112px; height: 125px; object-fit: contain; object-position: bottom; opacity: .92; filter: drop-shadow(0 11px 12px rgba(79, 68, 142, .16)); }
+    .impact-card.has-mascot p { max-width: 57%; }
+
+    .certificate-showcase { display: grid; grid-template-columns: minmax(270px, .9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 68px); align-items: center; margin-top: clamp(66px, 9vw, 108px); padding: clamp(25px, 4vw, 48px); border: 1px solid rgba(255, 255, 255, .75); border-radius: 30px; background: linear-gradient(135deg, rgba(255, 255, 255, .58), rgba(251, 244, 251, .37) 52%, rgba(231, 241, 252, .42)); box-shadow: 0 20px 46px rgba(89, 71, 130, .09), inset 0 1px 0 rgba(255, 255, 255, .86); }
+    .certificate-preview { position: relative; min-height: 285px; display: grid; align-content: center; justify-items: center; gap: 10px; padding: 31px; overflow: hidden; color: #fdf9ff; border: 7px solid rgba(224, 209, 255, .86); border-radius: 21px; background: radial-gradient(circle at 80% 16%, rgba(126, 189, 207, .34), transparent 28%), linear-gradient(145deg, #493c78, #6c55a8 54%, #4c8597); box-shadow: 0 18px 33px rgba(73, 55, 119, .22), inset 0 1px 0 rgba(255, 255, 255, .28); text-align: center; }
+    .certificate-preview::before, .certificate-preview::after { content: ""; position: absolute; width: 94px; height: 94px; border: 1px solid rgba(255, 255, 255, .19); border-radius: 50%; }
+    .certificate-preview::before { right: -32px; top: -32px; }
+    .certificate-preview::after { left: -37px; bottom: -37px; }
+    .certificate-preview img, .certificate-preview span, .certificate-preview strong, .certificate-preview small { position: relative; z-index: 1; }
+    .certificate-preview img { width: 44px; height: 44px; object-fit: contain; }
+    .certificate-preview span { color: rgba(255, 255, 255, .72); font-size: 11px; font-weight: 900; }
+    .certificate-preview strong { max-width: 245px; font-size: 21px; line-height: 1.65; }
+    .certificate-preview small { color: rgba(255, 255, 255, .76); font-size: 10px; }
+    .certificate-copy > span { color: #886a9f; font-size: 12px; font-weight: 900; }
+    .certificate-copy h2 { max-width: 470px; margin-top: 8px; }
+    .certificate-copy > p { max-width: 510px; margin: 14px 0 0; color: #74687d; font-size: 14px; line-height: 2.1; }
+    .certificate-points { display: grid; gap: 11px; margin: 21px 0 0; padding: 0; list-style: none; }
+    .certificate-points li { position: relative; padding-right: 25px; color: #655871; font-size: 13px; line-height: 1.9; }
+    .certificate-points li::before { content: ""; position: absolute; right: 0; top: .52em; width: 14px; height: 14px; border: 1px solid rgba(105, 162, 168, .32); border-radius: 50%; background: linear-gradient(145deg, rgba(255, 255, 255, .82), rgba(210, 242, 239, .70)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .84); }
+
+    .course-finish { position: relative; display: grid; grid-template-columns: minmax(250px, .78fr) minmax(0, 1.22fr); gap: clamp(25px, 6vw, 82px); align-items: center; margin-top: clamp(64px, 9vw, 104px); padding: clamp(28px, 5vw, 56px); overflow: hidden; border: 1px solid rgba(255, 255, 255, .78); border-radius: 31px; background: linear-gradient(135deg, rgba(255, 255, 255, .68), rgba(248, 233, 246, .43) 49%, rgba(218, 240, 248, .49)); box-shadow: 0 24px 55px rgba(83, 65, 122, .13), inset 0 1px 0 rgba(255, 255, 255, .90); }
+    .course-finish::before { content: ""; position: absolute; width: 380px; height: 380px; right: -155px; bottom: -235px; border: 1px solid rgba(132, 101, 189, .12); border-radius: 50%; box-shadow: 0 0 0 36px rgba(132, 101, 189, .04), 0 0 0 72px rgba(100, 180, 192, .035); }
+    .course-finish-visual, .course-finish-copy { position: relative; z-index: 1; }
+    .course-finish-visual { min-height: 248px; display: grid; place-items: end center; }
+    .finish-portal { position: absolute; top: 20px; width: 152px; height: 190px; border: 17px solid rgba(118, 93, 187, .72); border-bottom: 0; border-radius: 88px 88px 0 0; box-shadow: 0 0 0 8px rgba(255, 255, 255, .38), inset 0 0 31px rgba(196, 238, 247, .72), 0 16px 28px rgba(98, 83, 164, .16); }
+    .finish-portal::before { content: ""; position: absolute; inset: 15px 14px 0; border-radius: 62px 62px 0 0; background: radial-gradient(ellipse at 50% 76%, rgba(255,255,255,.90), rgba(211, 236, 250, .73) 42%, rgba(130, 105, 199, .20) 72%, transparent 73%); }
+    .finish-mascot { position: relative; z-index: 2; width: 158px; height: 191px; object-fit: contain; object-position: bottom; filter: drop-shadow(0 14px 17px rgba(75, 62, 132, .20)); }
+    .course-finish-copy > span { color: #83659c; font-size: 12px; font-weight: 900; }
+    .course-finish h2 { max-width: 540px; margin-top: 8px; font-size: clamp(29px, 4vw, 43px); }
+    .course-finish-copy > p { max-width: 570px; margin: 13px 0 0; color: #70647a; font-size: 14px; line-height: 2.1; }
+    .finish-next { display: flex; align-items: center; gap: 12px; max-width: 520px; margin-top: 22px; padding: 12px 14px; border: 1px solid rgba(255, 255, 255, .76); border-radius: 16px; background: rgba(255, 255, 255, .44); }
+    .finish-next span { flex: none; color: #8a739c; font-size: 10px; font-weight: 900; }
+    .finish-next strong { min-width: 0; color: #554261; font-size: 13px; line-height: 1.7; }
+    .course-start { width: min(100%, 300px); min-height: 54px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin-top: 17px; padding: 0 22px; color: #fff; border: 1px solid rgba(255, 255, 255, .58); border-radius: 16px; background: linear-gradient(135deg, #7259b7, #5a82b8 56%, #53aab8); box-shadow: 0 11px 22px rgba(85, 76, 162, .24), inset 0 1px 0 rgba(255, 255, 255, .34); cursor: pointer; font-size: 14px; font-weight: 900; transition: transform .2s ease, box-shadow .2s ease, filter .2s ease; }
+    .course-start:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.03); box-shadow: 0 16px 26px rgba(85, 76, 162, .30), inset 0 1px 0 rgba(255, 255, 255, .40); }
+    .course-start:focus-visible { outline: 3px solid rgba(82, 165, 190, .38); outline-offset: 4px; }
+    .course-start:disabled { cursor: wait; opacity: .68; transform: none; }
+    .course-start svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.25; }
+
     .final-band { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: center; margin-top: clamp(66px, 9vw, 106px); padding: clamp(28px, 4vw, 47px); overflow: hidden; color: #fffaf8; border-radius: 24px; background: linear-gradient(116deg, #7454b9, #7179c4 52%, #67aab4); box-shadow: 0 20px 45px rgba(95, 76, 153, .22); }
     .final-band::after { content: ""; position: absolute; inset: 0; opacity: .4; background-image: radial-gradient(circle, rgba(255,255,255,.78) 1px, transparent 1.5px); background-size: 55px 55px; mask-image: linear-gradient(115deg, black, transparent 76%); }
     .final-band-copy, .primary { position: relative; z-index: 1; }
@@ -192,6 +345,47 @@
       .stage-track { max-width: none; }
       .final-band { grid-template-columns: 1fr; gap: 22px; padding: 28px 22px; border-radius: 21px; }
       .primary { width: 100%; }
+    }
+
+    @media (max-width: 1020px) {
+      .route-track { padding-top: 12px; }
+      .route-road { display: none; }
+      .route-track::before { display: block; top: 28px; right: 27px; bottom: 26px; left: auto; width: 3px; height: auto; background: repeating-linear-gradient(180deg, rgba(116, 90, 188, .70) 0 5px, transparent 5px 13px); }
+      .route-track::after { display: block; top: auto; right: 21px; bottom: 15px; left: auto; transform: rotate(-135deg); }
+      .route-stops { grid-template-columns: 1fr; gap: 14px; padding-right: 0; }
+      .route-stop, .route-stop:nth-child(even) { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: start; padding-top: 0; }
+      .route-node { grid-column: 1; }
+      .route-card { grid-column: 2; min-height: 0; margin-top: 0; }
+    }
+
+    @media (max-width: 780px) {
+      .destination-section, .route-section, .impact-section { margin-top: 66px; }
+      .destination-panel { grid-template-columns: 1fr; gap: 18px; padding: 20px; border-radius: 24px; }
+      .destination-panel::before { inset: 32% 50% 28%; width: 1px; height: auto; background: linear-gradient(180deg, rgba(235, 157, 156, .22), rgba(119, 96, 191, .42), rgba(74, 179, 182, .25)); }
+      .destination-card { min-height: 0; padding: 21px 19px; }
+      .destination-avatar { min-height: 215px; order: 0; }
+      .destination-avatar zito-course-mascot { width: 162px; height: 192px; }
+      .destination-avatar::before { width: 152px; }
+      .destination-avatar::after { bottom: 23px; }
+      .zito-glass-course .course-route.learning-map { padding: 20px !important; border-radius: 24px; }
+      .route-legend { align-items: flex-start; flex-direction: column; gap: 6px; }
+      .route-card { padding: 15px 14px; }
+      .route-card span { font-size: 11px; }
+      .route-card h3 { font-size: 16px; line-height: 1.7; }
+      .route-card p { font-size: 12px; line-height: 1.85; }
+      .impact-grid { grid-template-columns: 1fr; }
+      .impact-card { min-height: 184px; }
+      .certificate-showcase, .course-finish { grid-template-columns: 1fr; gap: 23px; padding: 23px 20px; border-radius: 24px; }
+      .certificate-preview { min-height: 245px; order: 2; }
+      .course-finish-visual { min-height: 210px; order: 2; }
+      .finish-portal { top: 7px; width: 132px; height: 166px; border-width: 14px; }
+      .finish-mascot { width: 138px; height: 169px; }
+      .course-start { width: 100%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .route-road-lane, .route-node { animation: none; }
+      .route-traveler { display: none; }
     }
   </style>
   <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260902-scroll-position-1">
@@ -241,16 +435,85 @@
       return values.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
     }
 
-    function objectives(items) {
-      const values = Array.isArray(items) ? items.filter(Boolean).slice(0, 3) : [];
+    function objectives(items, limit = 3) {
+      const values = Array.isArray(items) ? items.filter(Boolean).slice(0, limit) : [];
       return values.map((item) => `<span>${escapeHtml(item)}</span>`).join("");
     }
 
+    function stageDots(count) {
+      const total = Math.max(1, Math.min(12, Number(count) || 1));
+      return Array.from({ length: total }, () => "<i></i>").join("");
+    }
+
+    function routeRoad(count) {
+      const total = Math.max(1, Math.min(12, Number(count) || 1));
+      const points = Array.from({ length: total }, (_, index) => ({
+        x: total === 1 ? 500 : 1000 - ((index + .5) * (1000 / total)),
+        y: index % 2 === 0 ? 66 : 94,
+      }));
+
+      if (total === 1) {
+        return `<svg class="route-road" viewBox="0 0 1000 150" preserveAspectRatio="none" aria-hidden="true"><circle cx="500" cy="66" r="18" fill="rgba(130, 101, 196, .10)"></circle></svg>`;
+      }
+
+      const roadPath = points.slice(1).reduce((path, point, index) => {
+        const previous = points[index];
+        const bend = (previous.x + point.x) / 2;
+        return `${path} C ${bend} ${previous.y}, ${bend} ${point.y}, ${point.x} ${point.y}`;
+      }, `M ${points[0].x} ${points[0].y}`);
+
+      return `<svg class="route-road" viewBox="0 0 1000 150" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="course-route-orb" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stop-color="#a787e1"></stop>
+            <stop offset="1" stop-color="#63b7c7"></stop>
+          </linearGradient>
+        </defs>
+        <path class="route-road-shadow" d="${roadPath}"></path>
+        <path class="route-road-surface" d="${roadPath}"></path>
+        <path id="course-route-motion-path" class="route-road-lane" d="${roadPath}"></path>
+        <circle class="route-traveler" cx="0" cy="0" r="7" fill="url(#course-route-orb)">
+          <animateMotion dur="7.6s" repeatCount="indefinite" rotate="auto"><mpath href="#course-route-motion-path"></mpath></animateMotion>
+        </circle>
+        <circle class="route-traveler route-traveler-secondary" cx="0" cy="0" r="5" fill="url(#course-route-orb)">
+          <animateMotion begin="-3.8s" dur="7.6s" repeatCount="indefinite" rotate="auto"><mpath href="#course-route-motion-path"></mpath></animateMotion>
+        </circle>
+      </svg>`;
+    }
+
     function render(course) {
-      const moduleCount = Number(course.module_count) || (course.modules || []).length;
+      const modules = Array.isArray(course.modules) ? course.modules.filter(Boolean) : [];
+      const routeModules = modules.length ? modules : [{
+        module_number: 1,
+        title: "آماده‌سازی مسیر",
+        stage_count: Number(course.module_stage_count) || 1,
+        learning_objectives: [],
+      }];
+      const moduleCount = Number(course.module_count) || modules.length || routeModules.length;
       const stageCount = Number(course.module_stage_count) || 0;
       const totalDuration = course.estimated_duration_label || "مسیر منعطف و مرحله‌به‌مرحله";
-      const stageBars = Array.from({ length: Math.max(1, stageCount) }, () => "<span></span>").join("");
+      const beforeItems = [
+        "نمی‌دانی از کجا و با چه ترتیبی شروع کنی.",
+        "آموخته‌ها به تمرین‌های کوچک و قابل انجام تبدیل نمی‌شوند.",
+        "بعد از یک وقفه، برگشتن به مسیر سخت و مبهم است.",
+      ];
+      const outcomeCandidates = [
+        ...(Array.isArray(course.learning_outcomes) ? course.learning_outcomes : []),
+        ...(Array.isArray(course.career_outcomes) ? course.career_outcomes : []),
+        ...(Array.isArray(course.daily_life_outcomes) ? course.daily_life_outcomes : []),
+      ].filter(Boolean);
+      const afterItems = outcomeCandidates.slice(0, 4).length ? outcomeCandidates.slice(0, 4) : [
+        "قدم بعدی‌ات را با یک نقشه روشن انتخاب می‌کنی.",
+        "برای یادگیری و تمرین، ریتمی پایدار می‌سازی.",
+        "آموخته‌ها را به موقعیت‌های واقعی خودت وصل می‌کنی.",
+      ];
+      const finalExamLabel = course.final_exam_label || "پس از تکمیل سرفصل‌ها، آزمون نهایی و مسیر دریافت گواهی برایت فعال می‌شود.";
+      const firstModuleTitle = modules[0]?.title || "اولین ایستگاه مسیر";
+      const routeFinishLabel = course.requires_final_exam ? "آزمون نهایی و گواهی" : "پایان مسیر";
+      const certificateCompletionLabel = course.requires_final_exam ? "پس از تکمیل مسیر و ارزیابی نهایی" : "پس از تکمیل تمام ایستگاه‌های مسیر";
+      const certificateProgressPoint = course.requires_final_exam
+        ? "ارزیابی پایانی پس از تکمیل ایستگاه‌های دوره فعال می‌شود."
+        : "پس از تکمیل همهٔ ایستگاه‌ها، خروجی نهایی مسیر برایت فعال می‌شود.";
       screen.className = "";
       screen.innerHTML = `
         <section class="course-hero">
@@ -271,48 +534,114 @@
           </div>
         </section>
 
-        <section class="section" aria-labelledby="course-story-title">
+        <section class="destination-section" aria-labelledby="destination-title">
           <div class="section-head">
-            <div><span class="section-kicker">پیش از شروع</span><h2 id="course-story-title">این دوره برای چه تغییری طراحی شده است؟</h2></div>
-            <p class="section-intro">مسیر را با سرعت خودت جلو می‌بری؛ هر سرفصل مفهومی، کاربرد و تمرین مستقل خودش را دارد.</p>
+            <div><span class="section-kicker">مقصد این مسیر</span><h2 id="destination-title">آخر این مسیر قرار است کجا برسی؟</h2></div>
+            <p class="section-intro">${escapeHtml(course.description || "در این دوره، هر قدم کوچک به یک نتیجه قابل استفاده در زندگی و کار تو وصل می‌شود.")}</p>
           </div>
-          <div class="course-story">
-            <p>${escapeHtml(course.description)}</p>
-            <div class="course-promise"><span>پایان این مسیر</span><strong>${escapeHtml(course.final_exam_label || "پس از تکمیل سرفصل‌ها، آزمون نهایی و مسیر دریافت گواهی برایت فعال می‌شود.")}</strong></div>
-          </div>
-          <div class="outcome-strip">
-            <article class="outcome"><span class="outcome-index">۰۱ / یاد می‌گیری</span><h3>مهارت‌های کلیدی</h3><ul>${list(course.learning_outcomes)}</ul></article>
-            <article class="outcome"><span class="outcome-index">۰۲ / به‌کار می‌بری</span><h3>در مسیر شغلی</h3><ul>${list(course.career_outcomes)}</ul></article>
-            <article class="outcome"><span class="outcome-index">۰۳ / همراهت می‌ماند</span><h3>در زندگی روزمره</h3><ul>${list(course.daily_life_outcomes)}</ul></article>
+          <div class="destination-panel">
+            <article class="destination-card before">
+              <span class="destination-kicker">قبل از این دوره</span>
+              <h3>انرژی داری، اما مسیر هنوز روشن نیست.</h3>
+              <ul class="destination-list">${list(beforeItems)}</ul>
+            </article>
+            <div class="destination-avatar" aria-hidden="true">
+              <zito-course-mascot aria-label="زیتو، همراه مسیر رشد تو"></zito-course-mascot>
+              <span class="destination-direction">قدم‌به‌قدم، نه یک‌باره</span>
+            </div>
+            <article class="destination-card after">
+              <span class="destination-kicker">بعد از این دوره</span>
+              <h3>می‌دانی قدم بعدی چیست و چرا انجامش می‌دهی.</h3>
+              <ul class="destination-list">${list(afterItems)}</ul>
+            </article>
           </div>
         </section>
 
-        <section class="section" aria-labelledby="roadmap-title">
+        <section class="route-section" aria-labelledby="roadmap-title">
           <div class="section-head">
-            <div><span class="section-kicker">نقشه کامل دوره</span><h2 id="roadmap-title">مسیر یادگیری، از اولین قدم تا آزمون نهایی</h2></div>
-            <p class="section-intro">هر خط یک سرفصل است؛ هشت نشان کوچک زیر آن، ایستگاه‌های همان سرفصل را نشان می‌دهند.</p>
+            <div><span class="section-kicker">نقشه و مسیر دوره</span><h2 id="roadmap-title">از اولین قدم تا ${escapeHtml(routeFinishLabel)}</h2></div>
+            <p class="section-intro">هر سرفصل یک ایستگاه واقعی در مسیر است؛ با تمرین‌های کوتاه جلو می‌روی و پیشرفتت در تمام راه ذخیره می‌شود.</p>
           </div>
-          <div class="learning-map">
-            ${(course.modules || []).map((module) => `
-              <article class="module-row">
-                <span class="module-marker">${module.module_number}</span>
-                <div class="module-body">
-                  <div class="module-heading"><h3>${escapeHtml(module.title)}</h3><span>${module.stage_count} مرحله در این سرفصل</span></div>
-                  <p class="module-description">${escapeHtml(module.description || "جزئیات این سرفصل در حال آماده‌سازی است.")}</p>
-                  <div class="module-objectives">${objectives(module.learning_objectives)}</div>
-                  <div class="stage-track" aria-label="${module.stage_count} مرحله برای ${escapeHtml(module.title)}">${stageBars}</div>
-                </div>
-              </article>`).join("")}
+          <div class="course-route learning-map">
+            <div class="route-legend"><span>شروع مسیر</span><span>${escapeHtml(totalDuration)}</span></div>
+            <div class="route-track">
+              ${routeRoad(routeModules.length)}
+              <ol class="route-stops" style="--route-count: ${routeModules.length}">
+                ${routeModules.map((module) => {
+                  const moduleStageCount = Math.max(1, Number(module.stage_count) || stageCount || 1);
+                  return `<li class="route-stop">
+                    <span class="route-node">${escapeHtml(module.module_number)}</span>
+                    <article class="route-card">
+                      <span>سرفصل ${escapeHtml(module.module_number)}</span>
+                      <h3>${escapeHtml(module.title)}</h3>
+                      <p>${moduleStageCount} ایستگاه یادگیری و تمرین</p>
+                      <div class="route-card-tags">${objectives(module.learning_objectives, 2)}</div>
+                      <div class="route-stage-dots" style="--stage-count: ${Math.min(12, moduleStageCount)}" aria-label="${moduleStageCount} مرحله برای ${escapeHtml(module.title)}">${stageDots(moduleStageCount)}</div>
+                    </article>
+                  </li>`;
+                }).join("")}
+              </ol>
+            </div>
+            <div class="route-finish">${escapeHtml(routeFinishLabel)}</div>
           </div>
         </section>
 
-        <section class="final-band">
-          <div class="final-band-copy">
-            <span>زیتو در تمام مسیر کنار توست</span>
-            <h2>آماده‌ای اولین سرفصل را شروع کنیم؟</h2>
-            <p>پیشرفتت ذخیره می‌شود، از هر ایستگاه می‌توانی با آواتار زیتو گفت‌وگو کنی و مسیر را هر زمان ادامه بدهی.</p>
+        <section class="impact-section" aria-labelledby="impact-title">
+          <div class="section-head">
+            <div><span class="section-kicker">چیزی که همراهت می‌ماند</span><h2 id="impact-title">این دوره چه چیزی را برایت متفاوت می‌کند؟</h2></div>
+            <p class="section-intro">هدف فقط گذراندن محتوا نیست؛ می‌خواهیم چیزی بسازی که در روزهای بعد هم به کارت بیاید.</p>
           </div>
-          <button id="startCourse" class="primary" type="button">شروع دوره</button>
+          <div class="impact-grid">
+            <article class="impact-card">
+              <span class="impact-number">۰۱</span>
+              <h3>تمرین‌های کوتاه و هدفمند</h3>
+              <p>هر ایستگاه یک کار کوچک دارد تا یادگیری از صفحه بیرون بیاید و قابل انجام بماند.</p>
+            </article>
+            <article class="impact-card">
+              <span class="impact-number">۰۲</span>
+              <h3>مسیر قابل پیگیری</h3>
+              <p>همیشه می‌دانی در کجای مسیر هستی، چه چیزی تمام شده و قدم بعدی چیست.</p>
+            </article>
+            <article class="impact-card has-mascot">
+              <span class="impact-number">۰۳</span>
+              <h3>همراهی زیتو در راه</h3>
+              <p>هرجا گیر کردی، زیتو کنار همان سرفصل برای فکرکردن و جلو رفتن همراهت است.</p>
+              <img class="impact-mascot" src="/landing-static/course-mascot-lottie/assets/zito-state-a.png" alt="" loading="lazy">
+            </article>
+          </div>
+        </section>
+
+        <section class="certificate-showcase" aria-labelledby="certificate-title">
+          <div class="certificate-preview" aria-label="پیش‌نمایش گواهی پایان دوره زیتو">
+            <img src="/landing-static/zito-logo.svg" alt="">
+            <span>گواهی پایان دوره زیتو</span>
+            <strong>${escapeHtml(course.title)}</strong>
+            <small>${escapeHtml(certificateCompletionLabel)}</small>
+          </div>
+          <div class="certificate-copy">
+            <span>پایان مسیر، یک خروجی قابل اتکا</span>
+            <h2 id="certificate-title">گواهی دوره فقط یک تصویر نیست؛ نشانهٔ مسیری است که واقعاً طی کرده‌ای.</h2>
+            <p>${escapeHtml(finalExamLabel)}</p>
+            <ul class="certificate-points">
+              <li>مسیر و پیشرفتت مرحله‌به‌مرحله ثبت می‌شود.</li>
+              <li>${escapeHtml(certificateProgressPoint)}</li>
+              <li>پس از قبولی، گواهی قابل بررسی زیتو برایت صادر می‌شود.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="course-finish" aria-labelledby="finish-title">
+          <div class="course-finish-visual" aria-hidden="true">
+            <div class="finish-portal"></div>
+            <img class="finish-mascot" src="/landing-static/course-mascot-lottie/assets/zito-state-b.png" alt="" loading="lazy">
+          </div>
+          <div class="course-finish-copy">
+            <span>مسیر آماده است</span>
+            <h2 id="finish-title">شروع از یک قدم کوچک، ادامه تا یک تغییر واقعی.</h2>
+            <p>پیشرفتت ذخیره می‌شود، هر زمان خواستی برمی‌گردی و در هر ایستگاه زیتو را کنار خودت داری.</p>
+            <div class="finish-next"><span>اولین ایستگاه</span><strong>${escapeHtml(firstModuleTitle)}</strong></div>
+            <button id="startCourse" class="course-start" type="button"><span>شروع مسیر</span><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h13M13 6l6 6-6 6" /></svg></button>
+          </div>
         </section>`;
 
       document.querySelector("#startCourse").addEventListener("click", async (event) => {

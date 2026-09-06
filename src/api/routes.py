@@ -1190,7 +1190,6 @@ def verify_phone_otp(
     payload: OtpVerifyIn,
     request: Request,
     response: Response,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> PhoneLoginOut:
     phone = _normalize_phone(payload.phone)
@@ -1208,8 +1207,6 @@ def verify_phone_otp(
     db.commit()
     db.refresh(user)
     set_user_cookie(response, session_token)
-    if not has_existing_user:
-        background_tasks.add_task(send_welcome_sms, phone, user.display_name)
     return PhoneLoginOut(
         user_id=user.id,
         phone=phone,
@@ -1247,6 +1244,7 @@ def get_my_profile(
 @router.patch("/api/me/profile", response_model=ProfileOut)
 def update_my_profile(
     payload: ProfilePatchIn,
+    background_tasks: BackgroundTasks,
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ) -> ProfileOut:
@@ -1255,6 +1253,7 @@ def update_my_profile(
         raise HTTPException(status_code=422, detail="حداقل یک فیلد پروفایل را ارسال کن.")
 
     profile = db.get(UserProfile, user.id)
+    was_complete = bool(profile and _profile_is_complete(profile))
     if not profile:
         profile = UserProfile(user_id=user.id)
         db.add(profile)
@@ -1263,9 +1262,12 @@ def update_my_profile(
         normalized = value.strip() if isinstance(value, str) else value
         setattr(profile, field, normalized or None)
 
-    profile.completed_at = datetime.now(timezone.utc) if _profile_is_complete(profile) else None
+    is_complete = _profile_is_complete(profile)
+    profile.completed_at = datetime.now(timezone.utc) if is_complete else None
     db.commit()
     db.refresh(profile)
+    if is_complete and not was_complete and user.phone:
+        background_tasks.add_task(send_welcome_sms, user.phone, user.display_name)
     return _profile_out(user, profile)
 
 

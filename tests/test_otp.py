@@ -116,7 +116,7 @@ class OtpFlowTests(unittest.TestCase):
         self.assertEqual(users[0].display_name, "First name")
         self.assertEqual(len(sessions), 2)
 
-    def test_welcome_sms_is_queued_once_for_a_new_verified_phone(self) -> None:
+    def test_welcome_sms_is_queued_once_after_profile_completion(self) -> None:
         phone = "09124445555"
         sent: list[tuple[str, str]] = []
 
@@ -125,27 +125,47 @@ class OtpFlowTests(unittest.TestCase):
             return True
 
         with patch("src.api.routes.send_welcome_sms", fake_send_welcome_sms):
-            with TestClient(app) as first_client:
-                request_response = first_client.post("/api/auth/otp/request", json={"phone": phone})
-                first_verify = first_client.post(
+            with TestClient(app) as client:
+                request_response = client.post("/api/auth/otp/request", json={"phone": phone})
+                first_verify = client.post(
                     "/api/auth/otp/verify",
                     json={
                         "phone": phone,
                         "code": request_response.json()["mock_code"],
-                        "display_name": "کاربر تازه",
+                        "display_name": "New learner",
                     },
                 )
+                self.assertEqual(first_verify.status_code, 200)
+                self.assertEqual(sent, [])
 
-            with TestClient(app) as returning_client:
-                request_response = returning_client.post("/api/auth/otp/request", json={"phone": phone})
-                returning_verify = returning_client.post(
-                    "/api/auth/otp/verify",
-                    json={"phone": phone, "code": request_response.json()["mock_code"]},
+                updates = [
+                    {"work_or_study_field": "Software development"},
+                    {"education_level": "Bachelor"},
+                    {"learning_goal_interests": "Applied AI"},
+                    {"ai_familiarity_level": "Beginner"},
+                    {"daily_learning_time_text": "One hour", "daily_learning_minutes": 60},
+                    {"preferred_career_path": "Product building"},
+                ]
+                for update in updates:
+                    profile_response = client.patch("/api/me/profile", json=update)
+                    self.assertEqual(profile_response.status_code, 200)
+                    self.assertEqual(sent, [])
+
+                completed_response = client.patch(
+                    "/api/me/profile",
+                    json={"referral_source": "Search"},
                 )
+                self.assertEqual(completed_response.status_code, 200)
+                self.assertTrue(completed_response.json()["completed"])
+                self.assertEqual(sent, [(phone, "New learner")])
 
-        self.assertEqual(first_verify.status_code, 200)
-        self.assertEqual(returning_verify.status_code, 200)
-        self.assertEqual(sent, [(phone, "کاربر تازه")])
+                edit_response = client.patch(
+                    "/api/me/profile",
+                    json={"referral_source": "Friend"},
+                )
+                self.assertEqual(edit_response.status_code, 200)
+
+        self.assertEqual(sent, [(phone, "New learner")])
 
     def test_new_phone_requires_a_name_before_otp_can_create_an_account(self) -> None:
         phone = "09127778888"

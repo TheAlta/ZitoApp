@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -11,6 +12,9 @@ from sqlalchemy.orm import Session
 
 from src.config import get_settings
 from src.models import PhoneOtpCode
+
+
+logger = logging.getLogger(__name__)
 
 
 class OtpError(Exception):
@@ -83,26 +87,31 @@ def _latest_code(db: Session, phone: str) -> PhoneOtpCode | None:
     ).first()
 
 
-async def _send_smsir_code(phone: str, code: str) -> None:
+async def _send_smsir_verify_template(
+    phone: str,
+    *,
+    api_key: str,
+    template_id: str,
+    parameters: list[dict[str, str]],
+    api_key_name: str,
+    purpose: str,
+) -> None:
     settings = get_settings()
-    template_id: int | str = settings.smsir_template_id
-    if settings.smsir_template_id.isdigit():
-        template_id = int(settings.smsir_template_id)
+    if not api_key.strip() or not template_id.strip():
+        raise OtpError(f"sms.ir {purpose} configuration is incomplete.")
 
+    normalized_template_id: int | str = template_id
+    if template_id.isdigit():
+        normalized_template_id = int(template_id)
     payload = {
         "mobile": phone,
-        "templateId": template_id,
-        "parameters": [
-            {
-                "name": settings.smsir_code_parameter,
-                "value": code,
-            }
-        ],
+        "templateId": normalized_template_id,
+        "parameters": parameters,
     }
     headers = {
         "Accept": "text/plain",
         "Content-Type": "application/json",
-        "X-API-KEY": _require_ascii_header_value("SMSIR_API_KEY", settings.smsir_api_key),
+        "X-API-KEY": _require_ascii_header_value(api_key_name, api_key),
     }
     url = f"{settings.smsir_api_url.rstrip('/')}/send/verify"
     try:
@@ -116,7 +125,7 @@ async def _send_smsir_code(phone: str, code: str) -> None:
         raise OtpError(f"Could not call sms.ir: {exc}") from exc
 
     if status_code >= 400:
-        raise OtpError(f"sms.ir rejected OTP request with status {status_code}.")
+        raise OtpError(f"sms.ir rejected {purpose} with status {status_code}.")
 
     try:
         data = json.loads(response_text)
@@ -124,8 +133,60 @@ async def _send_smsir_code(phone: str, code: str) -> None:
         raise OtpError("sms.ir returned an invalid response body.") from exc
 
     if int(data.get("status", 0)) != 1:
-        message = data.get("message") or "sms.ir did not accept OTP request."
-        raise OtpError(f"sms.ir OTP failed: {message}")
+        message = data.get("message") or f"sms.ir did not accept {purpose}."
+        raise OtpError(f"sms.ir {purpose} failed: {message}")
+
+
+async def _send_smsir_code(phone: str, code: str) -> None:
+    settings = get_settings()
+    await _send_smsir_verify_template(
+        phone,
+        api_key=settings.smsir_api_key,
+        template_id=settings.smsir_template_id,
+        parameters=[
+            {
+                "name": settings.smsir_code_parameter,
+                "value": code,
+            }
+        ],
+        api_key_name="SMSIR_API_KEY",
+        purpose="OTP request",
+    )
+
+
+async def send_welcome_sms(phone: str, full_name: str) -> bool:
+    """Send the optional, templated welcome message without blocking sign-in."""
+    settings = get_settings()
+    if not settings.smsir_welcome_enabled:
+        return False
+
+    normalized_name = " ".join(full_name.split())
+    if not normalized_name:
+        logger.warning("Skipping welcome SMS because the new account has no display name.")
+        return False
+
+    try:
+        await _send_smsir_verify_template(
+            phone,
+            api_key=settings.smsir_welcome_api_key,
+            template_id=settings.smsir_welcome_template_id,
+            parameters=[
+                {
+                    "name": settings.smsir_welcome_name_parameter,
+                    "value": normalized_name,
+                }
+            ],
+            api_key_name="SMSIR_WELCOME_API_KEY",
+            purpose="welcome SMS",
+        )
+    except OtpError as exc:
+        logger.warning(
+            "Welcome sms.ir send failed for phone ending in %s: %s",
+            phone[-4:],
+            exc,
+        )
+        return False
+    return True
 
 
 async def _post_smsir_verify(

@@ -29,3 +29,7 @@ def setup_test_environment() -> None:
     os.environ["SMSIR_API_KEY"] = ""
     os.environ["SMSIR_TEMPLATE_ID"] = ""
     os.environ["SMSIR_CODE_PARAMETER"] = "Code"
+    os.environ["SMSIR_WELCOME_ENABLED"] = "false"
+    os.environ["SMSIR_WELCOME_API_KEY"] = ""
+    os.environ["SMSIR_WELCOME_TEMPLATE_ID"] = ""
+    os.environ["SMSIR_WELCOME_NAME_PARAMETER"] = "FULLNAME"

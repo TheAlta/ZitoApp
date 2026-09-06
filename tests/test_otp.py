@@ -13,7 +13,7 @@ from src.config import get_settings
 from src.db import Base, SessionLocal, engine
 from src.main import app
 from src.models import PhoneOtpCode, User, UserProfile, UserSession
-from src.services.otp import OtpError, _send_smsir_code
+from src.services.otp import OtpError, _send_smsir_code, send_welcome_sms
 
 
 def request_and_verify(client: TestClient, phone: str, display_name: str = "Shayan") -> dict:
@@ -115,6 +115,37 @@ class OtpFlowTests(unittest.TestCase):
         self.assertEqual(len(users), 1)
         self.assertEqual(users[0].display_name, "First name")
         self.assertEqual(len(sessions), 2)
+
+    def test_welcome_sms_is_queued_once_for_a_new_verified_phone(self) -> None:
+        phone = "09124445555"
+        sent: list[tuple[str, str]] = []
+
+        async def fake_send_welcome_sms(recipient: str, full_name: str) -> bool:
+            sent.append((recipient, full_name))
+            return True
+
+        with patch("src.api.routes.send_welcome_sms", fake_send_welcome_sms):
+            with TestClient(app) as first_client:
+                request_response = first_client.post("/api/auth/otp/request", json={"phone": phone})
+                first_verify = first_client.post(
+                    "/api/auth/otp/verify",
+                    json={
+                        "phone": phone,
+                        "code": request_response.json()["mock_code"],
+                        "display_name": "کاربر تازه",
+                    },
+                )
+
+            with TestClient(app) as returning_client:
+                request_response = returning_client.post("/api/auth/otp/request", json={"phone": phone})
+                returning_verify = returning_client.post(
+                    "/api/auth/otp/verify",
+                    json={"phone": phone, "code": request_response.json()["mock_code"]},
+                )
+
+        self.assertEqual(first_verify.status_code, 200)
+        self.assertEqual(returning_verify.status_code, 200)
+        self.assertEqual(sent, [(phone, "کاربر تازه")])
 
     def test_new_phone_requires_a_name_before_otp_can_create_an_account(self) -> None:
         phone = "09127778888"
@@ -269,6 +300,10 @@ class SmsIrAdapterTests(unittest.IsolatedAsyncioTestCase):
                 "SMSIR_API_KEY",
                 "SMSIR_TEMPLATE_ID",
                 "SMSIR_CODE_PARAMETER",
+                "SMSIR_WELCOME_ENABLED",
+                "SMSIR_WELCOME_API_KEY",
+                "SMSIR_WELCOME_TEMPLATE_ID",
+                "SMSIR_WELCOME_NAME_PARAMETER",
             ]
         }
         os.environ["OTP_MOCK"] = "false"
@@ -276,6 +311,10 @@ class SmsIrAdapterTests(unittest.IsolatedAsyncioTestCase):
         os.environ["SMSIR_API_KEY"] = "test-smsir-key"
         os.environ["SMSIR_TEMPLATE_ID"] = "123456"
         os.environ["SMSIR_CODE_PARAMETER"] = "Code"
+        os.environ["SMSIR_WELCOME_ENABLED"] = "true"
+        os.environ["SMSIR_WELCOME_API_KEY"] = "test-welcome-smsir-key"
+        os.environ["SMSIR_WELCOME_TEMPLATE_ID"] = "980633"
+        os.environ["SMSIR_WELCOME_NAME_PARAMETER"] = "FULLNAME"
         get_settings.cache_clear()
 
     def tearDown(self) -> None:
@@ -304,6 +343,28 @@ class SmsIrAdapterTests(unittest.IsolatedAsyncioTestCase):
                 "mobile": "09123456789",
                 "templateId": 123456,
                 "parameters": [{"name": "Code", "value": "123456"}],
+            },
+        )
+
+    async def test_smsir_welcome_adapter_uses_its_own_template_and_key(self) -> None:
+        FakeSmsIrPost.next_status_code = 200
+        FakeSmsIrPost.next_body = '{"status":1,"message":"ok","data":{"messageId":2}}'
+        FakeSmsIrPost.last_request = None
+
+        with patch("src.services.otp._post_smsir_verify", FakeSmsIrPost.post):
+            sent = await send_welcome_sms("09123456789", "  نازنین   رضایی ")
+
+        self.assertTrue(sent)
+        request = FakeSmsIrPost.last_request
+        self.assertIsNotNone(request)
+        self.assertEqual(request["url"], "https://api.sms.ir/v1/send/verify")
+        self.assertEqual(request["headers"]["X-API-KEY"], "test-welcome-smsir-key")
+        self.assertEqual(
+            request["payload"],
+            {
+                "mobile": "09123456789",
+                "templateId": 980633,
+                "parameters": [{"name": "FULLNAME", "value": "نازنین رضایی"}],
             },
         )
 

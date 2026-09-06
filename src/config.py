@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     smsir_template_id: str = Field("", alias="SMSIR_TEMPLATE_ID")
     smsir_code_parameter: str = Field("Code", alias="SMSIR_CODE_PARAMETER")
     smsir_timeout_seconds: int = Field(10, alias="SMSIR_TIMEOUT_SECONDS")
+    smsir_welcome_enabled: bool = Field(False, alias="SMSIR_WELCOME_ENABLED")
+    smsir_welcome_api_key: str = Field("", alias="SMSIR_WELCOME_API_KEY")
+    smsir_welcome_template_id: str = Field("", alias="SMSIR_WELCOME_TEMPLATE_ID")
+    smsir_welcome_name_parameter: str = Field("FULLNAME", alias="SMSIR_WELCOME_NAME_PARAMETER")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -65,6 +69,10 @@ class Settings(BaseSettings):
             missing.append("ARVAN_API_BASE_URL/ARVAN_API_KEY")
         if not self.otp_mock and (not self.smsir_api_key or not self.smsir_template_id):
             missing.append("SMSIR_API_KEY/SMSIR_TEMPLATE_ID")
+        if self.smsir_welcome_enabled and (
+            not self.smsir_welcome_api_key or not self.smsir_welcome_template_id
+        ):
+            missing.append("SMSIR_WELCOME_API_KEY/SMSIR_WELCOME_TEMPLATE_ID")
 
         if missing:
             joined = ", ".join(missing)

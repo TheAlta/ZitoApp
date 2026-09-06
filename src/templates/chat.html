@@ -289,6 +289,12 @@
       background: linear-gradient(135deg, #8d39ff 0%, #5f3fff 46%, #176fff 100%);
       box-shadow: 0 16px 38px rgba(87, 74, 255, .27);
     }
+    .profile-choice-set { align-self: flex-start; display: flex; flex-wrap: wrap; gap: 8px; max-width: 92%; margin-top: -4px; animation: pop .24s ease both; }
+    .profile-choice { flex: 1 1 132px; width: auto; min-height: 42px; height: auto; padding: 8px 13px; color: #edefff; border: 1px solid rgba(151, 164, 255, .34); border-radius: 14px; background: rgba(32, 44, 94, .78); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 18px rgba(0, 0, 0, .16); font: inherit; font-size: 12px; font-weight: 800; line-height: 1.55; }
+    .profile-choice:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(93, 211, 255, .70); background: rgba(54, 66, 132, .88); }
+    .profile-choice:focus-visible { outline: 3px solid rgba(83, 210, 255, .44); outline-offset: 2px; }
+    .profile-choice.is-selected { color: #fff; border-color: rgba(182, 207, 255, .82); background: linear-gradient(135deg, #735ec6, #58a5b7); }
+    .profile-choice:disabled { cursor: default; opacity: .72; }
     .planet-stage {
       grid-area: planet;
       min-height: 0;
@@ -1887,7 +1893,23 @@
       return true;
     }
     let composerIsBusy = false;
-    function syncComposerControls() { button.disabled = composerIsBusy || !input.value.trim(); }
+    function profileStepUsesChoices(step = profileBuilder && PROFILE_STEPS[profileBuilder.stepIndex]) {
+      return Boolean(step && Array.isArray(step.options) && step.options.length);
+    }
+    function syncComposerControls() {
+      const useChoices = stage === "profile" && profileStepUsesChoices();
+      input.disabled = composerIsBusy || useChoices;
+      button.disabled = composerIsBusy || useChoices || !input.value.trim();
+    }
+    function setProfileChoiceStep(step) {
+      const useChoices = profileStepUsesChoices(step);
+      appShell.classList.toggle("profile-choice-step", useChoices);
+      if (useChoices) {
+        input.value = "";
+        input.placeholder = "یکی از گزینه‌ها را انتخاب کن";
+      }
+      syncComposerControls();
+    }
     function resizeComposerInput() {
       const maxHeight = 116;
       input.style.height = "auto";
@@ -1915,6 +1937,7 @@
       const wasLesson = appShell.classList.contains("mode-lesson");
       appShell.classList.remove("mode-onboarding", "mode-planet", "mode-lesson");
       appShell.classList.add(`mode-${mode}`);
+      if (mode !== "onboarding") appShell.classList.remove("profile-choice-step");
       learningSidebarToggle.hidden = mode !== "lesson";
       if (mode !== "lesson") {
         setLearningSidebarOpen(false);
@@ -2349,9 +2372,14 @@
       {
         key: "daily_learning_time_text",
         question: "روزانه حدودا چقدر زمان برای مطالعه و تمرین داری؟",
-        retry: "زمانی که در ذهن داری را کوتاه بنویس.",
+        retry: "یکی از گزینه‌ها را انتخاب کن.",
         parse: (value) => value.trim(),
         isValid: (value) => value.trim().length >= 1,
+        options: [
+          { label: "کمتر از یک ساعت", value: "کمتر از یک ساعت", minutes: 30 },
+          { label: "یک ساعت", value: "یک ساعت", minutes: 60 },
+          { label: "بیش از یک ساعت", value: "بیش از یک ساعت", minutes: 90 },
+        ],
       },
       {
         key: "preferred_career_path",
@@ -2403,9 +2431,51 @@
       const step = PROFILE_STEPS[profileBuilder.stepIndex];
       const question = typeof step.question === "function" ? step.question(profileBuilder.data) : step.question;
       addMessage(question);
-      input.placeholder = step.key === "daily_learning_time_text" ? "مثلا ۳۰ دقیقه..." : "پاسخت را بنویس...";
+      setProfileChoiceStep(step);
+      if (profileStepUsesChoices(step)) {
+        addProfileChoices(step);
+      } else {
+        input.placeholder = "پاسخت را بنویس...";
+      }
       hint.textContent = "پاسخ‌ها همین‌جا در چت گرفته می‌شوند و بعد از تکمیل، مسیر آموزشی آماده می‌شود.";
       setStatus("ساخت پروفایل");
+    }
+    function addProfileChoices(step) {
+      const choices = document.createElement("div");
+      choices.className = "profile-choice-set";
+      choices.setAttribute("role", "group");
+      choices.setAttribute("aria-label", step.question);
+      for (const option of step.options) {
+        const choiceButton = document.createElement("button");
+        choiceButton.className = "profile-choice";
+        choiceButton.type = "button";
+        choiceButton.textContent = option.label;
+        choiceButton.addEventListener("click", async () => {
+          if (composerIsBusy || choiceButton.disabled) return;
+          choices.querySelectorAll("button").forEach((item) => { item.disabled = true; });
+          choiceButton.classList.add("is-selected");
+          addMessage(option.label, "user");
+          setBusy(true);
+          let saved = false;
+          try {
+            await submitProfileAnswer(option.value, option);
+            saved = true;
+          } catch (error) {
+            if (!handleMissingUser(error)) addMessage(error.message);
+          } finally {
+            setBusy(false);
+            if (!saved && stage === "profile" && profileBuilder && PROFILE_STEPS[profileBuilder.stepIndex] === step) {
+              choices.querySelectorAll("button").forEach((item) => { item.disabled = false; });
+              choiceButton.classList.remove("is-selected");
+            } else if (!input.disabled) {
+              input.focus();
+            }
+          }
+        });
+        choices.appendChild(choiceButton);
+      }
+      chat.insertBefore(choices, typing);
+      chat.scrollTop = chat.scrollHeight;
     }
     async function submitProfileBuilder() {
       setStatus("ذخیره پروفایل");
@@ -2417,7 +2487,7 @@
       await new Promise((resolve) => setTimeout(resolve, 500));
       await showCourseCatalog();
     }
-    async function submitProfileAnswer(value) {
+    async function submitProfileAnswer(value, selectedOption = null) {
       const step = PROFILE_STEPS[profileBuilder.stepIndex];
       if (!step.isValid(value)) {
         addMessage(step.retry);
@@ -2426,7 +2496,9 @@
       const parsedValue = step.parse(value);
       const payload = { [step.key]: parsedValue };
       if (step.key === "daily_learning_time_text") {
-        const minutes = studyMinutesFrom(parsedValue);
+        const minutes = Number.isInteger(selectedOption?.minutes)
+          ? selectedOption.minutes
+          : studyMinutesFrom(parsedValue);
         if (Number.isFinite(minutes) && minutes >= 0 && minutes <= 1440) {
           payload.daily_learning_minutes = minutes;
         }
@@ -2872,7 +2944,7 @@
         await submitProfileAnswer(value);
       }
       catch (error) { if (!handleMissingUser(error)) addMessage(error.message); }
-      finally { setBusy(false); input.focus(); }
+      finally { setBusy(false); if (!input.disabled) input.focus(); }
     });
 
     input.addEventListener("input", resizeComposerInput);

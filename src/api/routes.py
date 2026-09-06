@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session, selectinload
 
@@ -73,7 +73,14 @@ from src.security import (
     set_admin_cookie,
     set_user_cookie,
 )
-from src.services.otp import OtpError, OtpRateLimitError, normalize_otp_code, request_otp, verify_otp
+from src.services.otp import (
+    OtpError,
+    OtpRateLimitError,
+    normalize_otp_code,
+    request_otp,
+    send_welcome_sms,
+    verify_otp,
+)
 from src.services.coach import answer_course_question, list_coach_messages
 from src.services.final_exam import (
     FinalExamAIError,
@@ -1183,6 +1190,7 @@ def verify_phone_otp(
     payload: OtpVerifyIn,
     request: Request,
     response: Response,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> PhoneLoginOut:
     phone = _normalize_phone(payload.phone)
@@ -1200,6 +1208,8 @@ def verify_phone_otp(
     db.commit()
     db.refresh(user)
     set_user_cookie(response, session_token)
+    if not has_existing_user:
+        background_tasks.add_task(send_welcome_sms, phone, user.display_name)
     return PhoneLoginOut(
         user_id=user.id,
         phone=phone,

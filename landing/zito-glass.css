@@ -817,6 +817,49 @@ body.zito-glass-certificate {
   stroke: rgba(76, 77, 107, .63);
 }
 
+/* Study-time choices remain direct, legible liquid controls instead of free text. */
+.zito-glass-app .profile-choice-set {
+  gap: 9px;
+  max-width: 100%;
+  padding: 2px 1px 12px;
+}
+
+.zito-glass-app .profile-choice {
+  color: #4a4059;
+  border-color: rgba(255, 255, 255, .72);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .65), rgba(236, 232, 251, .47));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .88), 0 9px 20px rgba(91, 75, 145, .10);
+  -webkit-backdrop-filter: blur(14px) saturate(122%);
+  backdrop-filter: blur(14px) saturate(122%);
+}
+
+.zito-glass-app .profile-choice:hover:not(:disabled) {
+  color: #413650;
+  border-color: rgba(104, 169, 194, .66);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .81), rgba(220, 239, 247, .62));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .96), 0 12px 24px rgba(79, 113, 170, .15);
+}
+
+.zito-glass-app .profile-choice.is-selected {
+  color: #fff;
+  border-color: rgba(255, 255, 255, .68);
+  background: linear-gradient(135deg, #7965bf, #5da9b9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .36), 0 11px 22px rgba(83, 83, 169, .24);
+}
+
+.zito-glass-app .phone-shell.mode-onboarding.profile-choice-step {
+  grid-template-rows: auto minmax(520px, 1fr);
+  grid-template-areas:
+    "topbar"
+    "hero";
+}
+
+.zito-glass-app .phone-shell.mode-onboarding.profile-choice-step .composer {
+  display: none;
+}
+
 /* Course selection uses one coherent glass canvas, not a stack of nested cards. */
 .zito-glass-app .phone-shell.mode-planet {
   position: relative;

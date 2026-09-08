@@ -1,4 +1,5 @@
 ﻿import json
+import re
 from typing import Any
 
 import httpx
@@ -8,6 +9,101 @@ from src.config import get_settings
 
 class ArvanAIError(RuntimeError):
     pass
+
+
+def _source_sentences(retrieved_sources: Any) -> list[str]:
+    """Extract readable source sentences from the coach's numbered RAG context."""
+    if not isinstance(retrieved_sources, str):
+        return []
+    without_headers = re.sub(r"\[SOURCE \d+:[^\]]+\]\s*", "", retrieved_sources)
+    return [
+        sentence.strip(" -•\t")
+        for sentence in re.split(r"[\n.!؟]+", without_headers)
+        if len(sentence.strip()) >= 24
+    ]
+
+
+def _most_relevant_source_sentence(question: str, sentences: list[str]) -> str:
+    ignored_words = {
+        "از", "به", "در", "با", "برای", "را", "که", "این", "آن", "و", "یا", "یک", "چه",
+        "چیه", "چیست", "شروع", "کنم", "شود", "است", "هست", "هم", "تا", "رو", "من",
+    }
+    terms = {
+        item for item in re.findall(r"[\u0600-\u06ffa-zA-Z0-9]+", question.lower())
+        if len(item) > 1 and item not in ignored_words
+    }
+    if not sentences:
+        return ""
+    return max(
+        sentences,
+        key=lambda sentence: (
+            sum(term in sentence.lower() for term in terms),
+            -abs(len(sentence) - 170),
+        ),
+    )
+
+
+def _learner_practice_context(message_data: dict[str, Any]) -> str:
+    context = message_data.get("learner_context")
+    learner = context.get("learner") if isinstance(context, dict) else {}
+    learner = learner if isinstance(learner, dict) else {}
+    field = str(learner.get("work_or_study_field") or learner.get("preferred_career_path") or "").strip()
+    daily_time = str(learner.get("daily_learning_time") or "").strip()
+    if field and daily_time:
+        return f"نمونه‌ات را از فضای {field} انتخاب کن و آن را در همان زمان روزانهٔ {daily_time} انجام بده."
+    if field:
+        return f"نمونه‌ات را از یک موقعیت واقعی در فضای {field} انتخاب کن."
+    if daily_time:
+        return f"تمرین را طوری کوچک نگه دار که در زمان روزانهٔ {daily_time} تمام شود."
+    return "تمرین را با یک موقعیت واقعی و کوچک از کار یا زندگی خودت انجام بده."
+
+
+def _mock_course_coach_response(message_data: dict[str, Any], fallback_text: str) -> str:
+    """Provide useful, source-bound coaching while local AI is deliberately mocked."""
+    question = str(message_data.get("learner_question") or fallback_text).strip()
+    sentences = _source_sentences(message_data.get("retrieved_sources"))
+    source_text = " ".join(sentences)
+    normalized_question = question.replace("ي", "ی").replace("ك", "ک").lower()
+    relevant_sentence = _most_relevant_source_sentence(question, sentences)
+    learner_context = _learner_practice_context(message_data)
+
+    is_marketing = "بازاریابی" in source_text or "مشتری" in source_text
+    asks_to_start = any(token in normalized_question for token in ("شروع", "از کجا", "چطور شروع"))
+
+    if is_marketing and asks_to_start:
+        answer = (
+            "شروع بازاریابی از فهم مسئله مشتری است، نه تبلیغ یا فهرست‌کردن ویژگی‌های محصول. "
+            "برای یک گروه مشخص، یک موقعیت استفاده را بنویس: مشتری می‌خواهد چه کاری انجام دهد، "
+            "کجا گیر می‌کند و الان از چه راه‌حلی استفاده می‌کند. سپس با سه گفت‌وگوی کوتاه یا مشاهده رفتار، "
+            f"دنبال شاهد همان مسئله باش؛ بعد از آن درباره پیام یا کانال تصمیم بگیر. {learner_context}"
+        )
+        action = "امروز یک گروه مشتری و یک موقعیت استفاده را در سه جمله ثبت کن."
+    elif is_marketing and any(token in normalized_question for token in ("کانال", "تبلیغ", "پیام")):
+        answer = (
+            "در این سرفصل، کانال یا پیام را بعد از روشن‌شدن مسئله مشتری انتخاب می‌کنیم. "
+            f"نکته مرتبط منبع این است: «{relevant_sentence or 'ابتدا موقعیت، مانع و راه‌حل فعلی مشتری را ثبت کن.'}» "
+            f"یک فرض ساده بنویس: برای کدام گروه، با چه پیامی و در کدام کانال می‌خواهی چه رفتاری را بسنجی. {learner_context}"
+        )
+        action = "یک فرض یک‌خطی برای مخاطب، پیام و رفتار مطلوب بنویس."
+    elif relevant_sentence:
+        answer = (
+            f"نکته اصلی این مرحله: {relevant_sentence} "
+            f"برای تبدیل آن به یادگیری واقعی، یک اقدام کوچک و قابل مشاهده انتخاب کن و نتیجه‌اش را در مرحله بعد مرور کن. {learner_context}"
+        )
+        action = "یک اقدام کوچک مشخص کن و نتیجه‌اش را کوتاه یادداشت کن."
+    else:
+        answer = "منبع تاییدشده این مرحله برای پاسخ دقیق کافی نیست؛ پرسش را به مفهوم یا تمرین همین درس نزدیک‌تر کن."
+        action = "یکی از نکته‌های همین درس را انتخاب کن و درباره کاربردش بپرس."
+
+    return json.dumps(
+        {
+            "answer": answer,
+            "grounded": bool(sentences),
+            "source_numbers": [1] if sentences else [],
+            "suggested_action": action,
+        },
+        ensure_ascii=False,
+    )
 
 
 def _mock_response(system_prompt: str, user_message: str) -> str:
@@ -123,19 +219,7 @@ def _mock_response(system_prompt: str, user_message: str) -> str:
         )
 
     if "ZITO_COURSE_COACH_V" in system_prompt:
-        question = str(message_data.get("learner_question") or answer_text).strip()
-        return json.dumps(
-            {
-                "answer": (
-                    f"برای پرسش «{question}»، بر اساس محتوای تاییدشده همین سرفصل، "
-                    "یک قدم کوچک و قابل اجرا انتخاب کن و نتیجه‌اش را در مرحله بعد مرور کن."
-                ),
-                "grounded": True,
-                "source_numbers": [1],
-                "suggested_action": "یک اقدام کوتاه متناسب با همین درس انتخاب کن.",
-            },
-            ensure_ascii=False,
-        )
+        return _mock_course_coach_response(message_data, answer_text)
     normalized = answer_text.replace(" ", "").replace("\u200c", "").lower()
 
     invalid_tokens = {

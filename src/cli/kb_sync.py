@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from src.db import SessionLocal
 from src.models import Course, CourseModule, CourseVersion
-from src.services.kb_import import KnowledgeBaseImportError, sync_personal_development_mock_kb
+from src.services.kb_import import KnowledgeBaseImportError, sync_mock_kb_for_course
 
 
 def _parse_arguments() -> argparse.Namespace:
@@ -52,7 +52,7 @@ def main() -> int:
         if not modules:
             raise KnowledgeBaseImportError("The selected course version has no modules to scope knowledge-base content.")
 
-        summary = sync_personal_development_mock_kb(
+        summary = sync_mock_kb_for_course(
             db,
             course=course,
             course_version=version,

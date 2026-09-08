@@ -83,7 +83,7 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
             "Arvan embeddings are not configured. Set ARVAN_EMBEDDING_API_BASE_URL and an API key."
         )
 
-    url = f"{settings.arvan_embedding_api_base_url.rstrip('/')}/embeddings"
+    url = f"{settings.effective_embedding_api_base_url.rstrip('/')}/embeddings"
     payload = {"model": settings.arvan_embedding_model, "input": normalized}
     headers = {
         "Authorization": f"Bearer {settings.effective_embedding_api_key}",

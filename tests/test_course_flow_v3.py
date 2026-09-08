@@ -12,9 +12,9 @@ setup_test_environment()
 
 from src.db import Base, SessionLocal, engine
 from src.main import app
-from src.models import UserModuleStageProgress
+from src.models import Course, CourseModule, CourseVersion, UserModuleStageProgress
 from src.seed import seed_defaults
-from src.services.rag import run_pending_index_jobs
+from src.services.rag import retrieve_course_chunks, run_pending_index_jobs
 
 
 PROFILE_PAYLOAD = {
@@ -81,6 +81,45 @@ class CourseFlowV3Tests(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn('id="startCourse"', page.text)
         self.assertIn("/api/courses/slug/", page.text)
+
+    def test_marketing_course_has_its_own_overview_and_becomes_current_when_selected(self) -> None:
+        with TestClient(app) as client:
+            courses = {item["slug"]: item for item in client.get("/api/courses").json()}
+            marketing_overview = client.get("/api/courses/slug/marketing")
+            personal_id = login_and_enroll(client, "09124440008")
+            marketing_id = client.post(f"/api/courses/{courses['marketing']['id']}/enroll").json()["id"]
+            current_marketing = client.get("/api/learning/enrollments/current")
+            returned_personal = client.post(f"/api/courses/{courses['personal-development-ai']['id']}/enroll")
+            current_personal = client.get("/api/learning/enrollments/current")
+
+        self.assertEqual(marketing_overview.status_code, 200)
+        self.assertEqual(marketing_overview.json()["module_count"], 5)
+        self.assertEqual(marketing_overview.json()["stage_count"], 40)
+        self.assertEqual(current_marketing.json()["enrollment_id"], marketing_id)
+        self.assertEqual(returned_personal.json()["id"], personal_id)
+        self.assertEqual(current_personal.json()["enrollment_id"], personal_id)
+
+    def test_marketing_rag_is_grounded_in_marketing_content_only(self) -> None:
+        with SessionLocal() as db:
+            course = db.scalars(select(Course).where(Course.slug == "marketing")).one()
+            version = db.scalars(
+                select(CourseVersion).where(CourseVersion.course_id == course.id, CourseVersion.status == "published")
+            ).one()
+            module = db.scalars(
+                select(CourseModule).where(CourseModule.course_version_id == version.id, CourseModule.module_number == 2)
+            ).one()
+            result = asyncio.run(
+                retrieve_course_chunks(
+                    db,
+                    course_version_id=version.id,
+                    module_id=module.id,
+                    question="برای انتخاب مشتری ایده‌آل چه شواهدی نیاز دارم؟",
+                )
+            )
+
+        self.assertTrue(result.grounded)
+        self.assertTrue(result.chunks)
+        self.assertTrue(all("توسعه فردی" not in chunk.document_title for chunk in result.chunks))
 
     def test_personalized_example_uses_safe_context_and_is_cached(self) -> None:
         model_response = json.dumps(

@@ -95,8 +95,13 @@ class Settings(BaseSettings):
         return self.arvan_embedding_api_key or self.arvan_api_key
 
     @property
+    def effective_embedding_api_base_url(self) -> str:
+        """Use the OpenAI-compatible chat base when embeddings share the same gateway."""
+        return self.arvan_embedding_api_base_url or self.arvan_api_base_url
+
+    @property
     def has_embedding_configuration(self) -> bool:
-        return bool(self.arvan_embedding_api_base_url and self.effective_embedding_api_key)
+        return bool(self.effective_embedding_api_base_url and self.effective_embedding_api_key)
 
 
 @lru_cache

@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 
 from src.config import get_settings
+from src.mock_curricula import MOCK_CURRICULA
 from src.models import (
     Admin,
     Course,
@@ -22,6 +23,7 @@ from src.security import hash_password
 from src.services.kb_import import (
     MOCK_PERSONAL_DEVELOPMENT_KB_REFERENCE,
     sync_personal_development_mock_kb,
+    sync_mock_kb_for_course,
 )
 
 
@@ -473,199 +475,85 @@ def _sample_stage_content(stage: dict, module: dict | None = None) -> dict:
 
 
 def _eight_stage_module_content(stage: dict, module: dict) -> tuple[dict, dict | None]:
-    """Return public stage content and private assessment rules for version 3."""
-
-    objectives = list(module["objectives"])
-    primary_objective = objectives[0]
-    secondary_objective = objectives[1] if len(objectives) > 1 else objectives[0]
+    """Build the existing UI contract from authored, module-specific material."""
+    content = module["stage_content"]
     stage_type = stage["type"]
-    blocks: list[dict]
-    activity: dict
-    evaluation_config: dict | None = None
-    media_slots: list[dict] = []
-
+    evaluation_config = None
+    media_slots = []
     if stage_type == "learning_path":
         blocks = [
-            {"kind": "timeline", "title": "مسیر این سرفصل", "items": objectives},
-            {"kind": "highlight", "title": "چرا مهم است؟", "body": module["description"]},
+            {"kind": "timeline", "title": "مسیر این سرفصل", "items": content["path"]},
+            {"kind": "highlight", "title": "هدف یادگیری", "body": module["description"]},
         ]
-        activity = {
-            "kind": "planning",
-            "title": "نقطه شروع",
-            "prompt": f"قبل از شروع، یک خروجی کوچک برای «{primary_objective}» در ذهن مشخص کن.",
-        }
-        media_slots = [{"kind": "video", "label": "ویدیوی معرفی سرفصل", "status": "empty", "url": None}]
+        activity = {"kind": "planning", "title": "نقطه شروع", "prompt": content["start_prompt"]}
+        media_slots = [{"kind": "video", "label": "معرفی سرفصل", "status": "empty", "url": None}]
     elif stage_type == "lesson_summary":
         blocks = [
-            {
-                "kind": "highlight",
-                "title": "خلاصه درس",
-                "body": (
-                    f"در «{module['title']}» روی {primary_objective} تمرکز می‌کنی. "
-                    "هدف این است که آن را از یک مفهوم کلی به تصمیم و اقدام واقعی تبدیل کنی."
-                ),
-            },
-            {"kind": "bullets", "title": "چیزهایی که با خودت می‌بری", "items": objectives},
+            {"kind": "highlight", "title": module["title"], "body": content["summary"]},
+            *deepcopy(content["lesson"]),
+            {"kind": "bullets", "title": "نکات اصلی", "items": content["takeaways"]},
         ]
-        activity = {
-            "kind": "reflection",
-            "title": "مرور کوتاه",
-            "prompt": f"به یک موقعیت واقعی فکر کن که {secondary_objective} در آن برایت مهم بوده است.",
-        }
+        activity = {"kind": "reflection", "title": "تمرین درس", "prompt": content["reflection_prompt"]}
         media_slots = [{"kind": "audio", "label": "خلاصه صوتی سرفصل", "status": "empty", "url": None}]
     elif stage_type == "flashcards":
-        blocks = [
-            {
-                "kind": "flashcards",
-                "title": "فلش‌کارت‌های این سرفصل",
-                "items": [
-                    {"front": "مفهوم کلیدی", "back": primary_objective},
-                    {"front": "در عمل", "back": f"{module['title']} را با یک قدم کوتاه و قابل بازبینی شروع کن."},
-                    {"front": "یادآوری", "back": "AI دستیار فکر کردن است؛ تصمیم نهایی و بررسی مسئولانه با توست."},
-                ],
-            }
-        ]
-        activity = {
-            "kind": "review",
-            "title": "مرور سریع",
-            "prompt": "کارت‌ها را یکی‌یکی مرور کن و روی مفهومی که برایت تازه‌تر است مکث کن.",
-        }
-        media_slots = [{"kind": "image", "label": "تصویر مرور مفاهیم", "status": "empty", "url": None}]
+        blocks = [{"kind": "flashcards", "title": "مرور مفاهیم", "items": content["flashcards"]}]
+        activity = {"kind": "review", "title": "بازیابی از حافظه", "prompt": content["review_prompt"]}
     elif stage_type == "golden_tips":
-        blocks = [
-            {
-                "kind": "tips",
-                "title": "نکات طلایی",
-                "items": [
-                    f"برای «{primary_objective}» یک معیار ساده و قابل مشاهده تعیین کن.",
-                    "کار را آن‌قدر کوچک انتخاب کن که بتوانی امروز شروعش کنی.",
-                    "خروجی AI را با شرایط واقعی خودت و یک بررسی انسانی تطبیق بده.",
-                ],
-            }
-        ]
-        activity = {
-            "kind": "selection",
-            "title": "یک نکته برای امروز",
-            "prompt": "یکی از نکات را انتخاب کن که همین امروز بتوانی اجرا کنی.",
-        }
+        blocks = [{"kind": "tips", "title": "نکات کاربردی", "items": content["tips"]}]
+        activity = {"kind": "selection", "title": "تمرین کاربردی", "prompt": content["tips_prompt"]}
     elif stage_type == "common_mistakes":
-        blocks = [
-            {
-                "kind": "mistakes",
-                "title": "خطاهایی که مسیر را سخت می‌کنند",
-                "items": [
-                    {"mistake": "هدف خیلی بزرگ و مبهم", "correction": "هدف را به یک خروجی کوچک برای همین هفته تبدیل کن."},
-                    {"mistake": "اعتماد کامل به اولین پاسخ AI", "correction": "منبع، فرض‌ها و تناسب پاسخ با شرایط خودت را بررسی کن."},
-                    {"mistake": "برنامه بدون زمان واقعی", "correction": "تمرین را با زمان آزاد روزانه‌ات هماهنگ کن."},
-                ],
-            }
-        ]
-        activity = {
-            "kind": "reflection",
-            "title": "پیشگیری از خطا",
-            "prompt": "یکی از این خطاها را که ممکن است برایت رخ دهد انتخاب کن و راه اصلاحش را به خاطر بسپار.",
-        }
+        blocks = [{"kind": "mistakes", "title": "خطا و راه اصلاح", "items": content["mistakes"]}]
+        activity = {"kind": "reflection", "title": "پیشگیری از خطا", "prompt": content["mistakes_prompt"]}
     elif stage_type == "personalized_work_example":
         blocks = [
-            {
-                "kind": "personalized_example",
-                "title": "مثال مخصوص مسیر تو",
-                "body": "زیتو با توجه به شغل یا رشته، هدف یادگیری و محتوای تاییدشده این سرفصل، یک مثال کاربردی آماده می‌کند.",
-            }
+            {"kind": "paragraph", "title": "مثال حل‌شده", "body": content["worked_example"]},
+            {"kind": "personalized_example", "title": "مثال مخصوص مسیر تو", "body": content["example"]["body"]},
         ]
-        activity = {
-            "kind": "application",
-            "title": "اتصال به دنیای واقعی",
-            "prompt": "بعد از دیدن مثال، فکر کن مشابه آن در کار یا مسیر تحصیلی تو کجا رخ می‌دهد.",
-        }
+        activity = {"kind": "application", "title": "حالا نوبت توست", "prompt": content["example"]["prompt"]}
     elif stage_type == "module_assessment":
-        first_correct = f"یک اقدام کوچک و قابل اندازه‌گیری برای «{primary_objective}» انتخاب کنم."
-        second_correct = "خروجی را با شرایط واقعی و بررسی انسانی مقایسه کنم."
-        blocks = [
-            {
-                "kind": "quiz",
-                "title": "آزمونک سرفصل",
-                "items": [
-                    {
-                        "id": "q1",
-                        "question": f"برای شروع «{primary_objective}» کدام انتخاب بهتر است؟",
-                        "options": [
-                            first_correct,
-                            "تا زمانی که برنامه کامل نشود هیچ اقدامی انجام ندهم.",
-                            "چند هدف بزرگ را هم‌زمان و بدون زمان‌بندی شروع کنم.",
-                        ],
-                    },
-                    {
-                        "id": "q2",
-                        "question": "بعد از دریافت پیشنهاد از AI، قدم مسئولانه چیست؟",
-                        "options": [
-                            second_correct,
-                            "پاسخ AI را بدون بررسی اجرا کنم.",
-                            "فقط به دلیل طولانی بودن پاسخ، آن را درست فرض کنم.",
-                        ],
-                    },
-                ],
-            }
-        ]
-        activity = {
-            "kind": "assessment",
-            "title": "ارزیابی سرفصل",
-            "prompt": "به هر دو سوال پاسخ بده. برای عبور از این مرحله باید حداقل ۶۰ از ۱۰۰ بگیری.",
-        }
+        questions = content["assessment"]["questions"]
+        public_questions = []
+        for position, question in enumerate(questions):
+            options = list(question["options"])
+            offset = (module["number"] + position) % len(options)
+            options = options[offset:] + options[:offset]
+            public_questions.append({
+                "id": question["id"], "question": question["question"], "options": options,
+            })
+        blocks = [{"kind": "quiz", "title": "آزمونک سرفصل", "items": public_questions}]
+        activity = {"kind": "assessment", "title": "ارزیابی", "prompt": "به همه سؤال‌ها پاسخ بده. حداقل نمره عبور ۶۰ از ۱۰۰ است."}
         evaluation_config = {
-            "mode": "single_choice",
-            "pass_score": 60,
+            "mode": "single_choice", "pass_score": 60,
             "questions": [
-                {"id": "q1", "correct_option": first_correct, "weight": 50},
-                {"id": "q2", "correct_option": second_correct, "weight": 50},
+                {"id": question["id"], "correct_option": question["correct_option"], "weight": 100 // len(questions)}
+                for question in questions
             ],
         }
     elif stage_type == "module_completion":
+        completion = content["completion"]
         blocks = [
-            {
-                "kind": "highlight",
-                "title": "این سرفصل را تمام کردی",
-                "body": (
-                    f"آفرین. در «{module['title']}» از شناخت مفهوم تا تمرین و ارزیابی جلو آمدی. "
-                    "در مرحله بعد، زیتو سراغ سرفصل بعدی می‌رود."
-                ),
-            },
-            {"kind": "bullets", "title": "جمع‌بندی کوتاه", "items": objectives},
+            {"kind": "highlight", "title": "جمع‌بندی سرفصل", "body": completion["body"]},
+            {"kind": "bullets", "title": "خروجی این سرفصل", "items": completion["takeaways"]},
         ]
-        activity = {
-            "kind": "continue",
-            "title": "آماده برای ادامه",
-            "prompt": "نمره آزمونک ثبت شده است. با ادامه دادن، سرفصل بعدی باز می‌شود.",
-        }
+        activity = {"kind": "continue", "title": "ادامه مسیر", "prompt": completion["prompt"]}
     else:
         raise ValueError(f"Unsupported eight-stage flow type: {stage_type}")
 
-    return (
-        {
-            "contract_version": 2,
-            "intro": f"{module['title']}: {stage['title']} آماده است.",
-            "blocks": blocks,
-            "activity": activity,
-            "media_slots": media_slots,
-            "coaching_checkpoint": {
-                "prompt": "هر سوالی درباره این بخش داری از زیتو بپرس.",
-                "mode": "live",
-                "enabled": True,
-            },
-            "ui_hint": {
-                "template": stage_type,
-                "avatar_visible": True,
-                "primary_action": "ثبت و ادامه",
-            },
-            "module": {
-                "number": module["number"],
-                "title": module["title"],
-                "objectives": objectives,
-                "tags": module["tags"],
-            },
+    return ({
+        "contract_version": 2,
+        "intro": module["description"],
+        "blocks": deepcopy(blocks),
+        "activity": activity,
+        "media_slots": media_slots,
+        "coaching_checkpoint": {
+            "prompt": "هر سوالی درباره این بخش داری از زیتو بپرس.", "mode": "live", "enabled": True,
         },
-        evaluation_config,
-    )
+        "ui_hint": {"template": stage_type, "avatar_visible": True, "primary_action": "ثبت و ادامه"},
+        "module": {
+            "number": module["number"], "title": module["title"],
+            "objectives": list(module["objectives"]), "tags": list(module["tags"]),
+        },
+    }, evaluation_config)
 
 
 def _seed_legacy_flat_course(db: Session) -> Course:
@@ -996,30 +884,32 @@ def _seed_eight_stage_module_version(
     db: Session,
     course: Course,
     template_by_code: dict[str, LearningStageTemplate],
+    curriculum: dict,
 ) -> CourseVersion:
     """Seed the active eight-stage Fake CMS version without changing v1/v2."""
 
     now = datetime.now(timezone.utc)
+    source_reference = f"src/mock_curricula.py:{course.slug}"
     version = db.scalars(
         select(CourseVersion).where(
             CourseVersion.course_id == course.id,
-            CourseVersion.version_number == 3,
+            CourseVersion.version_number == curriculum["version_number"],
         )
     ).first()
     if version:
         version.status = "published"
         version.source = "fake_cms_eight_stage"
-        version.overview_json = deepcopy(COURSE_V3_OVERVIEW)
+        version.overview_json = deepcopy(curriculum["overview"])
         version.module_stage_count = len(EIGHT_STAGE_FLOW_TYPES)
         version.requires_final_exam = True
         version.published_at = version.published_at or now
     else:
         version = CourseVersion(
             course_id=course.id,
-            version_number=3,
+            version_number=curriculum["version_number"],
             status="published",
             source="fake_cms_eight_stage",
-            overview_json=deepcopy(COURSE_V3_OVERVIEW),
+            overview_json=deepcopy(curriculum["overview"]),
             module_stage_count=len(EIGHT_STAGE_FLOW_TYPES),
             requires_final_exam=True,
             published_at=now,
@@ -1034,7 +924,7 @@ def _seed_eight_stage_module_version(
         ).all()
     }
     module_pairs: list[tuple[dict, CourseModule]] = []
-    for spec in PHASE2_MODULES:
+    for spec in curriculum["modules"]:
         module = existing_modules.get(spec["number"])
         if module:
             module.title = spec["title"]
@@ -1069,6 +959,8 @@ def _seed_eight_stage_module_version(
             payload, evaluation_config = _eight_stage_module_content(stage, spec)
             current = existing_contents.get(stage["number"])
             if current:
+                if current.content_json != payload or current.evaluation_config_json != evaluation_config:
+                    current.content_version += 1
                 current.template_id = template_by_code[stage["type"]].id
                 current.title = stage["title"]
                 current.content_json = payload
@@ -1079,7 +971,6 @@ def _seed_eight_stage_module_version(
                 current.reviewed_by = "seed"
                 current.generated_at = current.generated_at or now
                 current.reviewed_at = current.reviewed_at or now
-                current.content_version = 1
                 continue
             db.add(
                 CourseModuleStageContent(
@@ -1106,7 +997,7 @@ def _seed_eight_stage_module_version(
     if rag_config:
         rag_config.provider = "zito_embedding"
         rag_config.endpoint_config_ref = "ARVAN_EMBEDDING_API_BASE_URL"
-        rag_config.knowledge_base_ref = MOCK_PERSONAL_DEVELOPMENT_KB_REFERENCE
+        rag_config.knowledge_base_ref = source_reference
         rag_config.embedding_model = get_settings().arvan_embedding_model
         rag_config.embedding_dimensions = get_settings().arvan_embedding_dimensions
         rag_config.status = "ready"
@@ -1116,7 +1007,7 @@ def _seed_eight_stage_module_version(
                 course_version_id=version.id,
                 provider="zito_embedding",
                 endpoint_config_ref="ARVAN_EMBEDDING_API_BASE_URL",
-                knowledge_base_ref=MOCK_PERSONAL_DEVELOPMENT_KB_REFERENCE,
+                knowledge_base_ref=source_reference,
                 embedding_model=get_settings().arvan_embedding_model,
                 embedding_dimensions=get_settings().arvan_embedding_dimensions,
                 status="ready",
@@ -1124,7 +1015,7 @@ def _seed_eight_stage_module_version(
         )
 
     db.flush()
-    sync_personal_development_mock_kb(
+    sync_mock_kb_for_course(
         db,
         course=course,
         course_version=version,
@@ -1133,16 +1024,16 @@ def _seed_eight_stage_module_version(
 
     exam = db.scalars(select(Exam).where(Exam.course_version_id == version.id)).first()
     if exam:
-        exam.title = "آزمون نهایی توسعه فردی با هوش مصنوعی"
-        exam.questions_json = deepcopy(V3_FINAL_EXAM_FALLBACK_QUESTIONS)
+        exam.title = curriculum["final_exam"]["title"]
+        exam.questions_json = deepcopy(curriculum["final_exam"]["questions"])
         exam.passing_score = 70
         exam.status = "published"
     else:
         db.add(
             Exam(
                 course_version_id=version.id,
-                title="آزمون نهایی توسعه فردی با هوش مصنوعی",
-                questions_json=deepcopy(V3_FINAL_EXAM_FALLBACK_QUESTIONS),
+                title=curriculum["final_exam"]["title"],
+                questions_json=deepcopy(curriculum["final_exam"]["questions"]),
                 passing_score=70,
                 status="published",
             )
@@ -1156,7 +1047,14 @@ def seed_phase2_fake_course(db: Session) -> None:
     course = _seed_legacy_flat_course(db)
     template_by_code = _seed_stage_templates(db)
     _seed_module_version(db, course, template_by_code)
-    _seed_eight_stage_module_version(db, course, template_by_code)
+    for curriculum in MOCK_CURRICULA:
+        spec = curriculum["course"]
+        current_course = db.scalars(select(Course).where(Course.slug == spec["slug"])).first()
+        if current_course is None:
+            current_course = Course(**spec, status="published")
+            db.add(current_course)
+            db.flush()
+        _seed_eight_stage_module_version(db, current_course, template_by_code, curriculum)
     db.commit()
 
 

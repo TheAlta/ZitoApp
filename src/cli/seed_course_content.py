@@ -43,25 +43,32 @@ def main() -> int:
     arguments = _parse_arguments()
     with SessionLocal() as db:
         seed_phase2_fake_course(db)
-        course = db.scalars(select(Course).where(Course.slug == "personal-development-ai")).one()
-        versions = list(
+        courses = list(
             db.scalars(
-                select(CourseVersion)
-                .where(CourseVersion.course_id == course.id)
-                .order_by(CourseVersion.version_number)
+                select(Course)
+                .where(Course.slug.in_(("personal-development-ai", "marketing")))
+                .order_by(Course.slug)
             ).all()
         )
-        output: dict[str, object] = {
-            "course_slug": course.slug,
-            "versions": [
+        course = next(item for item in courses if item.slug == "personal-development-ai")
+        def version_output(item: Course) -> list[dict[str, object]]:
+            return [
                 {
                     "number": version.version_number,
                     "status": version.status,
                     "module_stage_count": version.module_stage_count,
                     "requires_final_exam": version.requires_final_exam,
                 }
-                for version in versions
-            ],
+                for version in db.scalars(
+                    select(CourseVersion)
+                    .where(CourseVersion.course_id == item.id)
+                    .order_by(CourseVersion.version_number)
+                ).all()
+            ]
+        output: dict[str, object] = {
+            "course_slug": course.slug,
+            "versions": version_output(course),
+            "courses": [{"slug": item.slug, "versions": version_output(item)} for item in courses],
         }
 
     if arguments.skip_index:

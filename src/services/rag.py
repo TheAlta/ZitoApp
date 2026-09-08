@@ -342,6 +342,11 @@ async def retrieve_course_chunks(
         )
     )
     settings = get_settings()
+    minimum_similarity = (
+        min(settings.rag_min_similarity, 0.10)
+        if settings.arvan_mock_ai
+        else settings.rag_min_similarity
+    )
     candidates: list[RetrievedChunk] = []
 
     if db.bind is not None and db.bind.dialect.name == "postgresql":
@@ -353,7 +358,7 @@ async def retrieve_course_chunks(
         ).all()
         for chunk, document, scope, cosine_distance in rows:
             score = 1.0 - float(cosine_distance)
-            if score >= settings.rag_min_similarity:
+            if score >= minimum_similarity:
                 candidates.append(
                     RetrievedChunk(
                         chunk_id=chunk.id,
@@ -373,7 +378,7 @@ async def retrieve_course_chunks(
         for chunk, document, scope in rows:
             embedding = chunk.embedding if isinstance(chunk.embedding, list) else []
             score = cosine_similarity(query_embedding, [float(value) for value in embedding])
-            if score >= settings.rag_min_similarity:
+            if score >= minimum_similarity:
                 scored.append((score, chunk, document, scope))
         for score, chunk, document, scope in sorted(scored, key=lambda item: item[0], reverse=True)[: settings.rag_retrieval_top_k]:
             candidates.append(

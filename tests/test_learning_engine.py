@@ -9,7 +9,7 @@ setup_test_environment()
 
 from src.db import Base, SessionLocal, engine
 from src.main import app
-from src.models import Course, CourseVersion, UserCourseEnrollment, UserModuleStageProgress, UserStageProgress
+from src.models import Course, CourseModule, CourseModuleStageContent, CourseVersion, UserCourseEnrollment, UserModuleStageProgress, UserStageProgress
 from src.seed import seed_defaults
 
 
@@ -53,9 +53,24 @@ def complete_module_stage(client: TestClient, enrollment_id: int, stage_number: 
             for block in lesson.json()["content"]["blocks"]
             if block.get("kind") == "quiz"
         )
+        with SessionLocal() as db:
+            enrollment = db.get(UserCourseEnrollment, enrollment_id)
+            assessment = db.scalars(
+                select(CourseModuleStageContent)
+                .join(CourseModule)
+                .where(
+                    CourseModule.course_version_id == enrollment.course_version_id,
+                    CourseModule.module_number == ((stage_number - 1) // 8) + 1,
+                    CourseModuleStageContent.stage_number == 7,
+                )
+            ).one()
+            expected = {
+                item["id"]: item["correct_option"]
+                for item in assessment.evaluation_config_json["questions"]
+            }
         response = {
             "answers": {
-                item["id"]: item["options"][0]
+                item["id"]: expected[item["id"]]
                 for item in quiz["items"]
             }
         }

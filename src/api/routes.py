@@ -1364,6 +1364,8 @@ def enroll_course(
     else:
         progress_rows = _ensure_stage_progress(db, enrollment, stages)
         _sync_enrollment_progress(enrollment, progress_rows)
+    # Selecting an existing enrollment must also make it the current course.
+    enrollment.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(enrollment)
 

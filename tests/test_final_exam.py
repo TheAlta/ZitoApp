@@ -11,7 +11,7 @@ setup_test_environment()
 
 from src.db import Base, SessionLocal, engine
 from src.main import app
-from src.models import Certificate, UserCourseEnrollment
+from src.models import Certificate, CourseModule, CourseModuleStageContent, UserCourseEnrollment
 from src.seed import seed_defaults
 
 
@@ -51,8 +51,23 @@ def complete_stage(client: TestClient, enrollment_id: int, stage_number: int) ->
         quiz = next(
             block for block in lesson.json()["content"]["blocks"] if block.get("kind") == "quiz"
         )
+        with SessionLocal() as db:
+            enrollment = db.get(UserCourseEnrollment, enrollment_id)
+            assessment = db.scalars(
+                select(CourseModuleStageContent)
+                .join(CourseModule)
+                .where(
+                    CourseModule.course_version_id == enrollment.course_version_id,
+                    CourseModule.module_number == ((stage_number - 1) // 8) + 1,
+                    CourseModuleStageContent.stage_number == 7,
+                )
+            ).one()
+            expected = {
+                item["id"]: item["correct_option"]
+                for item in assessment.evaluation_config_json["questions"]
+            }
         response_payload = {
-            "answers": {item["id"]: item["options"][0] for item in quiz["items"]}
+            "answers": {item["id"]: expected[item["id"]] for item in quiz["items"]}
         }
     response = client.post(
         f"/api/learning/enrollments/{enrollment_id}/stages/{stage_number}/complete",

@@ -229,7 +229,7 @@
     .route-legend span { display: inline-flex; align-items: center; gap: 7px; }
     .route-legend span::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(145deg, var(--violet), var(--sky)); box-shadow: 0 0 0 4px rgba(132, 107, 193, .10); }
     .route-track { position: relative; min-width: 0; padding: 39px 0 6px; }
-    .route-road { position: absolute; z-index: 0; top: 0; right: 0; width: 100%; height: 150px; overflow: visible; pointer-events: none; }
+    .route-road { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
     .route-road-shadow { fill: none; stroke: rgba(109, 87, 169, .11); stroke-width: 20; stroke-linecap: round; filter: drop-shadow(0 8px 9px rgba(91, 73, 146, .09)); }
     .route-road-surface { fill: none; stroke: rgba(255, 255, 255, .53); stroke-width: 13; stroke-linecap: round; }
     .route-road-lane { fill: none; stroke: rgba(113, 89, 180, .74); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 2 13; animation: route-road-flow 5.8s linear infinite; }
@@ -348,13 +348,12 @@
     }
 
     @media (max-width: 1020px) {
-      .route-track { padding-top: 12px; }
-      .route-road { display: none; }
-      .route-track::before { display: block; top: 28px; right: 27px; bottom: 26px; left: auto; width: 3px; height: auto; background: repeating-linear-gradient(180deg, rgba(116, 90, 188, .70) 0 5px, transparent 5px 13px); }
-      .route-track::after { display: block; top: auto; right: 21px; bottom: 15px; left: auto; transform: rotate(-135deg); }
-      .route-stops { grid-template-columns: 1fr; gap: 14px; padding-right: 0; }
+      .route-track { padding-top: 16px; }
+      .route-road { display: block; }
+      .route-track::before, .route-track::after { display: none; }
+      .route-stops { grid-template-columns: 1fr; gap: 18px; padding-right: 0; }
       .route-stop, .route-stop:nth-child(even) { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: start; padding-top: 0; }
-      .route-node { grid-column: 1; }
+      .route-node { position: relative; z-index: 1; grid-column: 1; }
       .route-card { grid-column: 2; min-height: 0; margin-top: 0; }
     }
 
@@ -479,6 +478,82 @@
           <animateMotion begin="-3.8s" dur="7.6s" repeatCount="indefinite" rotate="auto"><mpath href="#course-route-motion-path"></mpath></animateMotion>
         </circle>
       </svg>`;
+    }
+
+    let routeRoadResizeObserver = null;
+    let routeRoadFrame = 0;
+
+    function routePathFromPoints(points, width) {
+      if (points.length < 2) return "";
+      return points.slice(1).reduce((path, point, index) => {
+        const previous = points[index];
+        const deltaY = point.y - previous.y;
+        const deltaX = point.x - previous.x;
+        const mostlyVertical = Math.abs(deltaY) > Math.abs(deltaX);
+        const sway = mostlyVertical ? Math.min(13, width * .035) : Math.min(34, width * .06);
+        const direction = index % 2 === 0 ? 1 : -1;
+        const controlOneX = mostlyVertical ? previous.x + (sway * direction) : previous.x + (deltaX * .38);
+        const controlTwoX = mostlyVertical ? point.x - (sway * direction) : point.x - (deltaX * .38);
+        const controlOneY = mostlyVertical ? previous.y + (deltaY * .36) : previous.y + (deltaY * .75);
+        const controlTwoY = mostlyVertical ? point.y - (deltaY * .36) : point.y - (deltaY * .75);
+        return `${path} C ${controlOneX} ${controlOneY}, ${controlTwoX} ${controlTwoY}, ${point.x} ${point.y}`;
+      }, `M ${points[0].x} ${points[0].y}`);
+    }
+
+    function syncCourseRouteRoad() {
+      const track = screen.querySelector(".route-track");
+      const road = track?.querySelector(".route-road");
+      const nodes = [...(track?.querySelectorAll(".route-node") || [])];
+      if (!track || !road || !nodes.length) return;
+
+      const trackBox = track.getBoundingClientRect();
+      const width = Math.max(1, Math.round(trackBox.width));
+      const height = Math.max(1, Math.round(trackBox.height));
+      const points = nodes.map((node) => {
+        const nodeBox = node.getBoundingClientRect();
+        return {
+          x: Math.round(nodeBox.left - trackBox.left + (nodeBox.width / 2)),
+          y: Math.round(nodeBox.top - trackBox.top + (nodeBox.height / 2)),
+        };
+      });
+      const roadPath = routePathFromPoints(points, width);
+      if (!roadPath) return;
+
+      road.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      road.setAttribute("preserveAspectRatio", "none");
+      road.innerHTML = `
+        <defs>
+          <linearGradient id="course-route-orb" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stop-color="#a787e1"></stop>
+            <stop offset="1" stop-color="#63b7c7"></stop>
+          </linearGradient>
+        </defs>
+        <path class="route-road-shadow" d="${roadPath}"></path>
+        <path class="route-road-surface" d="${roadPath}"></path>
+        <path id="course-route-motion-path" class="route-road-lane" d="${roadPath}"></path>
+        <circle class="route-traveler" cx="0" cy="0" r="7" fill="url(#course-route-orb)">
+          <animateMotion dur="7.6s" repeatCount="indefinite" rotate="auto"><mpath href="#course-route-motion-path"></mpath></animateMotion>
+        </circle>
+        <circle class="route-traveler route-traveler-secondary" cx="0" cy="0" r="5" fill="url(#course-route-orb)">
+          <animateMotion begin="-3.8s" dur="7.6s" repeatCount="indefinite" rotate="auto"><mpath href="#course-route-motion-path"></mpath></animateMotion>
+        </circle>`;
+    }
+
+    function scheduleCourseRouteRoad() {
+      cancelAnimationFrame(routeRoadFrame);
+      routeRoadFrame = requestAnimationFrame(syncCourseRouteRoad);
+    }
+
+    function mountCourseRouteRoad() {
+      routeRoadResizeObserver?.disconnect();
+      const track = screen.querySelector(".route-track");
+      if (!track) return;
+      scheduleCourseRouteRoad();
+      if ("ResizeObserver" in window) {
+        routeRoadResizeObserver = new ResizeObserver(scheduleCourseRouteRoad);
+        routeRoadResizeObserver.observe(track);
+      }
+      if (document.fonts?.ready) document.fonts.ready.then(scheduleCourseRouteRoad);
     }
 
     function render(course) {
@@ -643,6 +718,8 @@
             <button id="startCourse" class="course-start" type="button"><span>شروع مسیر</span><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h13M13 6l6 6-6 6" /></svg></button>
           </div>
         </section>`;
+
+      mountCourseRouteRoad();
 
       document.querySelector("#startCourse").addEventListener("click", async (event) => {
         const button = event.currentTarget;

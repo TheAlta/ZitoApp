@@ -193,9 +193,15 @@ class UiContractTests(unittest.TestCase):
         with TestClient(app) as client:
             response = client.get("/app/")
             glass_response = client.get("/landing-static/zito-glass.css")
+            marketing_icon = client.get("/landing-static/course-icons/marketing-megaphone.svg")
+            personal_development_icon = client.get("/landing-static/course-icons/personal-development-notebook.svg")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(glass_response.status_code, 200)
+        self.assertEqual(marketing_icon.status_code, 200)
+        self.assertEqual(personal_development_icon.status_code, 200)
+        self.assertEqual(marketing_icon.headers["content-type"], "image/svg+xml")
+        self.assertEqual(personal_development_icon.headers["content-type"], "image/svg+xml")
         html = response.text
         glass_css = glass_response.text
         self.assertIn('id="welcomeTitle"', html)
@@ -211,6 +217,11 @@ class UiContractTests(unittest.TestCase):
         self.assertIn('key: "preferred_career_path"', html)
         self.assertIn('api("/api/me/profile"', html)
         self.assertIn('id="courseList"', html)
+        self.assertIn("course-orb-art", html)
+        self.assertIn("course-option--marketing", html)
+        self.assertIn("course-option--personal-development", html)
+        self.assertIn("course-icons/marketing-megaphone.svg", html)
+        self.assertIn("course-icons/personal-development-notebook.svg", html)
         self.assertIn('id="stagePathList"', html)
         self.assertIn('id="learningSidebarToggle"', html)
         self.assertIn('id="learningSidebarScrim"', html)
@@ -325,6 +336,10 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("routeModules", html)
         self.assertIn("stageDots", html)
         self.assertIn("function routeRoad", html)
+        self.assertIn("function syncCourseRouteRoad", html)
+        self.assertIn("function mountCourseRouteRoad", html)
+        self.assertIn("ResizeObserver", html)
+        self.assertIn("routePathFromPoints", html)
         self.assertIn('class="route-road"', html)
         self.assertIn('class="route-traveler"', html)
         self.assertIn("prefers-reduced-motion", html)

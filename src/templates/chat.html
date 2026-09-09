@@ -1568,7 +1568,7 @@
       .stage-header { padding: 17px 15px; }
     }
   </style>
-  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260905-mobile-drawer-1">
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260909-course-orbs-4">
 </head>
 <body class="zito-glass zito-glass-app">
   <main id="appShell" class="phone-shell mode-onboarding">
@@ -1992,17 +1992,29 @@
         courseList.innerHTML = '<div class="course-empty">فعلاً دوره منتشرشده و کامل برای شروع وجود ندارد.</div>';
         return;
       }
+      const courseVisuals = {
+        marketing: {
+          className: "course-option--marketing",
+          icon: "/landing-static/course-icons/marketing-megaphone.svg",
+        },
+        "personal-development-ai": {
+          className: "course-option--personal-development",
+          icon: "/landing-static/course-icons/personal-development-notebook.svg",
+        },
+      };
       courses.forEach((course) => {
+        const visual = courseVisuals[course.slug] || {};
         const option = document.createElement("button");
         option.type = "button";
-        option.className = "course-option";
+        option.className = `course-option ${visual.className || "course-option--default"}`;
         option.innerHTML = `
-          <span class="course-orb-mini" aria-hidden="true"></span>
+          <span class="course-orb-art" aria-hidden="true">
+            <img src="${visual.icon || "/landing-static/zito-logo.svg"}" alt="">
+          </span>
           <span class="course-option-copy">
             <strong>${escapeHtml(course.title)}</strong>
             <span>${course.module_count ? `${course.module_count} سرفصل · ${course.stage_count} بخش` : `${course.stage_count} مرحله`} · نسخه ${course.version_number}</span>
-          </span>
-          <span class="course-option-arrow" aria-hidden="true">‹</span>`;
+          </span>`;
         option.addEventListener("click", () => selectCourse(course, option));
         courseList.appendChild(option);
       });
@@ -2915,7 +2927,6 @@
 
     function selectCourse(course, option) {
       courseList.querySelectorAll("button").forEach((buttonItem) => { buttonItem.disabled = true; });
-      option.querySelector(".course-option-arrow").textContent = "…";
       selectedTrack = course.domain || "personal_development";
       localStorage.setItem("zito_track", selectedTrack);
       window.location.assign(`/app/courses/${encodeURIComponent(course.slug)}`);

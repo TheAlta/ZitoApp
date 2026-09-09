@@ -437,6 +437,14 @@ body.zito-glass-certificate {
   min-height: 52px;
 }
 
+.zito-glass-landing .phone-form[data-step="otp"] .phone-action-slot {
+  display: none;
+}
+
+.zito-glass-landing .phone-submit[hidden] {
+  display: none !important;
+}
+
 .zito-glass-landing .otp-entry {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr);
@@ -444,6 +452,10 @@ body.zito-glass-certificate {
   align-items: stretch;
   gap: 9px;
   min-height: 52px;
+  width: min(100%, 356px);
+  margin-top: clamp(22px, 3.6vh, 34px);
+  margin-right: auto;
+  margin-left: 0;
   direction: ltr;
   animation: zito-otp-entry .24s cubic-bezier(.2, .78, .2, 1) both;
 }
@@ -1003,33 +1015,97 @@ body.zito-glass-certificate {
 }
 
 .zito-glass-app .phone-shell.mode-planet .course-list {
-  width: min(100%, 470px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 390px);
   margin: 20px auto 0;
-  gap: 11px;
+  gap: 18px;
 }
 
 .zito-glass-app .phone-shell.mode-planet .course-option {
-  min-height: 82px;
-  padding: 13px 15px;
-  border-color: rgba(255, 255, 255, .62) !important;
-  outline: 1px solid rgba(255, 255, 255, .20);
+  --course-a: rgba(196, 152, 234, .42);
+  --course-b: rgba(102, 178, 213, .38);
+  position: relative;
+  isolation: isolate;
+  display: grid !important;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: center;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 20px 14px 18px;
+  gap: 8px;
+  overflow: hidden;
+  text-align: center;
+  color: #433956;
+  border-color: rgba(255, 255, 255, .78) !important;
+  outline: 1px solid rgba(255, 255, 255, .30);
   outline-offset: -1px;
-  border-radius: 20px;
+  border-radius: 50%;
   background:
-    linear-gradient(123deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, 0) 42%),
-    rgba(255, 255, 255, .13) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .70), inset 0 -1px 0 rgba(255, 255, 255, .11), 0 11px 22px rgba(83, 58, 110, .08) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(125%);
-  backdrop-filter: blur(16px) saturate(125%);
+    radial-gradient(68% 64% at 75% 76%, var(--course-b), transparent 72%),
+    radial-gradient(68% 72% at 23% 20%, rgba(255, 255, 255, .84), transparent 69%),
+    linear-gradient(140deg, rgba(255, 255, 255, .54), var(--course-a)) !important;
+  box-shadow: inset 0 2px 1px rgba(255, 255, 255, .84), inset -15px -18px 28px rgba(75, 55, 117, .10), 0 18px 30px rgba(83, 58, 110, .15), 0 6px 13px rgba(95, 175, 201, .11) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+  backdrop-filter: blur(20px) saturate(135%);
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+  animation: zito-course-orb-float 6.4s ease-in-out infinite;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 7%;
+  right: 16%;
+  width: 52%;
+  height: 28%;
+  border-radius: 50%;
+  opacity: .86;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .80), rgba(255, 255, 255, 0));
+  filter: blur(2px);
+  transform: rotate(-22deg);
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: 15%;
+  bottom: -15%;
+  left: 15%;
+  height: 34%;
+  border-radius: 50%;
+  background: var(--course-b);
+  filter: blur(22px);
+  opacity: .58;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--marketing {
+  --course-a: rgba(116, 202, 226, .38);
+  --course-b: rgba(116, 114, 212, .43);
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--personal-development {
+  --course-a: rgba(232, 156, 207, .40);
+  --course-b: rgba(121, 162, 221, .42);
+  animation-delay: -3.2s;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--personal-development .course-orb-art {
+  position: relative;
+  top: -7px;
+  left: -7px;
+  animation-delay: -1.7s;
 }
 
 .zito-glass-app .phone-shell.mode-planet .course-option:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, .90) !important;
-  background:
-    linear-gradient(123deg, rgba(255, 255, 255, .46), rgba(255, 255, 255, .08) 42%),
-    rgba(255, 255, 255, .22) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .83), 0 17px 31px rgba(112, 72, 136, .17), 0 4px 12px rgba(71, 151, 189, .11) !important;
+  animation: none;
+  transform: translateY(-5px) scale(1.018);
+  border-color: rgba(255, 255, 255, .96) !important;
+  box-shadow: inset 0 2px 1px rgba(255, 255, 255, .92), inset -15px -18px 28px rgba(75, 55, 117, .08), 0 25px 38px rgba(85, 62, 128, .21), 0 8px 15px rgba(81, 175, 200, .16) !important;
 }
 
 .zito-glass-app .phone-shell.mode-planet .course-option:focus-visible {
@@ -1037,23 +1113,65 @@ body.zito-glass-certificate {
   outline-offset: 2px;
 }
 
-.zito-glass-app .phone-shell.mode-planet .course-orb-mini {
-  width: 44px;
-  height: 44px;
-  box-shadow: inset -6px -5px 12px rgba(63, 48, 89, .18), 0 7px 16px rgba(104, 91, 173, .18);
+.zito-glass-app .phone-shell.mode-planet .course-option:disabled {
+  cursor: wait;
+  opacity: .72;
 }
 
-.zito-glass-app .phone-shell.mode-planet .course-option-arrow {
-  width: 30px;
-  height: 30px;
+.zito-glass-app .phone-shell.mode-planet .course-orb-art {
   display: grid;
+  flex: none;
   place-items: center;
+  align-self: end;
+  width: 76px;
+  height: 76px;
+  padding: 8px;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, .52);
   border-radius: 50%;
-  color: #66528e;
-  background: rgba(255, 255, 255, .42);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .80);
-  font-size: 24px;
-  line-height: 1;
+  background: rgba(255, 255, 255, .18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .68), 0 8px 18px rgba(83, 63, 124, .10);
+  animation: zito-course-art-float 4.8s ease-in-out infinite;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-orb-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 11px rgba(60, 46, 101, .23));
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy {
+  position: relative;
+  z-index: 1;
+  align-self: start;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 4px;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy strong {
+  display: block;
+  color: #413652;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy span {
+  display: none;
+}
+
+@keyframes zito-course-orb-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes zito-course-art-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-1.5deg); }
 }
 
 /* Secondary buttons become calm translucent controls. */
@@ -1384,6 +1502,11 @@ body.zito-glass-certificate {
 }
 
 @media (max-width: 520px) {
+  .zito-glass-landing .otp-entry {
+    width: 100%;
+    margin-top: 20px;
+  }
+
   .zito-glass-app .phone-shell .topbar {
     min-height: 60px;
     padding: 7px 10px !important;
@@ -1415,23 +1538,30 @@ body.zito-glass-certificate {
     font-size: 24px;
   }
 
+  .zito-glass-app .phone-shell.mode-planet .course-list {
+    width: min(100%, 360px);
+    gap: 14px;
+  }
+
   .zito-glass-app .phone-shell.mode-planet .course-option {
-    min-height: 76px;
-    grid-template-columns: 40px minmax(0, 1fr) 28px;
-    gap: 10px;
-    padding: 11px 12px;
-    border-radius: 18px;
+    padding: 16px 8px 14px;
+    gap: 7px;
   }
 
-  .zito-glass-app .phone-shell.mode-planet .course-orb-mini {
-    width: 40px;
-    height: 40px;
+  .zito-glass-app .phone-shell.mode-planet .course-orb-art {
+    width: 64px;
+    height: 64px;
+    padding: 7px;
   }
 
-  .zito-glass-app .phone-shell.mode-planet .course-option-arrow {
-    width: 28px;
-    height: 28px;
+  .zito-glass-app .phone-shell.mode-planet .course-option-copy strong {
+    font-size: 12px;
   }
+
+  .zito-glass-app .phone-shell.mode-planet .course-option-copy span {
+    font-size: 9px;
+  }
+
 }
 
 @media print {
@@ -2440,7 +2570,10 @@ body.zito-glass-certificate {
 
 @media (prefers-reduced-motion: reduce) {
   .zito-glass-app .phone-shell.mode-lesson .planet-stage,
-  .zito-glass-app .learning-toast {
+  .zito-glass-app .learning-toast,
+  .zito-glass-app .phone-shell.mode-planet .course-option,
+  .zito-glass-app .phone-shell.mode-planet .course-orb-art {
+    animation: none;
     transition: none;
   }
 }

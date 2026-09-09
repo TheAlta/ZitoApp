@@ -1303,7 +1303,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260905-login-actions-1">
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260909-otp-layout-1">
 </head>
 
 <body class="zito-glass zito-glass-landing">
@@ -1407,14 +1407,14 @@
               <path d="M5 12h13M13 6l6 6-6 6" />
             </svg>
           </button>
-          <div class="otp-entry" id="otpEntry" hidden>
-            <button class="otp-confirm" id="otpSubmit" type="submit" aria-label="تایید کد و ورود">
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="m6.5 12.5 3.5 3.5 7.5-8" />
-              </svg>
-            </button>
-            <input class="phone-input" id="otpInput" data-numeric="true" inputmode="numeric" autocomplete="one-time-code" aria-label="کد تایید" placeholder="کد تایید را وارد کن" maxlength="8">
-          </div>
+        </div>
+        <div class="otp-entry" id="otpEntry" hidden>
+          <button class="otp-confirm" id="otpSubmit" type="submit" aria-label="تایید کد و ورود">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m6.5 12.5 3.5 3.5 7.5-8" />
+            </svg>
+          </button>
+          <input class="phone-input" id="otpInput" data-numeric="true" inputmode="numeric" autocomplete="one-time-code" aria-label="کد تایید" placeholder="کد تایید را وارد کن" maxlength="8">
         </div>
       </form>
       <div class="phone-helper" id="phoneHelper" aria-live="polite"></div>

@@ -5,7 +5,7 @@ from tests._env import setup_test_environment
 
 setup_test_environment()
 
-from src.config import get_settings
+from src.config import Settings, get_settings
 from src.lib.arvan_client import ask_ai
 
 
@@ -67,3 +67,26 @@ class ArvanClientMockTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(settings.effective_embedding_api_base_url, settings.arvan_api_base_url)
         self.assertTrue(settings.has_embedding_configuration)
+
+    def test_content_generation_gateway_can_be_separate_or_fall_back(self) -> None:
+        settings = Settings(
+            DATABASE_URL="postgresql+psycopg://zito:pass@localhost:5432/zito",
+            ARVAN_API_BASE_URL="https://chat.example/v1",
+            ARVAN_API_KEY="chat-key",
+            ARVAN_MODEL="chat-model",
+            ARVAN_CONTENT_GENERATION_MODEL="authoring-model",
+            ARVAN_CONTENT_GENERATION_API_BASE_URL="https://authoring.example/v1",
+            ARVAN_CONTENT_GENERATION_API_KEY="authoring-key",
+        )
+
+        self.assertEqual(settings.effective_content_generation_model, "authoring-model")
+        self.assertEqual(settings.effective_content_generation_api_base_url, "https://authoring.example/v1")
+        self.assertEqual(settings.effective_content_generation_api_key, "authoring-key")
+
+        fallback = Settings(
+            DATABASE_URL="postgresql+psycopg://zito:pass@localhost:5432/zito",
+            ARVAN_API_BASE_URL="https://chat.example/v1",
+            ARVAN_API_KEY="chat-key",
+        )
+        self.assertEqual(fallback.effective_content_generation_api_base_url, "https://chat.example/v1")
+        self.assertEqual(fallback.effective_content_generation_api_key, "chat-key")

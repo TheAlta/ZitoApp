@@ -332,3 +332,109 @@ class AdminLoginIn(BaseModel):
 class AdminLoginOut(BaseModel):
     ok: bool = True
     username: str
+
+
+class CmsCourseCreateIn(BaseModel):
+    title: str = Field(min_length=3, max_length=255)
+    topic: str = Field(min_length=2, max_length=255)
+    goal: str = Field(min_length=8, max_length=2000)
+    duration: str = Field(min_length=2, max_length=120)
+    audience: str = Field(min_length=2, max_length=500)
+    target_group: str = Field(min_length=2, max_length=500)
+    level: str = Field(min_length=2, max_length=80)
+    module_count: int = Field(ge=1, le=20)
+    estimated_learning_hours: int = Field(ge=1, le=1000)
+    module_stage_count: int = Field(default=8, ge=7, le=9)
+    requires_final_exam: bool = True
+    domain: str | None = Field(default=None, max_length=120)
+    slug: str | None = Field(default=None, max_length=120)
+
+
+class CmsCourseBriefPatchIn(BaseModel):
+    title: str | None = Field(default=None, min_length=3, max_length=255)
+    topic: str | None = Field(default=None, min_length=2, max_length=255)
+    goal: str | None = Field(default=None, min_length=8, max_length=2000)
+    duration: str | None = Field(default=None, min_length=2, max_length=120)
+    audience: str | None = Field(default=None, min_length=2, max_length=500)
+    target_group: str | None = Field(default=None, min_length=2, max_length=500)
+    level: str | None = Field(default=None, min_length=2, max_length=80)
+    module_count: int | None = Field(default=None, ge=1, le=20)
+    estimated_learning_hours: int | None = Field(default=None, ge=1, le=1000)
+    module_stage_count: int | None = Field(default=None, ge=7, le=9)
+    requires_final_exam: bool | None = None
+    domain: str | None = Field(default=None, max_length=120)
+
+
+class CmsModulePatchIn(BaseModel):
+    title: str | None = Field(default=None, min_length=2, max_length=255)
+    description: str | None = Field(default=None, min_length=2, max_length=5000)
+    learning_objectives: list[str] | None = None
+    tags: list[str] | None = None
+
+
+class CmsStagePatchIn(BaseModel):
+    title: str | None = Field(default=None, min_length=2, max_length=255)
+    content: dict[str, Any] | None = None
+    evaluation_config: dict[str, Any] | None = None
+
+
+class CmsStageOut(BaseModel):
+    id: int
+    stage_number: int
+    template_code: str
+    title: str
+    content: dict[str, Any]
+    evaluation_config: dict[str, Any] | None = None
+    status: str
+    review_status: str
+
+
+class CmsModuleOut(BaseModel):
+    id: int
+    module_number: int
+    title: str
+    description: str | None = None
+    learning_objectives: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    status: str
+    stages: list[CmsStageOut] = Field(default_factory=list)
+
+
+class CmsCourseVersionOut(BaseModel):
+    course_id: int
+    course_title: str
+    course_slug: str
+    course_status: str
+    id: int
+    version_number: int
+    status: str
+    authoring_brief: dict[str, Any] | None = None
+    overview: dict[str, Any] | None = None
+    generation_status: str
+    generation_model: str | None = None
+    generation_prompt_version: str | None = None
+    generation_error: str | None = None
+    generated_at: datetime | None = None
+    module_stage_count: int | None = None
+    requires_final_exam: bool
+    modules: list[CmsModuleOut] = Field(default_factory=list)
+
+
+class CmsPublishOut(BaseModel):
+    course: CmsCourseVersionOut
+    index_changes: int
+    rag_status: str
+
+
+class CmsRagStatusOut(BaseModel):
+    course_id: int
+    course_version_id: int
+    version_number: int
+    status: str
+    document_count: int
+    queued_job_count: int
+    running_job_count: int
+    succeeded_job_count: int
+    retry_job_count: int
+    failed_job_count: int
+    last_error: str | None = None

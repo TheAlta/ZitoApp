@@ -155,6 +155,14 @@ class CourseVersion(Base):
     # A published version owns both its overview copy and its learning-flow contract.
     # Keeping them versioned prevents a CMS update from changing an active learner's path.
     overview_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    # The authoring brief and AI-generation audit are version-scoped so a new
+    # edit never mutates what enrolled learners are already studying.
+    authoring_brief_json: Mapped[dict] = mapped_column(JSON, nullable=True)
+    generation_status: Mapped[str] = mapped_column(String(40), default="not_requested", nullable=False)
+    generation_model: Mapped[str] = mapped_column(String(120), nullable=True)
+    generation_prompt_version: Mapped[str] = mapped_column(String(80), nullable=True)
+    generation_error: Mapped[str] = mapped_column(Text, nullable=True)
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     module_stage_count: Mapped[int] = mapped_column(Integer, nullable=True)
     requires_final_exam: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)

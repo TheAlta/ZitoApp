@@ -17,6 +17,8 @@ Zito is a FastAPI-based authenticated learning platform with AI-assisted trainin
 - Runs a grounded coaching API after each stage: only approved chunks from the learner's current module or explicit course-global KB sources may be cited.
 - Stores 3072-dimensional Bge-m3 embeddings in PostgreSQL `halfvec` with an HNSW index, and processes document indexing in a standalone worker rather than a learner request.
 - Shows canonical user identity and profile fields in a separate protected admin UI.
+- Lets an administrator create a versioned course brief, generate a 7/8/9-stage module curriculum with AI, review or edit each stage, and publish it without changing an active learner's pinned version.
+- On CMS publishing, automatically builds module-scoped KB sources and durable embedding jobs so the existing RAG coach can answer from the new course.
 - Soft-deletes users and revokes their active sessions without removing learning history; a later verified phone OTP restores the same account. Blocking is a separate admin operation.
 
 ## Local URLs
@@ -34,6 +36,7 @@ After setup:
 - `src/lib/arvan_client.py`: OpenAI-compatible Arvan chat client used for validation and coaching responses.
 - `src/lib/arvan_embeddings.py`: Arvan Bge-m3 embedding client with dimension validation.
 - `src/services/rag.py`: version-safe retrieval, chunk synchronization and durable RAG index jobs.
+- `src/services/cms.py`: draft generation, version cloning, publication validation, final-exam fallback and CMS-to-KB publishing.
 - `src/cli/rag_indexer.py`: standalone RAG worker command for local batches or a supervised production worker.
 - `src/cli/db_audit.py`: aggregate-only migration and legacy-cleanup safety audit.
 - `src/cli/seed_course_content.py`: idempotently seeds versioned Fake CMS content and indexes its initial KB jobs after a schema migration.

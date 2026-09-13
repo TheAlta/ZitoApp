@@ -16,6 +16,7 @@ from src.config import get_settings
 from src.lib.arvan_client import ArvanAIError, ask_ai
 from src.models import Certificate, Course, CourseModule, CourseVersion, Exam, ExamAttempt, User, UserCourseEnrollment
 from src.prompts import load_prompt
+from src.services.cms import course_version_domain, course_version_title
 from src.services.json_utils import parse_json_object
 from src.services.rag import RetrievedChunk, format_retrieved_context, retrieve_course_chunks
 
@@ -207,6 +208,7 @@ async def _retrieve_exam_sources(
     *,
     enrollment: UserCourseEnrollment,
     course: Course,
+    version: CourseVersion,
 ) -> tuple[list[RetrievedChunk], list[str]]:
     """Take at most one scoped source per module for balanced exam generation."""
 
@@ -224,7 +226,10 @@ async def _retrieve_exam_sources(
             db,
             course_version_id=enrollment.course_version_id,
             module_id=module.id,
-            question=f"آزمون نهایی دوره {course.title}: {module.title}. {objectives}",
+            question=(
+                f"آزمون نهایی دوره {course_version_title(course, version)}: "
+                f"{module.title}. {objectives}"
+            ),
         )
         retrieval_methods.append(retrieval.method)
         for chunk in retrieval.chunks:
@@ -255,7 +260,15 @@ async def _generate_questions(
     course: Course,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     fallback_questions = _normalized_questions(exam.questions_json)
-    chunks, retrieval_methods = await _retrieve_exam_sources(db, enrollment=enrollment, course=course)
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not version or version.course_id != course.id:
+        raise FinalExamStateError("نسخه دوره این ثبت‌نام معتبر نیست.")
+    chunks, retrieval_methods = await _retrieve_exam_sources(
+        db,
+        enrollment=enrollment,
+        course=course,
+        version=version,
+    )
     fallback_metadata = {
         "method": "approved_fallback",
         "prompt_version": FINAL_EXAM_GENERATION_PROMPT_VERSION,
@@ -267,9 +280,9 @@ async def _generate_questions(
 
     payload = {
         "course": {
-            "title": course.title,
-            "domain": course.domain,
-            "version_number": db.get(CourseVersion, enrollment.course_version_id).version_number,
+            "title": course_version_title(course, version),
+            "domain": course_version_domain(course, version),
+            "version_number": version.version_number,
             "modules": _course_outline(db, enrollment.course_version_id),
         },
         "retrieved_sources": format_retrieved_context(chunks),
@@ -432,7 +445,7 @@ def _issue_certificate(
         exam_attempt_id=attempt.id,
         certificate_number=_new_certificate_number(db),
         recipient_name=user.display_name.strip()[:100],
-        course_title=course.title,
+        course_title=course_version_title(course, version),
         course_version_number=version.version_number,
         score=attempt.score,
         passing_score=exam.passing_score,

@@ -11,8 +11,11 @@ from src.models import (
     Certificate,
     CoachMessage,
     Course,
+    CourseKbDocument,
+    CourseKbIndexJob,
     CourseModule,
     CourseModuleStageContent,
+    CourseRagConfig,
     CourseStageContent,
     CourseVersion,
     Exam,
@@ -35,6 +38,15 @@ from src.schemas import (
     CoachQuestionIn,
     CoachReplyOut,
     CoachingCheckpointOut,
+    CmsCourseBriefPatchIn,
+    CmsCourseCreateIn,
+    CmsCourseVersionOut,
+    CmsModuleOut,
+    CmsModulePatchIn,
+    CmsPublishOut,
+    CmsRagStatusOut,
+    CmsStageOut,
+    CmsStagePatchIn,
     CourseOverviewModuleOut,
     CourseOverviewOut,
     CourseOut,
@@ -95,6 +107,15 @@ from src.services.final_exam import (
     start_final_exam,
 )
 from src.services.personalized_stage import generate_personalized_work_example
+from src.services.cms import (
+    CmsError,
+    create_course_draft,
+    create_course_revision,
+    generate_curriculum,
+    publish_draft_version,
+    replace_draft_curriculum,
+    stage_flow,
+)
 
 router = APIRouter()
 LEARNING_STAGE_COUNT = 20
@@ -217,6 +238,20 @@ def _module_stage_count(version: CourseVersion) -> int:
     return version.module_stage_count or LEARNING_STAGE_COUNT
 
 
+def _version_display_title(course: Course, version: CourseVersion) -> str:
+    """Use the version brief so a published revision does not rewrite active enrollments."""
+
+    brief = version.authoring_brief_json if isinstance(version.authoring_brief_json, dict) else {}
+    title = str(brief.get("title") or "").strip()
+    return title or course.title
+
+
+def _version_display_domain(course: Course, version: CourseVersion) -> str:
+    brief = version.authoring_brief_json if isinstance(version.authoring_brief_json, dict) else {}
+    domain = str(brief.get("domain") or brief.get("topic") or "").strip()
+    return domain or course.domain
+
+
 def _course_out(db: Session, course: Course) -> CourseOut | None:
     version = _published_version_for(course)
     if not version:
@@ -228,9 +263,9 @@ def _course_out(db: Session, course: Course) -> CourseOut | None:
             return None
         return CourseOut(
             id=course.id,
-            title=course.title,
+            title=_version_display_title(course, version),
             slug=course.slug,
-            domain=course.domain,
+            domain=_version_display_domain(course, version),
             version_id=version.id,
             version_number=version.version_number,
             stage_count=len(module_stages),
@@ -250,9 +285,9 @@ def _course_out(db: Session, course: Course) -> CourseOut | None:
         return None
     return CourseOut(
         id=course.id,
-        title=course.title,
+        title=_version_display_title(course, version),
         slug=course.slug,
-        domain=course.domain,
+        domain=_version_display_domain(course, version),
         version_id=version.id,
         version_number=version.version_number,
         stage_count=len(approved_stages),
@@ -737,9 +772,9 @@ def _module_learning_path_out(
     return LearningPathOut(
         enrollment_id=enrollment.id,
         course_id=course.id,
-        course_title=course.title,
+        course_title=_version_display_title(course, version),
         course_slug=course.slug,
-        course_domain=course.domain,
+        course_domain=_version_display_domain(course, version),
         course_version_id=version.id,
         course_version_number=version.version_number,
         status=enrollment.status,
@@ -778,7 +813,7 @@ def _module_current_stage_out(
     return LearningStageOut(
         enrollment_id=enrollment.id,
         course_id=course.id,
-        course_title=course.title,
+        course_title=_version_display_title(course, version),
         stage_number=ordinal,
         stage_type=stage.template.code,
         title=stage.title,
@@ -1012,9 +1047,9 @@ def _learning_path_out(
     return LearningPathOut(
         enrollment_id=enrollment.id,
         course_id=course.id,
-        course_title=course.title,
+        course_title=_version_display_title(course, version),
         course_slug=course.slug,
-        course_domain=course.domain,
+        course_domain=_version_display_domain(course, version),
         course_version_id=version.id,
         course_version_number=version.version_number,
         status=enrollment.status,
@@ -1641,13 +1676,14 @@ def get_current_learning_stage(
     stage = next(stage for stage in stages if stage.stage_number == stage_number)
     progress = next(row for row in progress_rows if row.stage_number == stage_number)
     course = db.get(Course, enrollment.course_id)
-    if not course:
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not course or not version or version.course_id != course.id:
         raise HTTPException(status_code=409, detail="دوره این مسیر آموزشی پیدا نشد.")
     content = stage.content_json if isinstance(stage.content_json, dict) else {}
     return LearningStageOut(
         enrollment_id=enrollment.id,
         course_id=course.id,
-        course_title=course.title,
+        course_title=_version_display_title(course, version),
         stage_number=stage.stage_number,
         stage_type=stage.stage_type,
         title=stage.title,
@@ -1846,4 +1882,383 @@ def unblock_user(user_id: int, db: Session = Depends(get_db)) -> dict:
     user.blocked_at = None
     db.commit()
     return {"unblocked": True}
+
+
+def _cms_version_out(db: Session, course: Course, version: CourseVersion) -> CmsCourseVersionOut:
+    modules = db.scalars(
+        select(CourseModule)
+        .where(CourseModule.course_version_id == version.id)
+        .order_by(CourseModule.module_number)
+    ).all()
+    stage_rows = db.scalars(
+        select(CourseModuleStageContent)
+        .where(CourseModuleStageContent.course_module_id.in_([module.id for module in modules] or [-1]))
+        .options(selectinload(CourseModuleStageContent.template))
+        .order_by(CourseModuleStageContent.course_module_id, CourseModuleStageContent.stage_number)
+    ).all()
+    stages_by_module: dict[int, list[CmsStageOut]] = {}
+    for stage in stage_rows:
+        stages_by_module.setdefault(stage.course_module_id, []).append(
+            CmsStageOut(
+                id=stage.id,
+                stage_number=stage.stage_number,
+                template_code=stage.template.code if stage.template else "unknown",
+                title=stage.title,
+                content=stage.content_json if isinstance(stage.content_json, dict) else {},
+                evaluation_config=(
+                    stage.evaluation_config_json if isinstance(stage.evaluation_config_json, dict) else None
+                ),
+                status=stage.status,
+                review_status=stage.review_status,
+            )
+        )
+    return CmsCourseVersionOut(
+        course_id=course.id,
+        course_title=_version_display_title(course, version),
+        course_slug=course.slug,
+        course_status=course.status,
+        id=version.id,
+        version_number=version.version_number,
+        status=version.status,
+        authoring_brief=(version.authoring_brief_json if isinstance(version.authoring_brief_json, dict) else None),
+        overview=version.overview_json if isinstance(version.overview_json, dict) else None,
+        generation_status=version.generation_status,
+        generation_model=version.generation_model,
+        generation_prompt_version=version.generation_prompt_version,
+        generation_error=version.generation_error,
+        generated_at=version.generated_at,
+        module_stage_count=version.module_stage_count,
+        requires_final_exam=version.requires_final_exam,
+        modules=[
+            CmsModuleOut(
+                id=module.id,
+                module_number=module.module_number,
+                title=module.title,
+                description=module.description,
+                learning_objectives=list(module.learning_objectives_json or []),
+                tags=list(module.tags_json or []),
+                status=module.status,
+                stages=stages_by_module.get(module.id, []),
+            )
+            for module in modules
+        ],
+    )
+
+
+def _cms_course_and_version(db: Session, course_id: int, version_number: int) -> tuple[Course, CourseVersion]:
+    course = db.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="دوره پیدا نشد.")
+    version = db.scalars(
+        select(CourseVersion).where(
+            CourseVersion.course_id == course_id,
+            CourseVersion.version_number == version_number,
+        )
+    ).first()
+    if not version:
+        raise HTTPException(status_code=404, detail="نسخه دوره پیدا نشد.")
+    return course, version
+
+
+def _cms_rag_status_out(
+    db: Session,
+    course: Course,
+    version: CourseVersion,
+) -> CmsRagStatusOut:
+    documents = db.scalars(
+        select(CourseKbDocument).where(
+            CourseKbDocument.course_version_id == version.id,
+            CourseKbDocument.source_type == "cms",
+        )
+    ).all()
+    jobs = db.scalars(
+        select(CourseKbIndexJob).where(CourseKbIndexJob.course_version_id == version.id)
+    ).all()
+    counts = {
+        status: sum(job.status == status for job in jobs)
+        for status in ("queued", "running", "succeeded", "retry", "failed")
+    }
+    config = db.scalars(
+        select(CourseRagConfig).where(CourseRagConfig.course_version_id == version.id)
+    ).first()
+
+    if version.status != "published":
+        status = "not_published"
+    elif counts["failed"]:
+        status = "failed"
+    elif documents and counts["succeeded"] >= len(documents) and not (
+        counts["queued"] or counts["running"] or counts["retry"]
+    ):
+        status = "ready"
+    elif counts["running"] or counts["retry"]:
+        status = "indexing"
+    else:
+        status = "queued"
+
+    return CmsRagStatusOut(
+        course_id=course.id,
+        course_version_id=version.id,
+        version_number=version.version_number,
+        status=status,
+        document_count=len(documents),
+        queued_job_count=counts["queued"],
+        running_job_count=counts["running"],
+        succeeded_job_count=counts["succeeded"],
+        retry_job_count=counts["retry"],
+        failed_job_count=counts["failed"],
+        last_error=(config.last_error if config else None),
+    )
+
+
+@router.get(
+    "/api/admin/courses",
+    response_model=list[CmsCourseVersionOut],
+    dependencies=[Depends(require_admin)],
+)
+def list_admin_courses(db: Session = Depends(get_db)) -> list[CmsCourseVersionOut]:
+    rows = db.execute(
+        select(Course, CourseVersion)
+        .join(CourseVersion, CourseVersion.course_id == Course.id)
+        .order_by(Course.updated_at.desc(), CourseVersion.version_number.desc())
+    ).all()
+    return [_cms_version_out(db, course, version) for course, version in rows]
+
+
+@router.post(
+    "/api/admin/courses",
+    response_model=CmsCourseVersionOut,
+    status_code=201,
+    dependencies=[Depends(require_admin)],
+)
+def create_admin_course(payload: CmsCourseCreateIn, db: Session = Depends(get_db)) -> CmsCourseVersionOut:
+    try:
+        course, version = create_course_draft(db, payload.model_dump())
+        db.commit()
+    except CmsError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _cms_version_out(db, course, version)
+
+
+@router.get(
+    "/api/admin/courses/{course_id}/versions/{version_number}",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+def get_admin_course_version(
+    course_id: int,
+    version_number: int,
+    db: Session = Depends(get_db),
+) -> CmsCourseVersionOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    return _cms_version_out(db, course, version)
+
+
+@router.get(
+    "/api/admin/courses/{course_id}/versions/{version_number}/rag-status",
+    response_model=CmsRagStatusOut,
+    dependencies=[Depends(require_admin)],
+)
+def get_admin_course_rag_status(
+    course_id: int,
+    version_number: int,
+    db: Session = Depends(get_db),
+) -> CmsRagStatusOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    return _cms_rag_status_out(db, course, version)
+
+
+@router.post(
+    "/api/admin/courses/{course_id}/revisions",
+    response_model=CmsCourseVersionOut,
+    status_code=201,
+    dependencies=[Depends(require_admin)],
+)
+def create_admin_course_revision(
+    course_id: int,
+    db: Session = Depends(get_db),
+) -> CmsCourseVersionOut:
+    course = db.get(Course, course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail="دوره پیدا نشد.")
+    try:
+        version = create_course_revision(db, course)
+        db.commit()
+    except CmsError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _cms_version_out(db, course, version)
+
+
+@router.patch(
+    "/api/admin/courses/{course_id}/versions/{version_number}/brief",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+def patch_admin_course_brief(
+    course_id: int,
+    version_number: int,
+    payload: CmsCourseBriefPatchIn,
+    db: Session = Depends(get_db),
+) -> CmsCourseVersionOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    if version.status == "published":
+        raise HTTPException(status_code=409, detail="نسخه منتشرشده را ویرایش نکن؛ ابتدا نسخه جدید بساز.")
+    current_brief = dict(version.authoring_brief_json or {})
+    updates = payload.model_dump(exclude_unset=True)
+    brief = {**current_brief, **updates}
+    try:
+        stage_flow(int(brief.get("module_stage_count") or 8))
+    except CmsError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    version.authoring_brief_json = brief
+    version.module_stage_count = int(brief.get("module_stage_count") or 8)
+    version.requires_final_exam = bool(brief.get("requires_final_exam", True))
+    curriculum_fields = {
+        "title",
+        "topic",
+        "goal",
+        "duration",
+        "audience",
+        "target_group",
+        "level",
+        "module_count",
+        "estimated_learning_hours",
+        "module_stage_count",
+        "domain",
+    }
+    curriculum_changed = any(
+        field in updates and updates[field] != current_brief.get(field)
+        for field in curriculum_fields
+    )
+    if version.modules:
+        version.generation_status = "needs_regeneration" if curriculum_changed else "edited"
+    else:
+        version.generation_status = "not_requested"
+    version.generation_error = None
+    db.commit()
+    return _cms_version_out(db, course, version)
+
+
+@router.post(
+    "/api/admin/courses/{course_id}/versions/{version_number}/generate",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+async def generate_admin_course(
+    course_id: int,
+    version_number: int,
+    db: Session = Depends(get_db),
+) -> CmsCourseVersionOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    if version.status == "published":
+        raise HTTPException(status_code=409, detail="نسخه منتشرشده قابل تولید مجدد نیست؛ نسخه جدید بساز.")
+    brief = version.authoring_brief_json if isinstance(version.authoring_brief_json, dict) else None
+    if not brief:
+        raise HTTPException(status_code=422, detail="فرم تدوین دوره کامل نیست.")
+
+    version.generation_status = "generating"
+    version.generation_error = None
+    db.commit()
+    try:
+        curriculum = await generate_curriculum(brief)
+        replace_draft_curriculum(db, version, curriculum)
+        db.commit()
+    except (ArvanAIError, CmsError, ValueError, TypeError) as exc:
+        db.rollback()
+        version = db.get(CourseVersion, version.id)
+        if version:
+            version.generation_status = "failed"
+            version.generation_error = str(exc)[:1000]
+            db.commit()
+        raise HTTPException(status_code=422, detail="تولید دوره کامل نشد؛ جزئیات خطا در پیش‌نویس ثبت شد.") from exc
+    return _cms_version_out(db, course, version)
+
+
+@router.patch(
+    "/api/admin/courses/{course_id}/versions/{version_number}/modules/{module_id}",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+def patch_admin_course_module(
+    course_id: int,
+    version_number: int,
+    module_id: int,
+    payload: CmsModulePatchIn,
+    db: Session = Depends(get_db),
+) -> CmsCourseVersionOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    if version.status == "published":
+        raise HTTPException(status_code=409, detail="نسخه منتشرشده را ویرایش نکن؛ ابتدا نسخه جدید بساز.")
+    module = db.get(CourseModule, module_id)
+    if not module or module.course_version_id != version.id:
+        raise HTTPException(status_code=404, detail="سرفصل این نسخه پیدا نشد.")
+    update = payload.model_dump(exclude_unset=True)
+    if "title" in update:
+        module.title = update["title"]
+    if "description" in update:
+        module.description = update["description"]
+    if "learning_objectives" in update:
+        module.learning_objectives_json = update["learning_objectives"] or []
+    if "tags" in update:
+        module.tags_json = update["tags"] or []
+    version.generation_status = "edited"
+    db.commit()
+    return _cms_version_out(db, course, version)
+
+
+@router.patch(
+    "/api/admin/courses/{course_id}/versions/{version_number}/stages/{stage_id}",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+def patch_admin_course_stage(
+    course_id: int,
+    version_number: int,
+    stage_id: int,
+    payload: CmsStagePatchIn,
+    db: Session = Depends(get_db),
+) -> CmsCourseVersionOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    if version.status == "published":
+        raise HTTPException(status_code=409, detail="نسخه منتشرشده را ویرایش نکن؛ ابتدا نسخه جدید بساز.")
+    stage = db.get(CourseModuleStageContent, stage_id)
+    if not stage or not stage.course_module or stage.course_module.course_version_id != version.id:
+        raise HTTPException(status_code=404, detail="ایستگاه این نسخه پیدا نشد.")
+    update = payload.model_dump(exclude_unset=True)
+    if "title" in update:
+        stage.title = update["title"]
+    if "content" in update:
+        stage.content_json = update["content"] or {}
+    if "evaluation_config" in update:
+        stage.evaluation_config_json = update["evaluation_config"]
+    stage.ai_generation_status = "edited"
+    stage.review_status = "pending"
+    version.generation_status = "edited"
+    db.commit()
+    return _cms_version_out(db, course, version)
+
+
+@router.post(
+    "/api/admin/courses/{course_id}/versions/{version_number}/publish",
+    response_model=CmsPublishOut,
+    dependencies=[Depends(require_admin)],
+)
+def publish_admin_course(
+    course_id: int,
+    version_number: int,
+    db: Session = Depends(get_db),
+) -> CmsPublishOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    try:
+        index_changes = publish_draft_version(db, course, version)
+        db.commit()
+    except CmsError as exc:
+        db.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return CmsPublishOut(
+        course=_cms_version_out(db, course, version),
+        index_changes=index_changes,
+        rag_status="queued",
+    )
 

@@ -1174,6 +1174,64 @@ body.zito-glass-certificate {
   50% { transform: translateY(-3px) rotate(-1.5deg); }
 }
 
+/* A growing catalog stays inside the course-picker pane instead of escaping it. */
+.zito-glass-app .phone-shell.mode-planet .planet-stage {
+  display: block;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: clamp(20px, 4vw, 34px) clamp(14px, 4vw, 28px);
+}
+
+.zito-glass-app .phone-shell.mode-planet .planet-card {
+  width: min(620px, 100%);
+  margin: 0 auto;
+  padding: 4px 0 24px;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
+  width: min(100%, 620px);
+  gap: 23px 20px;
+  padding: 7px 5px 22px;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option {
+  --orbit-offset: 0px;
+  justify-self: center;
+  width: min(100%, 184px);
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option:nth-child(3n + 2) {
+  --orbit-offset: 9px;
+  animation-delay: -2.1s;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option:nth-child(3n) {
+  --orbit-offset: -5px;
+  animation-delay: -4.2s;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-height: 1.55;
+}
+
+@keyframes zito-course-orb-float {
+  0%, 100% { transform: translateY(var(--orbit-offset, 0px)); }
+  50% { transform: translateY(calc(var(--orbit-offset, 0px) - 5px)); }
+}
+
+@media (max-width: 460px) {
+  .zito-glass-app .phone-shell.mode-planet .planet-stage { padding-inline: 12px; }
+  .zito-glass-app .phone-shell.mode-planet .course-list { gap: 18px 12px; }
+  .zito-glass-app .phone-shell.mode-planet .course-option { width: min(100%, 164px); padding: 16px 10px 14px; }
+  .zito-glass-app .phone-shell.mode-planet .course-orb-art { width: 66px; height: 66px; }
+}
+
 /* Secondary buttons become calm translucent controls. */
 .zito-glass :is(.modal-close, .final-exam-retry, .coaching-actions button, button.ghost) {
   border-color: rgba(255, 255, 255, .70) !important;

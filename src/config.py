@@ -15,6 +15,17 @@ class Settings(BaseSettings):
     arvan_api_base_url: str = Field("", alias="ARVAN_API_BASE_URL")
     arvan_api_key: str = Field("", alias="ARVAN_API_KEY")
     arvan_model: str = Field("GPT-5.4-Mini", alias="ARVAN_MODEL")
+    # Course authoring has a different quality/cost profile from short coach
+    # replies. Empty values fall back to the normal Arvan gateway and key, but
+    # an OpenAI-compatible generation service can be configured independently.
+    arvan_content_generation_model: str = Field("", alias="ARVAN_CONTENT_GENERATION_MODEL")
+    arvan_content_generation_api_base_url: str = Field(
+        "", alias="ARVAN_CONTENT_GENERATION_API_BASE_URL"
+    )
+    arvan_content_generation_api_key: str = Field("", alias="ARVAN_CONTENT_GENERATION_API_KEY")
+    arvan_content_generation_timeout_seconds: int = Field(
+        90, alias="ARVAN_CONTENT_GENERATION_TIMEOUT_SECONDS"
+    )
     arvan_timeout_seconds: int = Field(45, alias="ARVAN_TIMEOUT_SECONDS")
     arvan_mock_ai: bool = Field(False, alias="ARVAN_MOCK_AI")
 
@@ -98,6 +109,19 @@ class Settings(BaseSettings):
     def effective_embedding_api_base_url(self) -> str:
         """Use the OpenAI-compatible chat base when embeddings share the same gateway."""
         return self.arvan_embedding_api_base_url or self.arvan_api_base_url
+
+    @property
+    def effective_content_generation_model(self) -> str:
+        """Keep existing deployments working until a CMS-specific model is set."""
+        return self.arvan_content_generation_model or self.arvan_model
+
+    @property
+    def effective_content_generation_api_base_url(self) -> str:
+        return self.arvan_content_generation_api_base_url or self.arvan_api_base_url
+
+    @property
+    def effective_content_generation_api_key(self) -> str:
+        return self.arvan_content_generation_api_key or self.arvan_api_key
 
     @property
     def has_embedding_configuration(self) -> bool:

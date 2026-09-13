@@ -17,10 +17,12 @@ from src.models import (
     CoachThread,
     Course,
     CourseModuleStageContent,
+    CourseVersion,
     User,
     UserCourseEnrollment,
 )
 from src.prompts import load_prompt
+from src.services.cms import course_version_domain, course_version_title
 from src.services.json_utils import parse_json_object
 from src.services.rag import RetrievedChunk, format_retrieved_context, retrieve_course_chunks
 
@@ -51,6 +53,7 @@ def build_personalized_context(
     stage: CourseModuleStageContent,
     stage_number: int,
     course: Course,
+    version: CourseVersion,
 ) -> dict[str, Any]:
     """Return only the learner attributes that are useful for coaching.
 
@@ -73,8 +76,8 @@ def build_personalized_context(
             "preferred_career_path": profile.preferred_career_path if profile else None,
         },
         "course": {
-            "title": course.title,
-            "domain": course.domain,
+            "title": course_version_title(course, version),
+            "domain": course_version_domain(course, version),
         },
         "module": {
             "number": module.module_number,
@@ -302,7 +305,8 @@ async def answer_course_question(
     if not stage.course_module:
         raise ValueError("The learning stage is missing its course module.")
     course = db.get(Course, enrollment.course_id)
-    if not course:
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not course or not version or version.course_id != course.id:
         raise ValueError("The enrolled course no longer exists.")
 
     thread = get_or_create_coach_thread(db, user=user, enrollment=enrollment)
@@ -349,7 +353,7 @@ async def answer_course_question(
         status = "no_grounding"
     else:
         try:
-            context = build_personalized_context(user, enrollment, stage, stage_number, course)
+            context = build_personalized_context(user, enrollment, stage, stage_number, course, version)
             request_payload = {
                 "learner_question": clean_question,
                 "learner_context": context,

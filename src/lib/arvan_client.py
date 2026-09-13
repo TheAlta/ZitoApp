@@ -304,18 +304,24 @@ async def ask_ai(
     *,
     temperature: float = 0.2,
     response_format: dict[str, Any] | None = None,
+    model: str | None = None,
+    api_base_url: str | None = None,
+    api_key: str | None = None,
+    timeout_seconds: int | None = None,
 ) -> str:
     settings = get_settings()
 
     if settings.arvan_mock_ai:
         return _mock_response(system_prompt, user_message)
 
-    if not settings.arvan_api_base_url or not settings.arvan_api_key:
-        raise ArvanAIError("Arvan AIaaS is not configured. Set ARVAN_API_BASE_URL and ARVAN_API_KEY.")
+    effective_base_url = api_base_url or settings.arvan_api_base_url
+    effective_api_key = api_key or settings.arvan_api_key
+    if not effective_base_url or not effective_api_key:
+        raise ArvanAIError("AI gateway is not configured. Set its API base URL and key.")
 
-    url = f"{settings.arvan_api_base_url.rstrip('/')}/chat/completions"
+    url = f"{effective_base_url.rstrip('/')}/chat/completions"
     payload: dict[str, Any] = {
-        "model": settings.arvan_model,
+        "model": model or settings.arvan_model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
@@ -326,27 +332,30 @@ async def ask_ai(
         payload["response_format"] = response_format
 
     headers = {
-        "Authorization": f"Bearer {settings.arvan_api_key}",
+        "Authorization": f"Bearer {effective_api_key}",
         "Content-Type": "application/json",
     }
 
     try:
-        async with httpx.AsyncClient(timeout=settings.arvan_timeout_seconds, trust_env=False) as client:
+        async with httpx.AsyncClient(
+            timeout=timeout_seconds or settings.arvan_timeout_seconds,
+            trust_env=False,
+        ) as client:
             response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
     except httpx.HTTPStatusError as exc:
         body = exc.response.text[:500] if exc.response is not None else ""
-        raise ArvanAIError(f"Arvan AIaaS returned HTTP {exc.response.status_code}: {body}") from exc
+        raise ArvanAIError(f"AI gateway returned HTTP {exc.response.status_code}: {body}") from exc
     except (httpx.RequestError, ValueError) as exc:
-        raise ArvanAIError(f"Could not call Arvan AIaaS ({type(exc).__name__}): {exc}") from exc
+        raise ArvanAIError(f"Could not call AI gateway ({type(exc).__name__}): {exc}") from exc
 
     try:
         content = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
-        raise ArvanAIError(f"Unexpected Arvan AIaaS response shape: {data}") from exc
+        raise ArvanAIError(f"Unexpected AI gateway response shape: {data}") from exc
 
     if not isinstance(content, str) or not content.strip():
-        raise ArvanAIError("Arvan AIaaS returned an empty response.")
+        raise ArvanAIError("AI gateway returned an empty response.")
     return content.strip()
 

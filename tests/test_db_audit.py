@@ -25,7 +25,7 @@ class DatabaseAuditTests(unittest.TestCase):
         with SessionLocal() as db:
             report = collect_database_audit(db)
 
-        self.assertEqual(report["alembic_revision"], "unavailable")
+        self.assertEqual(report["alembic_revision"], "20260912_0017")
         self.assertEqual(report["enrollment_integrity"], {
             "course_version_mismatches": 0,
             "invalid_progress_rows": 0,

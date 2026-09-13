@@ -16,6 +16,7 @@ Before installing the unit on production:
 2. Run Alembic migrations successfully.
 3. Confirm `/health` is healthy and run the private `verify-rag` command.
 4. Confirm `/opt/zito/app/.env` contains the required embedding configuration.
+5. Optionally set `ARVAN_CONTENT_GENERATION_MODEL` when CMS authoring should use a different model. `ARVAN_CONTENT_GENERATION_API_BASE_URL` and `ARVAN_CONTENT_GENERATION_API_KEY` may point to a separate OpenAI-compatible gateway; empty values safely reuse the normal Arvan gateway.
 
 Install it only during an approved deployment window:
 

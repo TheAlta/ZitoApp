@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from src.config import get_settings
 from src.lib.arvan_client import ArvanAIError, ask_ai
-from src.models import Course, CourseModuleStageContent, User, UserCourseEnrollment
+from src.models import Course, CourseModuleStageContent, CourseVersion, User, UserCourseEnrollment
 from src.prompts import load_prompt
 from src.services.coach import build_personalized_context
 from src.services.json_utils import parse_json_object
@@ -101,7 +101,8 @@ async def generate_personalized_work_example(
     if not stage.course_module:
         raise ValueError("The learning stage is missing its course module.")
     course = db.get(Course, enrollment.course_id)
-    if not course:
+    version = db.get(CourseVersion, enrollment.course_version_id)
+    if not course or not version or version.course_id != course.id:
         raise ValueError("The enrolled course no longer exists.")
 
     retrieval_question = (
@@ -126,7 +127,9 @@ async def generate_personalized_work_example(
 
     try:
         request_payload = {
-            "learner_context": build_personalized_context(user, enrollment, stage, stage_number, course),
+            "learner_context": build_personalized_context(
+                user, enrollment, stage, stage_number, course, version
+            ),
             "retrieved_sources": format_retrieved_context(retrieval.chunks),
         }
         raw_response = await ask_ai(

@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
@@ -9,6 +10,7 @@ from tests._env import setup_test_environment
 setup_test_environment()
 
 from src.db import Base, SessionLocal, engine
+from src.lib.arvan_client import ArvanAIError
 from src.main import app
 from src.models import CourseKbDocument, CourseKbIndexJob, Exam
 from src.seed import seed_defaults
@@ -129,6 +131,41 @@ class CmsAuthoringTests(unittest.TestCase):
                 f"/api/admin/courses/{draft['course_id']}/versions/{draft['version_number']}/publish"
             )
             self.assertEqual(blocked_publish.status_code, 422, blocked_publish.text)
+
+    def test_gateway_failure_marks_draft_failed_without_a_server_error(self) -> None:
+        with self._admin_client() as client:
+            created = client.post(
+                "/api/admin/courses",
+                json={
+                    **COURSE_BRIEF,
+                    "title": "Gateway failure handling",
+                    "slug": "gateway-failure-handling",
+                },
+            )
+            self.assertEqual(created.status_code, 201, created.text)
+            draft = created.json()
+
+            with patch(
+                "src.api.routes.generate_curriculum",
+                new=AsyncMock(
+                    side_effect=ArvanAIError(
+                        "AI gateway returned HTTP 403: Account is debtor"
+                    )
+                ),
+            ):
+                generated = client.post(
+                    f"/api/admin/courses/{draft['course_id']}/versions/"
+                    f"{draft['version_number']}/generate"
+                )
+
+            self.assertEqual(generated.status_code, 422, generated.text)
+            current = client.get(
+                f"/api/admin/courses/{draft['course_id']}/versions/"
+                f"{draft['version_number']}"
+            )
+            self.assertEqual(current.status_code, 200, current.text)
+            self.assertEqual(current.json()["generation_status"], "failed")
+            self.assertIn("HTTP 403", current.json()["generation_error"])
 
 
     def test_publishing_makes_a_course_available_and_queues_its_own_kb(self) -> None:

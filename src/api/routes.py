@@ -7,6 +7,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session, selectinload
 
 from src.db import get_db
+from src.lib.arvan_client import ArvanAIError
 from src.models import (
     Certificate,
     CoachMessage,

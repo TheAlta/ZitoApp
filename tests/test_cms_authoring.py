@@ -14,7 +14,7 @@ from src.lib.arvan_client import ArvanAIError
 from src.main import app
 from src.models import CourseKbDocument, CourseKbIndexJob, Exam
 from src.seed import seed_defaults
-from src.services.cms import stage_flow
+from src.services.cms import CMS_MODULE_STAGE_COUNT, stage_flow
 from src.services.rag import run_pending_index_jobs
 
 
@@ -54,11 +54,26 @@ class CmsAuthoringTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         return client
 
-    def test_supported_stage_flows_keep_assessment_and_completion_at_the_end(self) -> None:
-        for count in (7, 8, 9):
-            flow = stage_flow(count)
-            self.assertEqual(len(flow), count)
-            self.assertEqual(flow[-2:], ("module_assessment", "module_completion"))
+    def test_cms_uses_the_existing_eight_station_learning_flow(self) -> None:
+        flow = stage_flow(CMS_MODULE_STAGE_COUNT)
+        self.assertEqual(CMS_MODULE_STAGE_COUNT, 8)
+        self.assertEqual(len(flow), 8)
+        self.assertEqual(flow[-2:], ("module_assessment", "module_completion"))
+
+    def test_cms_ignores_a_requested_station_count_and_keeps_eight(self) -> None:
+        with self._admin_client() as client:
+            created = client.post(
+                "/api/admin/courses",
+                json={
+                    **COURSE_BRIEF,
+                    "title": "Fixed station contract",
+                    "slug": "fixed-station-contract",
+                    "module_stage_count": 7,
+                },
+            )
+            self.assertEqual(created.status_code, 201, created.text)
+            self.assertEqual(created.json()["module_stage_count"], 8)
+            self.assertEqual(created.json()["authoring_brief"]["module_stage_count"], 8)
 
     def test_admin_can_create_generate_and_edit_a_draft_course(self) -> None:
         with self._admin_client() as client:
@@ -274,6 +289,56 @@ class CmsAuthoringTests(unittest.TestCase):
             self.assertTrue(coach.json()["citations"])
             self.assertIn("User research for product", coach.json()["citations"][0]["title"])
 
+    def test_admin_can_deactivate_soft_delete_and_restore_a_course(self) -> None:
+        brief = {**COURSE_BRIEF, "title": "Course lifecycle", "slug": "course-lifecycle"}
+        with self._admin_client() as client:
+            draft = client.post("/api/admin/courses", json=brief).json()
+            generated = client.post(
+                f"/api/admin/courses/{draft['course_id']}/versions/1/generate"
+            )
+            self.assertEqual(generated.status_code, 200, generated.text)
+            published = client.post(
+                f"/api/admin/courses/{draft['course_id']}/versions/1/publish"
+            )
+            self.assertEqual(published.status_code, 200, published.text)
+            course_id = draft["course_id"]
+            version_number = draft["version_number"]
+
+            deactivated = client.post(
+                f"/api/admin/courses/{course_id}/versions/{version_number}/deactivate"
+            )
+            self.assertEqual(deactivated.status_code, 200, deactivated.text)
+            self.assertEqual(deactivated.json()["course_status"], "inactive")
+            self.assertNotIn(
+                "course-lifecycle",
+                {course["slug"] for course in client.get("/api/courses").json()},
+            )
+
+            reactivated = client.post(
+                f"/api/admin/courses/{course_id}/versions/{version_number}/reactivate"
+            )
+            self.assertEqual(reactivated.status_code, 200, reactivated.text)
+            self.assertEqual(reactivated.json()["course_status"], "published")
+
+            deleted = client.post(
+                f"/api/admin/courses/{course_id}/versions/{version_number}/soft-delete"
+            )
+            self.assertEqual(deleted.status_code, 200, deleted.text)
+            self.assertEqual(deleted.json()["course_status"], "deleted")
+            self.assertNotIn(
+                "course-lifecycle",
+                {course["slug"] for course in client.get("/api/courses").json()},
+            )
+
+            restored = client.post(
+                f"/api/admin/courses/{course_id}/versions/{version_number}/restore"
+            )
+            self.assertEqual(restored.status_code, 200, restored.text)
+            self.assertEqual(restored.json()["course_status"], "published")
+            self.assertIn(
+                "course-lifecycle",
+                {course["slug"] for course in client.get("/api/courses").json()},
+            )
 
     def test_published_course_is_edited_through_an_isolated_revision(self) -> None:
         revision_brief = {**COURSE_BRIEF, "title": "Revision source course", "slug": "revision-source-course"}

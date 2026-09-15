@@ -36,6 +36,7 @@ from src.services.rag import document_content_checksum, ensure_course_rag_config
 
 CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v1"
 CMS_MODULE_PROMPT_VERSION = "cms-course-module-v1"
+CMS_MODULE_STAGE_COUNT = 8
 CMS_SUPPORTED_STAGE_COUNTS = {7, 8, 9}
 
 _STAGE_FLOWS: dict[int, tuple[str, ...]] = {
@@ -160,8 +161,9 @@ def create_course_draft(db: Session, brief: dict[str, Any]) -> tuple[Course, Cou
     if not title or not topic:
         raise CmsError("نام و موضوع دوره باید وارد شوند.")
 
-    stage_count = int(brief.get("module_stage_count") or 8)
-    stage_flow(stage_count)
+    # CMS courses always use Zito's established eight-station learning flow.
+    stage_count = CMS_MODULE_STAGE_COUNT
+    brief = {**brief, "module_stage_count": stage_count}
     requested_slug = str(brief.get("slug") or title)
     course = Course(
         title=title,
@@ -202,7 +204,7 @@ def create_course_revision(db: Session, course: Course) -> CourseVersion:
         source="cms_revision",
         overview_json=deepcopy(source.overview_json),
         authoring_brief_json=deepcopy(source.authoring_brief_json),
-        module_stage_count=source.module_stage_count,
+        module_stage_count=CMS_MODULE_STAGE_COUNT,
         requires_final_exam=source.requires_final_exam,
         generation_status="edited",
         generation_model=source.generation_model,
@@ -365,7 +367,7 @@ def _mock_stage_content(stage_type: str, module: dict[str, Any], brief: dict[str
 
 def _mock_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
     module_count = int(brief["module_count"])
-    stage_count = int(brief.get("module_stage_count") or 8)
+    stage_count = CMS_MODULE_STAGE_COUNT
     modules: list[GeneratedModule] = []
     for number in range(1, module_count + 1):
         module = {
@@ -392,8 +394,8 @@ def _mock_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
 
 async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
     """Generate an outline then each module with the CMS model contract."""
-    stage_count = int(brief.get("module_stage_count") or 8)
-    stage_flow(stage_count)
+    stage_count = CMS_MODULE_STAGE_COUNT
+    brief = {**brief, "module_stage_count": stage_count}
     if get_settings().arvan_mock_ai:
         return _mock_curriculum(brief)
 
@@ -449,7 +451,7 @@ def replace_draft_curriculum(db: Session, version: CourseVersion, curriculum: Ge
     """Replace only draft generated content; published versions are immutable."""
     if version.status == "published":
         raise CmsError("نسخه منتشرشده قابل بازنویسی نیست؛ یک نسخه جدید بساز.")
-    expected_count = version.module_stage_count or 8
+    expected_count = CMS_MODULE_STAGE_COUNT
     stage_flow(expected_count)
     template_by_code = {
         item.code: item
@@ -582,7 +584,9 @@ def publish_draft_version(db: Session, course: Course, version: CourseVersion) -
         raise CmsError("پیش‌نویس با چارچوب فعلی آماده انتشار نیست؛ ابتدا تولید AI را کامل کن.")
     brief = version.authoring_brief_json if isinstance(version.authoring_brief_json, dict) else {}
     expected_module_count = int(brief.get("module_count") or 0)
-    expected_stage_count = version.module_stage_count or 8
+    expected_stage_count = version.module_stage_count or CMS_MODULE_STAGE_COUNT
+    if expected_stage_count != CMS_MODULE_STAGE_COUNT:
+        raise CmsError("نسخه‌های CMS باید با جریان ثابت ۸ ایستگاه تولید شوند؛ ابتدا دوباره تولید کن.")
     expected_flow = stage_flow(expected_stage_count)
     modules = db.scalars(
         select(CourseModule)

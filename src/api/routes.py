@@ -109,6 +109,7 @@ from src.services.final_exam import (
 )
 from src.services.personalized_stage import generate_personalized_work_example
 from src.services.cms import (
+    CMS_MODULE_STAGE_COUNT,
     CmsError,
     create_course_draft,
     create_course_revision,
@@ -2106,14 +2107,11 @@ def patch_admin_course_brief(
     if version.status == "published":
         raise HTTPException(status_code=409, detail="نسخه منتشرشده را ویرایش نکن؛ ابتدا نسخه جدید بساز.")
     current_brief = dict(version.authoring_brief_json or {})
+    previous_stage_count = version.module_stage_count or CMS_MODULE_STAGE_COUNT
     updates = payload.model_dump(exclude_unset=True)
-    brief = {**current_brief, **updates}
-    try:
-        stage_flow(int(brief.get("module_stage_count") or 8))
-    except CmsError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    brief = {**current_brief, **updates, "module_stage_count": CMS_MODULE_STAGE_COUNT}
     version.authoring_brief_json = brief
-    version.module_stage_count = int(brief.get("module_stage_count") or 8)
+    version.module_stage_count = CMS_MODULE_STAGE_COUNT
     version.requires_final_exam = bool(brief.get("requires_final_exam", True))
     curriculum_fields = {
         "title",
@@ -2125,10 +2123,9 @@ def patch_admin_course_brief(
         "level",
         "module_count",
         "estimated_learning_hours",
-        "module_stage_count",
         "domain",
     }
-    curriculum_changed = any(
+    curriculum_changed = previous_stage_count != CMS_MODULE_STAGE_COUNT or any(
         field in updates and updates[field] != current_brief.get(field)
         for field in curriculum_fields
     )
@@ -2139,6 +2136,72 @@ def patch_admin_course_brief(
     version.generation_error = None
     db.commit()
     return _cms_version_out(db, course, version)
+
+
+def _set_course_visibility(
+    db: Session,
+    course_id: int,
+    version_number: int,
+    *,
+    action: str,
+) -> CmsCourseVersionOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    if action == "deactivate":
+        if course.status != "published":
+            raise HTTPException(status_code=409, detail="فقط دوره منتشرشده را می‌توان غیرفعال کرد.")
+        course.status = "inactive"
+    elif action == "reactivate":
+        if course.status != "inactive":
+            raise HTTPException(status_code=409, detail="فقط دوره غیرفعال را می‌توان فعال کرد.")
+        course.status = "published"
+    elif action == "soft-delete":
+        if course.status == "deleted":
+            raise HTTPException(status_code=409, detail="این دوره قبلاً حذف نرم شده است.")
+        course.status = "deleted"
+    elif action == "restore":
+        if course.status != "deleted":
+            raise HTTPException(status_code=409, detail="فقط دوره حذف‌شده را می‌توان بازیابی کرد.")
+        course.status = "published" if _published_version_for(course) else "draft"
+    else:  # pragma: no cover - internal routing guard
+        raise HTTPException(status_code=400, detail="عملیات دوره معتبر نیست.")
+    db.commit()
+    return _cms_version_out(db, course, version)
+
+
+@router.post(
+    "/api/admin/courses/{course_id}/versions/{version_number}/deactivate",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+def deactivate_admin_course(course_id: int, version_number: int, db: Session = Depends(get_db)) -> CmsCourseVersionOut:
+    return _set_course_visibility(db, course_id, version_number, action="deactivate")
+
+
+@router.post(
+    "/api/admin/courses/{course_id}/versions/{version_number}/reactivate",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+def reactivate_admin_course(course_id: int, version_number: int, db: Session = Depends(get_db)) -> CmsCourseVersionOut:
+    return _set_course_visibility(db, course_id, version_number, action="reactivate")
+
+
+@router.post(
+    "/api/admin/courses/{course_id}/versions/{version_number}/soft-delete",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+def soft_delete_admin_course(course_id: int, version_number: int, db: Session = Depends(get_db)) -> CmsCourseVersionOut:
+    return _set_course_visibility(db, course_id, version_number, action="soft-delete")
+
+
+@router.post(
+    "/api/admin/courses/{course_id}/versions/{version_number}/restore",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+def restore_admin_course(course_id: int, version_number: int, db: Session = Depends(get_db)) -> CmsCourseVersionOut:
+    return _set_course_visibility(db, course_id, version_number, action="restore")
 
 
 @router.post(
@@ -2158,6 +2221,9 @@ async def generate_admin_course(
     if not brief:
         raise HTTPException(status_code=422, detail="فرم تدوین دوره کامل نیست.")
 
+    brief = {**brief, "module_stage_count": CMS_MODULE_STAGE_COUNT}
+    version.authoring_brief_json = brief
+    version.module_stage_count = CMS_MODULE_STAGE_COUNT
     version.generation_status = "generating"
     version.generation_error = None
     db.commit()

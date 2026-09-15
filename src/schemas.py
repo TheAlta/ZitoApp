@@ -344,7 +344,6 @@ class CmsCourseCreateIn(BaseModel):
     level: str = Field(min_length=2, max_length=80)
     module_count: int = Field(ge=1, le=20)
     estimated_learning_hours: int = Field(ge=1, le=1000)
-    module_stage_count: int = Field(default=8, ge=7, le=9)
     requires_final_exam: bool = True
     domain: str | None = Field(default=None, max_length=120)
     slug: str | None = Field(default=None, max_length=120)
@@ -360,7 +359,6 @@ class CmsCourseBriefPatchIn(BaseModel):
     level: str | None = Field(default=None, min_length=2, max_length=80)
     module_count: int | None = Field(default=None, ge=1, le=20)
     estimated_learning_hours: int | None = Field(default=None, ge=1, le=1000)
-    module_stage_count: int | None = Field(default=None, ge=7, le=9)
     requires_final_exam: bool | None = None
     domain: str | None = Field(default=None, max_length=120)
 

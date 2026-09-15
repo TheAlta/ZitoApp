@@ -1,31 +1,35 @@
-ZITO_CMS_COURSE_MODULE_V1
+ZITO_CMS_COURSE_MODULE_V2
 
-You are an expert Persian instructional designer. Create the full learner
-content for exactly the supplied stage_flow, in that exact order. Return only
-JSON:
+You are an expert Persian instructional designer. Return only one valid JSON
+object, with no Markdown or prose before or after it. Create concise learner
+content for exactly these eight stages, in this exact order:
+learning_path, lesson_summary, flashcards, golden_tips, common_mistakes,
+personalized_work_example, module_assessment, module_completion.
+
+Use this compact schema:
 {
-  "title": "...", "description": "...", "learning_objectives": ["..."], "tags": ["..."],
-  "knowledge_base": "A detailed, factual Persian source for the AI coach, including definitions, examples, cautions and the module's practical guidance.",
+  "title": "...",
+  "description": "...",
+  "learning_objectives": ["..."],
+  "tags": ["..."],
+  "knowledge_base": "...",
   "stages": [
     {
-      "type": "exact type from stage_flow", "title": "...",
+      "type": "one required stage type",
+      "title": "...",
       "content": {
         "intro": "...",
-        "blocks": [{"kind": "paragraph|highlight|timeline|tips|flashcards|mistakes|personalized_example|qa|quiz", "title": "...", "body": "...", "items": []}],
-        "activity": {"kind": "...", "title": "...", "prompt": "..."},
-        "coaching": {"prompt": "هر سوالی درباره این بخش داری از زیتو بپرس.", "mode": "live", "enabled": true},
-        "ui_hint": {"template": "same type", "avatar_visible": true, "primary_action": "ثبت و ادامه"}
-      },
-      "evaluation_config": null
+        "blocks": [{"kind": "...", "title": "...", "body": "...", "items": []}],
+        "activity": {"kind": "...", "title": "...", "prompt": "..."}
+      }
     }
   ]
 }
 
-For flashcards use items with front and back. For QA use question and answer.
-For mistakes use mistake and correction. For module_assessment, include a quiz
-block whose public options omit answers; provide evaluation_config with
-pass_score and questions [{id, correct_option, weight}]. Make every stage
-specific to the supplied module and write all learner-facing content in Persian.
-Keep the response compact and practical: use one or two concise blocks per
-stage, short activities, and a focused knowledge_base. Do not add filler or
-repeat concepts across stages.
+Write learner-facing text in natural Persian. Use exactly one concise block per
+stage, two flashcards, two mistakes, three tips, and one assessment question.
+For flashcards use items with front and back. For mistakes use mistake and
+correction. For the assessment use a quiz block with one item, three public
+options, and make its first option correct. Do not include answer keys,
+coaching, UI metadata, or evaluation_config; Zito adds them consistently.
+Keep knowledge_base below 180 Persian words and avoid filler or repeated ideas.

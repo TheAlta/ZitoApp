@@ -35,8 +35,8 @@ from src.services.json_utils import parse_json_object
 from src.services.rag import document_content_checksum, ensure_course_rag_config, sync_document_chunks
 
 
-CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v1"
-CMS_MODULE_PROMPT_VERSION = "cms-course-module-v1"
+CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v2"
+CMS_MODULE_PROMPT_VERSION = "cms-course-module-v2"
 CMS_MODULE_STAGE_COUNT = 8
 CMS_SUPPORTED_STAGE_COUNTS = {7, 8, 9}
 
@@ -267,11 +267,34 @@ def _required_string(value: Any, label: str, maximum: int = 2000) -> str:
     return text[:maximum]
 
 
+def _assessment_config_from_content(content: dict[str, Any]) -> dict[str, Any]:
+    for block in content.get("blocks", []):
+        if not isinstance(block, dict) or block.get("kind") != "quiz":
+            continue
+        for item in block.get("items", []):
+            if not isinstance(item, dict):
+                continue
+            options = item.get("options")
+            if isinstance(options, list) and options and str(options[0]).strip():
+                question_id = str(item.get("id") or "q1").strip()
+                return {
+                    "pass_score": 60,
+                    "questions": [{
+                        "id": question_id,
+                        "correct_option": str(options[0]).strip(),
+                        "weight": 100,
+                    }],
+                }
+    raise CmsError("AI برای آزمونک سرفصل، گزینه‌های معتبر تولید نکرد.")
+
+
 def _module_from_response(data: dict[str, Any], number: int, stage_count: int) -> GeneratedModule:
     expected_flow = stage_flow(stage_count)
     raw_stages = data.get("stages")
     if not isinstance(raw_stages, list) or len(raw_stages) != stage_count:
         raise CmsError(f"AI باید برای هر سرفصل دقیقاً {stage_count} ایستگاه بسازد.")
+
+    module_title = _required_string(data.get("title"), "عنوان سرفصل", 255)
 
     stages: list[dict[str, Any]] = []
     for index, stage_type in enumerate(expected_flow, start=1):
@@ -281,19 +304,42 @@ def _module_from_response(data: dict[str, Any], number: int, stage_count: int) -
         content = raw_stage.get("content")
         if not isinstance(content, dict):
             raise CmsError(f"محتوای ایستگاه {index} معتبر نیست.")
+        content = {
+            **content,
+            "coaching": content.get("coaching") if isinstance(content.get("coaching"), dict) else {
+                "prompt": "هر سوالی درباره این بخش داری از زیتو بپرس.",
+                "mode": "live",
+                "enabled": True,
+            },
+            "ui_hint": content.get("ui_hint") if isinstance(content.get("ui_hint"), dict) else {
+                "template": stage_type,
+                "avatar_visible": True,
+                "primary_action": "ثبت و ادامه",
+            },
+            "module": content.get("module") if isinstance(content.get("module"), dict) else {
+                "title": module_title,
+            },
+        }
+        evaluation_config = (
+            raw_stage.get("evaluation_config")
+            if isinstance(raw_stage.get("evaluation_config"), dict)
+            else None
+        )
+        if stage_type == "module_assessment" and evaluation_config is None:
+            evaluation_config = _assessment_config_from_content(content)
         stages.append(
             {
                 "stage_number": index,
                 "type": stage_type,
                 "title": _required_string(raw_stage.get("title") or _STAGE_TITLES[stage_type], "عنوان ایستگاه", 255),
                 "content_json": content,
-                "evaluation_config_json": raw_stage.get("evaluation_config") if isinstance(raw_stage.get("evaluation_config"), dict) else None,
+                "evaluation_config_json": evaluation_config,
             }
         )
 
     return GeneratedModule(
         number=number,
-        title=_required_string(data.get("title"), "عنوان سرفصل", 255),
+        title=module_title,
         description=_required_string(data.get("description"), "توضیح سرفصل"),
         learning_objectives=_as_strings(data.get("learning_objectives"), limit=6),
         tags=_as_strings(data.get("tags"), limit=10),
@@ -320,6 +366,21 @@ def _overview_from_response(data: dict[str, Any], brief: dict[str, Any]) -> dict
         "audience": str(brief.get("audience") or "").strip(),
         "target_group": str(brief.get("target_group") or "").strip(),
         "level": str(brief.get("level") or "").strip(),
+    }
+
+
+def _uses_prompt_json(model: str) -> bool:
+    """GPT-5.1 on the configured gateway rejects native JSON mode."""
+    return model.strip().lower().startswith("gpt-")
+
+
+def _generation_options(model: str, *, output_budget: int) -> dict[str, Any]:
+    if _uses_prompt_json(model):
+        return {"max_completion_tokens": output_budget}
+    return {
+        "response_format": {"type": "json_object"},
+        "max_tokens": output_budget,
+        "reasoning_effort": "low",
     }
 
 
@@ -406,13 +467,11 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
         load_prompt("course_outline_generation.md"),
         json.dumps({"brief": brief}, ensure_ascii=False),
         temperature=0.35,
-        response_format={"type": "json_object"},
         model=model,
         api_base_url=settings.effective_content_generation_api_base_url,
         api_key=settings.effective_content_generation_api_key,
         timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-        max_tokens=1100,
-        reasoning_effort="low",
+        **_generation_options(model, output_budget=1900),
     )
     outline = parse_json_object(outline_raw)
     raw_modules = outline.get("modules")
@@ -431,21 +490,15 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
                     "brief": brief,
                     "module": module_outline,
                     "module_number": number,
-                    "stage_flow": [
-                        {"type": stage_type, "title": _STAGE_TITLES[stage_type]}
-                        for stage_type in stage_flow(stage_count)
-                    ],
                 },
                 ensure_ascii=False,
             ),
             temperature=0.35,
-            response_format={"type": "json_object"},
             model=model,
             api_base_url=settings.effective_content_generation_api_base_url,
             api_key=settings.effective_content_generation_api_key,
             timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-            max_tokens=2600,
-            reasoning_effort="low",
+            **_generation_options(model, output_budget=2048),
         )
         return _module_from_response(parse_json_object(module_raw), number, stage_count)
 

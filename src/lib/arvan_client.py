@@ -305,6 +305,7 @@ async def ask_ai(
     temperature: float = 0.2,
     response_format: dict[str, Any] | None = None,
     max_tokens: int | None = None,
+    max_completion_tokens: int | None = None,
     reasoning_effort: str | None = None,
     model: str | None = None,
     api_base_url: str | None = None,
@@ -334,6 +335,8 @@ async def ask_ai(
         payload["response_format"] = response_format
     if max_tokens is not None:
         payload["max_tokens"] = max_tokens
+    if max_completion_tokens is not None:
+        payload["max_completion_tokens"] = max_completion_tokens
     if reasoning_effort:
         payload["reasoning_effort"] = reasoning_effort
 

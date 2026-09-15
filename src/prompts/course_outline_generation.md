@@ -16,3 +16,7 @@ non-repetitive course outline from the supplied JSON brief. Return only JSON:
 Generate exactly brief.module_count modules. Write all learner-facing text in
 natural Persian. Each module must teach a distinct progression; do not repeat
 the same concept under different titles. Do not make unsupported claims.
+
+Keep the JSON compact: use one concise sentence for each text field, at most
+two learning objectives and two tags per module, and at most two items in each
+overview list. Do not use Markdown fences or prose before or after the JSON.

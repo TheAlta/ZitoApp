@@ -7,6 +7,7 @@ course version, so publishing a revision cannot change an active path.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from copy import deepcopy
@@ -410,6 +411,8 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
         api_base_url=settings.effective_content_generation_api_base_url,
         api_key=settings.effective_content_generation_api_key,
         timeout_seconds=settings.arvan_content_generation_timeout_seconds,
+        max_tokens=1100,
+        reasoning_effort="low",
     )
     outline = parse_json_object(outline_raw)
     raw_modules = outline.get("modules")
@@ -418,8 +421,7 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
         raise CmsError("AI تعداد سرفصل‌های درخواستی را تولید نکرد.")
     overview = _overview_from_response(outline.get("overview") if isinstance(outline.get("overview"), dict) else {}, brief)
 
-    modules: list[GeneratedModule] = []
-    for number, module_outline in enumerate(raw_modules, start=1):
+    async def generate_module(number: int, module_outline: Any) -> GeneratedModule:
         if not isinstance(module_outline, dict):
             raise CmsError("فهرست سرفصل‌های تولیدشده معتبر نیست.")
         module_raw = await ask_ai(
@@ -442,8 +444,16 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
             api_base_url=settings.effective_content_generation_api_base_url,
             api_key=settings.effective_content_generation_api_key,
             timeout_seconds=settings.arvan_content_generation_timeout_seconds,
+            max_tokens=2600,
+            reasoning_effort="low",
         )
-        modules.append(_module_from_response(parse_json_object(module_raw), number, stage_count))
+        return _module_from_response(parse_json_object(module_raw), number, stage_count)
+
+    modules = list(
+        await asyncio.gather(
+            *(generate_module(number, module_outline) for number, module_outline in enumerate(raw_modules, start=1))
+        )
+    )
     return GeneratedCurriculum(overview=overview, modules=modules)
 
 

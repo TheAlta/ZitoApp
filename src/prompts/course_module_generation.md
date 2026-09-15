@@ -26,3 +26,6 @@ For mistakes use mistake and correction. For module_assessment, include a quiz
 block whose public options omit answers; provide evaluation_config with
 pass_score and questions [{id, correct_option, weight}]. Make every stage
 specific to the supplied module and write all learner-facing content in Persian.
+Keep the response compact and practical: use one or two concise blocks per
+stage, short activities, and a focused knowledge_base. Do not add filler or
+repeat concepts across stages.

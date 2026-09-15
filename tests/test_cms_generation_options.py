@@ -4,7 +4,13 @@ from tests._env import setup_test_environment
 
 setup_test_environment()
 
-from src.services.cms import _generation_options, _module_from_response, stage_flow
+from src.services.cms import (
+    _ai_generation_brief,
+    _generation_options,
+    _module_from_response,
+    _stages_from_outline,
+    stage_flow,
+)
 
 
 class CmsGenerationOptionsTests(unittest.TestCase):
@@ -59,3 +65,39 @@ class CmsGenerationOptionsTests(unittest.TestCase):
         assessment = next(stage for stage in module.stages if stage["type"] == "module_assessment")
         self.assertEqual(assessment["evaluation_config_json"]["questions"][0]["correct_option"], "First")
         self.assertTrue(assessment["content_json"]["coaching"]["enabled"])
+
+    def test_gpt_outline_uses_a_safe_brief_and_builds_all_stages_locally(self) -> None:
+        brief = {
+            "title": "Course title",
+            "topic": "Course topic",
+            "goal": "Practice the topic",
+            "duration": "Two weeks",
+            "audience": "Beginners",
+            "target_group": "Team members",
+            "level": "Beginner",
+            "module_count": 2,
+            "estimated_learning_hours": 6,
+            "module_stage_count": 8,
+            "slug": "internal-slug",
+            "domain": "internal-domain",
+            "requires_final_exam": True,
+        }
+
+        ai_brief = _ai_generation_brief(brief)
+        self.assertNotIn("slug", ai_brief)
+        self.assertNotIn("domain", ai_brief)
+        self.assertNotIn("requires_final_exam", ai_brief)
+
+        module = _stages_from_outline(
+            {
+                "title": "A generated outline module",
+                "description": "A generated outline description",
+                "learning_objectives": ["Apply one concept"],
+                "tags": ["topic"],
+            },
+            brief,
+            number=1,
+        )
+        self.assertEqual(len(module.stages), 8)
+        self.assertEqual(module.stages[-2]["type"], "module_assessment")
+        self.assertIsNotNone(module.stages[-2]["evaluation_config_json"])

@@ -40,6 +40,19 @@ CMS_MODULE_PROMPT_VERSION = "cms-course-module-v2"
 CMS_MODULE_STAGE_COUNT = 8
 CMS_SUPPORTED_STAGE_COUNTS = {7, 8, 9}
 
+_AI_BRIEF_FIELDS = (
+    "title",
+    "topic",
+    "goal",
+    "duration",
+    "audience",
+    "target_group",
+    "level",
+    "module_count",
+    "estimated_learning_hours",
+    "module_stage_count",
+)
+
 _STAGE_FLOWS: dict[int, tuple[str, ...]] = {
     7: (
         "learning_path",
@@ -384,6 +397,15 @@ def _generation_options(model: str, *, output_budget: int) -> dict[str, Any]:
     }
 
 
+def _ai_generation_brief(brief: dict[str, Any]) -> dict[str, Any]:
+    """Keep internal CMS metadata out of the external generation payload."""
+    return {
+        field: brief[field]
+        for field in _AI_BRIEF_FIELDS
+        if field in brief
+    }
+
+
 def _mock_stage_content(stage_type: str, module: dict[str, Any], brief: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any] | None]:
     title = str(module["title"])
     topic = str(brief["topic"])
@@ -454,6 +476,56 @@ def _mock_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
     return GeneratedCurriculum(_overview_from_response(overview, brief), modules)
 
 
+def _stages_from_outline(module: dict[str, Any], brief: dict[str, Any], number: int) -> GeneratedModule:
+    """Build the fixed learner flow from an AI-authored module outline.
+
+    GPT-5.1 on the current gateway accepts course outlining but rejects the
+    large nested module payload. The learner flow itself is a Zito-owned,
+    stable contract, so it is safely assembled here from the generated plan.
+    """
+    title = _required_string(module.get("title"), "عنوان سرفصل", 255)
+    description = _required_string(module.get("description"), "توضیح سرفصل")
+    objectives = _as_strings(module.get("learning_objectives"), limit=6)
+    if not objectives:
+        objectives = [f"کاربرد {brief.get('topic') or title} در یک موقعیت واقعی"]
+    tags = _as_strings(module.get("tags"), limit=10) or [str(brief.get("topic") or title)]
+    source_module = {
+        "title": title,
+        "description": description,
+        "learning_objectives": objectives,
+        "tags": tags,
+    }
+    stages: list[dict[str, Any]] = []
+    for stage_number, stage_type in enumerate(stage_flow(CMS_MODULE_STAGE_COUNT), start=1):
+        content, evaluation = _mock_stage_content(stage_type, source_module, brief)
+        stages.append(
+            {
+                "stage_number": stage_number,
+                "type": stage_type,
+                "title": _STAGE_TITLES[stage_type],
+                "content_json": content,
+                "evaluation_config_json": evaluation,
+            }
+        )
+    knowledge_base = "\n".join(
+        [
+            f"عنوان سرفصل: {title}",
+            f"توضیح: {description}",
+            "اهداف: " + " | ".join(objectives),
+            f"راهنمای تمرین: این سرفصل را در یک موقعیت واقعی از {brief.get('topic') or title} اجرا و نتیجه را مرور کن.",
+        ]
+    )
+    return GeneratedModule(
+        number=number,
+        title=title,
+        description=description,
+        learning_objectives=objectives,
+        tags=tags,
+        stages=stages,
+        knowledge_base=knowledge_base,
+    )
+
+
 async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
     """Generate an outline then each module with the CMS model contract."""
     stage_count = CMS_MODULE_STAGE_COUNT
@@ -463,15 +535,16 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
 
     settings = get_settings()
     model = settings.effective_content_generation_model
+    ai_brief = _ai_generation_brief(brief)
     outline_raw = await ask_ai(
         load_prompt("course_outline_generation.md"),
-        json.dumps({"brief": brief}, ensure_ascii=False),
-        temperature=0.35,
+        json.dumps({"brief": ai_brief}, ensure_ascii=False),
+        temperature=0.2,
         model=model,
         api_base_url=settings.effective_content_generation_api_base_url,
         api_key=settings.effective_content_generation_api_key,
         timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-        **_generation_options(model, output_budget=1900),
+        **_generation_options(model, output_budget=2048),
     )
     outline = parse_json_object(outline_raw)
     raw_modules = outline.get("modules")
@@ -480,6 +553,16 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
         raise CmsError("AI تعداد سرفصل‌های درخواستی را تولید نکرد.")
     overview = _overview_from_response(outline.get("overview") if isinstance(outline.get("overview"), dict) else {}, brief)
 
+    if _uses_prompt_json(model):
+        modules = [
+            _stages_from_outline(module_outline, brief, number)
+            for number, module_outline in enumerate(raw_modules, start=1)
+            if isinstance(module_outline, dict)
+        ]
+        if len(modules) != module_count:
+            raise CmsError("فهرست سرفصل‌های تولیدشده معتبر نیست.")
+        return GeneratedCurriculum(overview=overview, modules=modules)
+
     async def generate_module(number: int, module_outline: Any) -> GeneratedModule:
         if not isinstance(module_outline, dict):
             raise CmsError("فهرست سرفصل‌های تولیدشده معتبر نیست.")
@@ -487,13 +570,13 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
             load_prompt("course_module_generation.md"),
             json.dumps(
                 {
-                    "brief": brief,
+                    "brief": ai_brief,
                     "module": module_outline,
                     "module_number": number,
                 },
                 ensure_ascii=False,
             ),
-            temperature=0.35,
+            temperature=0.2,
             model=model,
             api_base_url=settings.effective_content_generation_api_base_url,
             api_key=settings.effective_content_generation_api_key,

@@ -385,7 +385,7 @@
     .brand {
       position: relative;
       z-index: 5;
-      margin-top: 6vh;
+      margin-top: clamp(32px, 6vh, 72px);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -395,31 +395,20 @@
 
     /* درخشش لوگو حذف شد تا پس‌زمینه‌ی عکس معلوم نشه */
     .logo-img {
-      width: 130px;
+      width: clamp(112px, 11vw, 152px);
       height: auto;
       display: block;
       object-fit: contain;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
     }
 
     .wordmark-zito {
-      margin-top: -5px;
+      margin-top: 0;
       font-family: var(--font-en);
       font-weight: 800;
-      font-size: 40px;
-      letter-spacing: 6px;
-      color: #ffffff;
-      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-    }
-
-    .sub-en {
-      margin-top: 6px;
-      font-family: var(--font-fa);
-      font-weight: 400;
-      font-size: 13px;
-      line-height: 1.5;
-      color: rgba(255, 255, 255, 0.7);
-      max-width: 220px;
+      font-size: clamp(32px, 4.1vw, 48px);
+      line-height: .95;
+      letter-spacing: clamp(4px, .52vw, 7px);
     }
 
     /* ---------- آواتار ---------- */
@@ -795,19 +784,15 @@
     /* ========================================================= */
     @media (min-width: 1024px) {
       .brand {
-        margin-top: 6vh;
+        margin-top: clamp(42px, 6vh, 72px);
       }
 
       .logo-img {
-        width: 160px;
+        width: clamp(132px, 10vw, 152px);
       }
 
       .wordmark-zito {
-        font-size: 46px;
-      }
-
-      .sub-en {
-        font-size: 17px;
+        font-size: clamp(38px, 3vw, 48px);
       }
 
       .avatar-wrap {
@@ -842,24 +827,17 @@
     /* ========================================================= */
     @media (max-width: 640px) {
       .brand {
-        margin-top: 10vh;
+        margin-top: clamp(34px, 8svh, 56px);
       }
 
       .logo-img {
-        width: 180px;
-        margin-bottom: 15px;
+        width: clamp(116px, 34vw, 142px);
+        margin-bottom: 5px;
       }
 
       .wordmark-zito {
-        font-size: 43px;
-        letter-spacing: 4px;
-      }
-
-      .sub-en {
-        font-size: 14px;
-        font-weight: bold;
-        max-width: 160px;
-        margin-top: 0;
+        font-size: clamp(31px, 9.6vw, 40px);
+        letter-spacing: clamp(3px, 1.1vw, 5px);
       }
 
       .avatar-wrap {
@@ -994,11 +972,48 @@
     }
 
     .wordmark-zito {
-      color: #3b3758;
-      text-shadow: 0 4px 20px rgba(155, 114, 171, .14);
+      position: relative;
+      isolation: isolate;
+      display: inline-grid;
+      place-items: center;
+      margin-top: clamp(12px, 1.5vw, 20px);
+      padding: 8px 14px;
+      color: rgba(244, 247, 255, .9);
+      overflow: visible;
     }
 
-    .sub-en { color: #766e88; }
+    .wordmark-zito::before {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      inset: -22px -36px -25px;
+      border-radius: 50%;
+      background:
+        radial-gradient(ellipse at 18% 48%, rgba(247, 167, 205, .34), transparent 56%),
+        radial-gradient(ellipse at 82% 53%, rgba(103, 210, 225, .40), transparent 58%),
+        radial-gradient(ellipse at 52% 90%, rgba(152, 114, 224, .23), transparent 62%);
+      filter: blur(13px);
+      opacity: .9;
+      pointer-events: none;
+    }
+
+    .wordmark-zito > span {
+      display: inline-block;
+      background: linear-gradient(112deg, #ffffff 5%, #dce9ff 28%, #f7edff 50%, #8fe2ea 72%, #fefeff 96%);
+      background-size: 190% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      -webkit-text-stroke: 1px rgba(255, 255, 255, .56);
+      filter: drop-shadow(0 2px 0 rgba(255, 255, 255, .72)) drop-shadow(0 8px 16px rgba(93, 84, 166, .22));
+      text-shadow: none;
+      animation: wordmarkSheen 7s ease-in-out infinite alternate;
+    }
+
+    @keyframes wordmarkSheen {
+      from { background-position: 0% 50%; }
+      to { background-position: 100% 50%; }
+    }
 
     .chat-bubble {
       --bubble-fill: rgba(255, 253, 250, .86);
@@ -1327,10 +1342,7 @@
   <div class="brand">
     <img class="logo-img" src="/landing-static/zito-logo.svg?v=20260905-unified-z-1" alt="لوگوی زیتو">
 
-    <div class="wordmark-zito">ZITO</div>
-    <div class="sub-en">
-     زیتو  <br>همراه هوشمند یادگیری تو
-    </div>
+    <div class="wordmark-zito" aria-label="ZITO"><span aria-hidden="true">ZITO</span></div>
   </div>
 
   <!-- آواتار -->

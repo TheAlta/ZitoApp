@@ -8,6 +8,7 @@ from src.services.cms import (
     _ai_generation_brief,
     _generation_options,
     _module_from_response,
+    _supports_rich_module_generation,
     _stages_from_outline,
     stage_flow,
 )
@@ -29,6 +30,11 @@ class CmsGenerationOptionsTests(unittest.TestCase):
                 "reasoning_effort": "low",
             },
         )
+
+    def test_only_gpt_41_uses_full_module_generation(self) -> None:
+        self.assertTrue(_supports_rich_module_generation("GPT-4.1"))
+        self.assertFalse(_supports_rich_module_generation("GPT-5.1"))
+        self.assertFalse(_supports_rich_module_generation("GLM-5.3"))
 
     def test_assessment_key_is_derived_from_the_first_public_option(self) -> None:
         stages = []
@@ -65,6 +71,39 @@ class CmsGenerationOptionsTests(unittest.TestCase):
         assessment = next(stage for stage in module.stages if stage["type"] == "module_assessment")
         self.assertEqual(assessment["evaluation_config_json"]["questions"][0]["correct_option"], "First")
         self.assertTrue(assessment["content_json"]["coaching"]["enabled"])
+
+    def test_assessment_derives_each_public_question_key(self) -> None:
+        stages = []
+        for stage_type in stage_flow(8):
+            blocks = []
+            if stage_type == "module_assessment":
+                blocks = [{
+                    "kind": "quiz",
+                    "items": [
+                        {"id": "q1", "question": "First?", "options": ["Right", "Wrong", "Wrong"]},
+                        {"id": "q2", "question": "Second?", "options": ["Correct", "No", "No"]},
+                    ],
+                }]
+            stages.append({
+                "type": stage_type,
+                "title": stage_type,
+                "content": {"intro": "Short content", "blocks": blocks, "activity": {}},
+            })
+
+        module = _module_from_response(
+            {
+                "title": "Synthetic module",
+                "description": "Synthetic description",
+                "learning_objectives": ["One objective"],
+                "tags": ["synthetic"],
+                "knowledge_base": "Synthetic knowledge base",
+                "stages": stages,
+            },
+            number=1,
+            stage_count=8,
+        )
+        assessment = next(stage for stage in module.stages if stage["type"] == "module_assessment")
+        self.assertEqual(len(assessment["evaluation_config_json"]["questions"]), 2)
 
     def test_gpt_outline_uses_a_safe_brief_and_builds_all_stages_locally(self) -> None:
         brief = {

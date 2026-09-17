@@ -1151,13 +1151,25 @@
     .qa-item p { padding: 0 13px 13px; color: #6c6477; }
     .mistake-item { border-right: 3px solid rgba(205, 96, 126, .42); background: rgba(252, 241, 243, .66); }
     .dialog-item:nth-child(even) { margin-right: 24px; background: rgba(237, 246, 247, .68); }
-    .quiz-item { padding: 11px 0; border-top: 1px solid rgba(142, 109, 181, .12); }
-    .quiz-item:first-child { padding-top: 0; border-top: 0; }
-    .quiz-question { margin-bottom: 8px; font-weight: 900; }
+    .quiz-item { margin-top: 14px; padding: 17px; border: 1px solid rgba(130, 100, 171, .13); border-radius: 17px; background: linear-gradient(135deg, rgba(255, 253, 251, .76), rgba(244, 239, 250, .62)); box-shadow: 0 8px 22px rgba(108, 82, 141, .05); }
+    .quiz-item:first-child { margin-top: 0; }
+    .quiz-question { display: grid; grid-template-columns: 31px minmax(0, 1fr); align-items: start; gap: 10px; margin-bottom: 13px; color: #4e405f; font-weight: 900; line-height: 1.85; }
+    .quiz-question p { margin: 1px 0 0; }
+    .quiz-question-index { width: 31px; height: 31px; display: grid; place-items: center; color: #fff; border-radius: 11px; background: linear-gradient(145deg, #9571cc, #55a3ba); box-shadow: 0 6px 14px rgba(110, 83, 164, .19); font-size: 11px; }
     .choice-list { display: grid; gap: 7px; }
-    .choice-option, .check-option { display: flex; align-items: center; gap: 9px; padding: 9px 10px; color: #665e72; border: 1px solid rgba(137, 108, 174, .09); border-radius: 11px; background: rgba(251, 247, 249, .56); font-size: 12px; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
-    .choice-option:hover, .check-option:hover { border-color: rgba(113, 86, 177, .28); background: rgba(243, 237, 248, .72); transform: translateX(-2px); }
-    .choice-option input, .check-option input { flex: none; width: 17px; height: 17px; accent-color: #775ec5; }
+    .choice-option, .check-option { position: relative; display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 10px 12px; color: #665e72; border: 1px solid rgba(137, 108, 174, .12); border-radius: 13px; background: rgba(255, 253, 250, .66); font-size: 12px; cursor: pointer; transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease; }
+    .choice-option:hover, .check-option:hover { border-color: rgba(113, 86, 177, .32); background: rgba(250, 246, 253, .92); transform: translateX(-2px); }
+    .choice-option input, .check-option input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .choice-option-indicator { flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: transparent; border: 1px solid rgba(118, 91, 158, .22); border-radius: 50%; background: rgba(255, 255, 255, .74); box-shadow: inset 0 1px 2px rgba(93, 64, 133, .06); transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease; }
+    .choice-option-indicator::before { content: ""; width: 7px; height: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translate(-1px, -1px); }
+    .choice-option-copy { min-width: 0; font-weight: 800; line-height: 1.75; }
+    .choice-option.is-selected, .choice-option:has(input:checked) { color: #51406b; border-color: rgba(99, 135, 199, .55); background: linear-gradient(120deg, rgba(239, 229, 250, .93), rgba(226, 246, 248, .90)); box-shadow: 0 7px 18px rgba(91, 109, 172, .11); }
+    .choice-option.is-selected .choice-option-indicator, .choice-option:has(input:checked) .choice-option-indicator { color: #fff; border-color: transparent; background: linear-gradient(145deg, #916cc9, #50a5b8); transform: scale(1.05); }
+    .choice-option input:focus-visible + .choice-option-indicator { outline: 3px solid rgba(83, 150, 192, .28); outline-offset: 3px; }
+    .assessment-ready-note { display: flex; align-items: center; gap: 7px; margin: 14px 1px 0; color: #81738f; font-size: 11px; font-weight: 800; }
+    .assessment-ready-note::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(134, 104, 180, .38); box-shadow: 0 0 0 4px rgba(136, 104, 181, .09); }
+    .assessment-ready-note.is-ready { color: #377664; }
+    .assessment-ready-note.is-ready::before { background: #4ea485; box-shadow: 0 0 0 4px rgba(78, 164, 133, .12); }
     .flashcard-deck { display: grid; justify-items: center; gap: 14px; padding: 15px 0 7px; }
     .flashcard-stack { position: relative; width: min(100%, 408px); min-height: 300px; aspect-ratio: 3 / 4; perspective: 1400px; isolation: isolate; }
     .flashcard-shadow {
@@ -1349,6 +1361,7 @@
       .module-stage-focus > div + div { border-top: 1px solid rgba(127, 102, 161, .10); border-right: 0; }
       .module-stage-item { flex-basis: 124px; }
       .block-cards { grid-template-columns: 1fr; }
+      .quiz-item { padding: 14px; }
       .stage-complete-button { width: 100%; }
       .coaching-actions { flex-direction: column; align-items: stretch; text-align: center; }
       .coaching-actions button { width: 100%; }
@@ -1568,7 +1581,7 @@
       .stage-header { padding: 17px 15px; }
     }
   </style>
-  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260913-course-catalog-scroll-1">
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260917-course-preview-4">
 </head>
 <body class="zito-glass zito-glass-app">
   <main id="appShell" class="phone-shell mode-onboarding">
@@ -1706,6 +1719,15 @@
     </aside>
   </main>
 
+  <div id="coursePreviewScrim" class="course-preview-scrim" aria-hidden="true" hidden></div>
+  <section id="coursePreview" class="course-preview" role="dialog" aria-modal="false" aria-labelledby="coursePreviewTitle" hidden>
+    <button id="coursePreviewClose" class="course-preview-close" type="button" aria-label="بستن پیش‌نمایش دوره" title="بستن پیش‌نمایش">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18" /></svg>
+    </button>
+    <div class="course-preview-art" aria-hidden="true"><img id="coursePreviewImage" src="" alt=""></div>
+    <h2 id="coursePreviewTitle"></h2>
+  </section>
+
   <div id="learningToast" class="learning-toast" role="status" aria-live="polite" hidden></div>
 
   <div id="answerModal" class="answer-modal coaching-modal" aria-hidden="true">
@@ -1766,6 +1788,12 @@
     let coachingStageNumber = null;
     let currentLearningPath = null;
     let learningToastTimer = null;
+    let coursePreviewCloseTimer = null;
+    let coursePreviewHideTimer = null;
+    let coursePreviewLongPressTimer = null;
+    let coursePreviewCourse = null;
+    let coursePreviewOption = null;
+    let suppressCourseSelectionUntil = 0;
     const savedDisplayName = localStorage.getItem("zito_display_name") || "";
 
     const appShell = document.querySelector("#appShell");
@@ -1787,6 +1815,11 @@
     const coachMessage = document.querySelector("#coachMessage");
     const courseCatalog = document.querySelector("#courseCatalog");
     const courseList = document.querySelector("#courseList");
+    const coursePreviewScrim = document.querySelector("#coursePreviewScrim");
+    const coursePreview = document.querySelector("#coursePreview");
+    const coursePreviewClose = document.querySelector("#coursePreviewClose");
+    const coursePreviewImage = document.querySelector("#coursePreviewImage");
+    const coursePreviewTitle = document.querySelector("#coursePreviewTitle");
     const learningPath = document.querySelector("#learningPath");
     const activeCourseTitle = document.querySelector("#activeCourseTitle");
     const pathProgressText = document.querySelector("#pathProgressText");
@@ -1933,6 +1966,7 @@
     function addMessage(text, who = "bot") { const div = document.createElement("div"); div.className = `msg ${who}`; div.textContent = text; chat.insertBefore(div, typing); chat.scrollTop = chat.scrollHeight; }
     function addModalMessage(text, who = "bot") { const div = document.createElement("div"); div.className = `msg ${who}`; div.textContent = text; modalMessages.appendChild(div); modalMessages.scrollTop = modalMessages.scrollHeight; }
     function escapeHtml(value) { return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
+    function toPersianNumber(value) { return String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[digit]); }
     function setLearningSidebarOpen(open) {
       const isOpen = Boolean(open) && appShell.classList.contains("mode-lesson");
       appShell.classList.toggle("learning-sidebar-open", isOpen);
@@ -1989,7 +2023,50 @@
       lessonPanel.style.setProperty("--planet-b", b);
       lessonPanel.style.setProperty("--planet-c", c);
     }
+    function clearCoursePreviewCloseTimer() {
+      window.clearTimeout(coursePreviewCloseTimer);
+      coursePreviewCloseTimer = null;
+    }
+    function closeCoursePreview({ immediate = false } = {}) {
+      clearCoursePreviewCloseTimer();
+      window.clearTimeout(coursePreviewHideTimer);
+      if (coursePreview.hidden) return;
+      coursePreview.classList.remove("is-visible");
+      coursePreviewScrim.classList.remove("is-visible");
+      const finish = () => {
+        coursePreview.hidden = true;
+        coursePreviewScrim.hidden = true;
+        coursePreviewCourse = null;
+        coursePreviewOption = null;
+      };
+      if (immediate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        finish();
+      } else {
+        coursePreviewHideTimer = window.setTimeout(finish, 180);
+      }
+    }
+    function scheduleCoursePreviewClose() {
+      clearCoursePreviewCloseTimer();
+      coursePreviewCloseTimer = window.setTimeout(() => closeCoursePreview(), 260);
+    }
+    function openCoursePreview(course, option, visual, { fromTouch = false } = {}) {
+      clearCoursePreviewCloseTimer();
+      window.clearTimeout(coursePreviewHideTimer);
+      coursePreviewCourse = course;
+      coursePreviewOption = option;
+      coursePreviewImage.src = visual.icon;
+      coursePreviewTitle.textContent = course.title;
+      coursePreview.hidden = false;
+      coursePreviewScrim.hidden = false;
+      coursePreview.setAttribute("aria-label", `پیش‌نمایش دوره ${course.title}`);
+      if (fromTouch) suppressCourseSelectionUntil = Date.now() + 850;
+      window.requestAnimationFrame(() => {
+        coursePreview.classList.add("is-visible");
+        coursePreviewScrim.classList.add("is-visible");
+      });
+    }
     function renderCourseCatalog(courses) {
+      closeCoursePreview({ immediate: true });
       courseList.innerHTML = "";
       if (!courses.length) {
         courseList.innerHTML = '<div class="course-empty">فعلاً دوره منتشرشده و کامل برای شروع وجود ندارد.</div>';
@@ -2005,20 +2082,54 @@
           icon: "/landing-static/course-icons/personal-development-notebook.svg",
         },
       };
+      const rotatingCourseVisuals = [
+        { className: "course-option--mascot", icon: "/landing-static/zito-mascot.svg?v=20260831-static-2" },
+        { className: "course-option--coach", icon: "/landing-static/coach-icons/zito-glasses.svg" },
+        { className: "course-option--phone", icon: "/landing-static/course-mascot-lottie/assets/zito-state-a.png" },
+        { className: "course-option--laptop", icon: "/landing-static/course-mascot-lottie/assets/zito-state-b.png" },
+      ];
+      let nextRotatingVisual = 0;
       courses.forEach((course) => {
-        const visual = courseVisuals[course.slug] || {};
+        const visual = courseVisuals[course.slug]
+          || rotatingCourseVisuals[nextRotatingVisual++ % rotatingCourseVisuals.length];
+        const titleLength = String(course.title || "").trim().length;
         const option = document.createElement("button");
         option.type = "button";
-        option.className = `course-option ${visual.className || "course-option--default"}`;
+        option.className = `course-option ${visual.className} ${titleLength > 58 ? "course-option--extra-long-title" : titleLength > 38 ? "course-option--long-title" : ""}`;
+        option.setAttribute("aria-haspopup", "dialog");
+        option.setAttribute("aria-label", `مشاهده و شروع دوره ${course.title}`);
         option.innerHTML = `
-          <span class="course-orb-art" aria-hidden="true">
-            <img src="${visual.icon || "/landing-static/zito-logo.svg"}" alt="">
-          </span>
           <span class="course-option-copy">
             <strong>${escapeHtml(course.title)}</strong>
-            <span>${course.module_count ? `${course.module_count} سرفصل · ${course.stage_count} بخش` : `${course.stage_count} مرحله`} · نسخه ${course.version_number}</span>
+          </span>
+          <span class="course-orb-art" aria-hidden="true">
+            <img src="${visual.icon}" alt="">
           </span>`;
-        option.addEventListener("click", () => selectCourse(course, option));
+        option.addEventListener("pointerenter", (event) => {
+          if (event.pointerType === "touch") return;
+          window.setTimeout(() => {
+            if (option.matches(":hover") && !option.disabled) openCoursePreview(course, option, visual);
+          }, 340);
+        });
+        option.addEventListener("pointerleave", (event) => {
+          if (event.pointerType !== "touch") scheduleCoursePreviewClose();
+        });
+        option.addEventListener("focus", () => openCoursePreview(course, option, visual));
+        option.addEventListener("blur", () => scheduleCoursePreviewClose());
+        option.addEventListener("pointerdown", (event) => {
+          if (event.pointerType !== "touch") return;
+          window.clearTimeout(coursePreviewLongPressTimer);
+          coursePreviewLongPressTimer = window.setTimeout(() => openCoursePreview(course, option, visual, { fromTouch: true }), 520);
+        });
+        option.addEventListener("pointerup", () => window.clearTimeout(coursePreviewLongPressTimer));
+        option.addEventListener("pointercancel", () => window.clearTimeout(coursePreviewLongPressTimer));
+        option.addEventListener("click", (event) => {
+          if (Date.now() < suppressCourseSelectionUntil) {
+            event.preventDefault();
+            return;
+          }
+          selectCourse(course, option);
+        });
         courseList.appendChild(option);
       });
     }
@@ -2594,7 +2705,14 @@
         return `<section class="content-block block-${kind}">${title}<div class="block-qa">${(block.items || []).map((item, itemIndex) => `<details class="qa-item" ${itemIndex === 0 ? "open" : ""}><summary>${escapeHtml(item.question || "")}</summary><p>${escapeHtml(item.answer || "")}</p></details>`).join("")}</div></section>`;
       }
       if (kind === "quiz") {
-        return `<section class="content-block block-${kind}">${title}${(block.items || []).map((item, questionIndex) => `<div class="quiz-item"><div class="quiz-question">${escapeHtml(item.question || "")}</div><div class="choice-list">${(item.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-choice-${blockIndex}-${questionIndex}" data-assessment-question="${escapeHtml(item.id || `q-${blockIndex}-${questionIndex}`)}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></div>`).join("")}</section>`;
+        const questions = Array.isArray(block.items) ? block.items : [];
+        return `<section class="content-block block-${kind}" data-assessment-block>${title}${questions.map((item, questionIndex) => {
+          const questionId = item.id || `q-${blockIndex}-${questionIndex}`;
+          return `<div class="quiz-item" data-quiz-item>
+            <div class="quiz-question"><span class="quiz-question-index">${toPersianNumber(questionIndex + 1)}</span><p>${escapeHtml(item.question || "")}</p></div>
+            <div class="choice-list" role="radiogroup" aria-label="${escapeHtml(item.question || `سوال ${questionIndex + 1}`)}">${(item.options || []).map((option) => `<label class="choice-option" data-choice-option><input type="radio" name="stage-choice-${blockIndex}-${questionIndex}" data-assessment-question="${escapeHtml(questionId)}" value="${escapeHtml(option)}"><span class="choice-option-indicator" aria-hidden="true"></span><span class="choice-option-copy">${escapeHtml(option)}</span></label>`).join("")}</div>
+          </div>`;
+        }).join("")}<p class="assessment-ready-note" data-assessment-ready-note>به همه سؤال‌ها پاسخ بده تا نتیجه ثبت شود.</p></section>`;
       }
       if (kind === "scenario") {
         return `<section class="content-block block-scenario">${title}<p>${escapeHtml(block.body || "")}</p><div class="choice-list">${(block.options || []).map((option) => `<label class="choice-option"><input type="radio" name="stage-scenario-${blockIndex}" value="${escapeHtml(option)}"><span>${escapeHtml(option)}</span></label>`).join("")}</div></section>`;
@@ -2699,6 +2817,35 @@
       });
     }
 
+    function bindAssessmentChoices() {
+      const completeButton = lessonPanel.querySelector("[data-complete-stage]");
+      const inputs = Array.from(lessonPanel.querySelectorAll("[data-assessment-question]"));
+      const readyNote = lessonPanel.querySelector("[data-assessment-ready-note]");
+      if (!inputs.length || !completeButton) return;
+
+      const questionNames = [...new Set(inputs.map((item) => item.name))];
+      const updateState = () => {
+        inputs.forEach((input) => {
+          input.closest("[data-choice-option]")?.classList.toggle("is-selected", input.checked);
+        });
+        const answeredCount = questionNames.filter((name) => {
+          return Boolean(lessonPanel.querySelector(`[name="${CSS.escape(name)}"]:checked`));
+        }).length;
+        const ready = answeredCount === questionNames.length;
+        completeButton.disabled = !ready;
+        completeButton.textContent = ready ? "ثبت پاسخ و مشاهده نتیجه" : "ابتدا پاسخ‌ها را کامل کن";
+        if (readyNote) {
+          readyNote.classList.toggle("is-ready", ready);
+          readyNote.textContent = ready
+            ? "همه پاسخ‌ها انتخاب شدند؛ آماده ثبت نتیجه هستی."
+            : `${toPersianNumber(answeredCount)} از ${toPersianNumber(questionNames.length)} سؤال پاسخ داده شده است.`;
+        }
+      };
+
+      inputs.forEach((input) => input.addEventListener("change", updateState));
+      updateState();
+    }
+
     function renderPersonalizedExample(target, result) {
       const content = result.content || {};
       const citations = Array.isArray(result.citations) ? result.citations : [];
@@ -2733,11 +2880,14 @@
       const blocks = Array.isArray(content.blocks) ? content.blocks : [];
       const waitingForFinalExam = Boolean(lesson.final_exam_available);
       const terminal = lesson.course_completed || waitingForFinalExam;
+      const requiresAssessment = lesson.stage_type === "module_assessment";
       const completeLabel = lesson.course_completed
         ? "مسیر کامل شده است"
         : waitingForFinalExam
           ? "آماده آزمون نهایی"
-          : "تکمیل مرحله و ادامه";
+          : requiresAssessment
+            ? "ابتدا پاسخ‌ها را کامل کن"
+            : "تکمیل مرحله و ادامه";
       const templateLabel = stageLabel(lesson.stage_type);
       const moduleStageCount = lesson.module_stage_count || 20;
       const finalExamNote = waitingForFinalExam
@@ -2788,7 +2938,7 @@
           </div>
           <div class="meter"><div class="bar" style="width: ${lesson.progress_percentage}%"></div></div>
           <div class="lesson-actions">
-            <button class="stage-complete-button ${terminal ? "done" : ""}" type="button" data-complete-stage ${terminal ? "disabled" : ""}>${completeLabel}</button>
+            <button class="stage-complete-button ${terminal ? "done" : ""}" type="button" data-complete-stage ${terminal || requiresAssessment ? "disabled" : ""}>${completeLabel}</button>
           </div>
         </article>`;
       const completeButton = lessonPanel.querySelector("[data-complete-stage]");
@@ -2796,6 +2946,7 @@
       lessonPanel.querySelector("[data-open-final-exam]")?.addEventListener("click", openFinalExam);
       lessonPanel.querySelector("[data-open-coach]")?.addEventListener("click", () => openCoachForCurrentLesson().catch((error) => { coachMessage.textContent = error.message; }));
       bindFlashcards();
+      if (requiresAssessment && !terminal) bindAssessmentChoices();
       if (lesson.stage_type === "personalized_work_example") loadPersonalizedExample(lesson);
       coachMessage.textContent = waitingForFinalExam
         ? "مسیر سرفصل‌ها کامل شده است. برای مرور یا پرسش، من همچنان کنار تو هستم."
@@ -2933,6 +3084,7 @@
     }
 
     function selectCourse(course, option) {
+      closeCoursePreview({ immediate: true });
       courseList.querySelectorAll("button").forEach((buttonItem) => { buttonItem.disabled = true; });
       selectedTrack = course.domain || "personal_development";
       localStorage.setItem("zito_track", selectedTrack);
@@ -2982,9 +3134,23 @@
     closeLearningSidebar.addEventListener("click", () => setLearningSidebarOpen(false));
     learningSidebarScrim.addEventListener("click", () => setLearningSidebarOpen(false));
     document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !coursePreview.hidden) {
+        closeCoursePreview();
+        return;
+      }
       if (event.key === "Escape" && appShell.classList.contains("learning-sidebar-open")) {
         setLearningSidebarOpen(false);
       }
+    });
+
+    coursePreviewClose.addEventListener("click", () => {
+      closeCoursePreview();
+    });
+    coursePreview.addEventListener("pointerenter", clearCoursePreviewCloseTimer);
+    coursePreview.addEventListener("pointerleave", scheduleCoursePreviewClose);
+    document.addEventListener("pointerdown", (event) => {
+      if (coursePreview.hidden || coursePreview.contains(event.target) || coursePreviewOption?.contains(event.target)) return;
+      closeCoursePreview();
     });
 
     modalClose.addEventListener("click", () => continueAfterCoaching().catch((error) => { coachMessage.textContent = error.message; }));

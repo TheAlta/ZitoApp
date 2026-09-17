@@ -1592,6 +1592,271 @@ body.zito-glass-certificate {
   }
 }
 
+/* Course previews keep spherical cards quiet while long Persian titles stay legible. */
+.zito-glass-app .phone-shell.mode-planet .course-option {
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 7px;
+  color: #5e5575;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy {
+  align-self: start;
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 0 7px;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy strong,
+.zito-glass-app .phone-shell.mode-planet .course-option-copy span {
+  display: block;
+  overflow: visible;
+  color: rgba(65, 54, 85, .88);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  -webkit-box-orient: initial;
+  -webkit-line-clamp: initial;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy strong {
+  font-size: clamp(11px, 1.25vw, 13px);
+  font-weight: 900;
+  line-height: 1.48;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .68);
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy span {
+  color: rgba(88, 77, 110, .67);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--long-title .course-option-copy strong {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--extra-long-title .course-option-copy strong {
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--coach {
+  --course-a: rgba(183, 157, 232, .43);
+  --course-b: rgba(94, 184, 196, .42);
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--phone {
+  --course-a: rgba(239, 178, 211, .44);
+  --course-b: rgba(105, 145, 223, .42);
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--laptop {
+  --course-a: rgba(154, 188, 232, .46);
+  --course-b: rgba(173, 115, 210, .40);
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--mascot .course-orb-art,
+.zito-glass-app .phone-shell.mode-planet .course-option--coach .course-orb-art {
+  padding: 4px;
+}
+
+.zito-glass-app .course-preview-scrim {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  border: 0;
+  background: rgba(73, 55, 102, .16);
+  opacity: 0;
+  cursor: default;
+  pointer-events: none;
+  transition: opacity .18s ease;
+  -webkit-backdrop-filter: blur(10px) saturate(82%);
+  backdrop-filter: blur(10px) saturate(82%);
+}
+
+.zito-glass-app .course-preview-scrim.is-visible { opacity: 1; }
+
+.zito-glass-app .course-preview {
+  position: fixed;
+  z-index: 81;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  align-items: center;
+  column-gap: 20px;
+  width: min(calc(100vw - 32px), 420px);
+  min-height: 206px;
+  padding: 28px 48px 28px 26px;
+  color: #453958;
+  text-align: right;
+  direction: ltr;
+  border: 1px solid rgba(255, 255, 255, .85);
+  border-radius: 30px;
+  outline: 1px solid rgba(117, 91, 179, .18);
+  outline-offset: -1px;
+  background:
+    radial-gradient(82% 56% at 20% 0%, rgba(255, 255, 255, .78), transparent 72%),
+    radial-gradient(72% 67% at 100% 100%, rgba(122, 205, 221, .28), transparent 72%),
+    linear-gradient(139deg, rgba(255, 255, 255, .74), rgba(255, 238, 249, .48) 50%, rgba(220, 234, 255, .53));
+  box-shadow: 0 36px 90px rgba(57, 39, 89, .28), inset 0 1px 0 rgba(255, 255, 255, .93), inset 0 -1px 0 rgba(112, 91, 172, .12);
+  opacity: 0;
+  transform: translate(-50%, calc(-50% + 18px)) scale(.94);
+  transition: opacity .2s ease, transform .25s cubic-bezier(.2, .8, .2, 1);
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(30px) saturate(145%);
+  backdrop-filter: blur(30px) saturate(145%);
+}
+
+.zito-glass-app .course-preview.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+
+.zito-glass-app .course-preview-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: #645979;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .76);
+}
+
+.zito-glass-app .course-preview-close svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+.zito-glass-app .course-preview-art {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  width: 110px;
+  height: 138px;
+  margin: 0;
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 42px 42px 32px 32px;
+  background:
+    radial-gradient(circle at 30% 16%, rgba(255, 255, 255, .82), rgba(255, 255, 255, 0) 55%),
+    rgba(255, 255, 255, .14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8), 0 12px 26px rgba(92, 67, 137, .14);
+}
+
+.zito-glass-app .course-preview-art img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain !important;
+  object-position: center;
+  filter: drop-shadow(0 10px 12px rgba(57, 43, 96, .23));
+}
+
+.zito-glass-app .course-preview-kicker {
+  color: #7f67ad;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.zito-glass-app .course-preview h2 {
+  grid-column: 1;
+  grid-row: 1;
+  max-width: 100%;
+  margin: 0;
+  color: #64557d;
+  font-size: clamp(19px, 5vw, 24px);
+  font-weight: 800;
+  line-height: 1.55;
+  direction: rtl;
+  text-align: right;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
+}
+
+.zito-glass-app .course-preview p {
+  margin: 0 0 17px;
+  color: #756a85;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.zito-glass-app .course-preview-start {
+  width: min(100%, 230px);
+  min-height: 44px;
+  padding: 9px 18px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  border: 1px solid rgba(255, 255, 255, .63);
+  border-radius: 999px;
+  background: linear-gradient(125deg, #9271d6, #6d74cf 54%, #5bb6c5);
+  box-shadow: 0 12px 24px rgba(91, 75, 160, .23), inset 0 1px 0 rgba(255, 255, 255, .37);
+}
+
+.zito-glass-app .course-preview-start:hover,
+.zito-glass-app .course-preview-start:focus-visible { filter: brightness(1.06); transform: translateY(-1px); }
+
+@media (max-width: 520px) {
+  .zito-glass-app .course-preview {
+    grid-template-columns: minmax(0, 1fr) 94px;
+    column-gap: 14px;
+    width: min(calc(100vw - 24px), 350px);
+    min-height: 170px;
+    padding: 22px 42px 22px 18px;
+    border-radius: 26px;
+  }
+  .zito-glass-app .course-preview-art { width: 88px; height: 110px; }
+  .zito-glass-app .course-preview h2 { font-size: 18px; }
+  .zito-glass-app .phone-shell.mode-planet .course-option-copy strong { font-size: 11px; }
+}
+
+/* A course bubble needs only its name and avatar: no tiny secondary copy. */
+.zito-glass-app .phone-shell.mode-planet .course-option-copy {
+  align-content: center;
+  min-height: 42px;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy strong {
+  color: #685a82;
+  font-family: inherit;
+  font-size: clamp(12px, 1.35vw, 14px);
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.52;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .8), 0 4px 13px rgba(117, 94, 161, .10);
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option-copy span {
+  display: none !important;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--long-title .course-option-copy strong {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.zito-glass-app .phone-shell.mode-planet .course-option--extra-long-title .course-option-copy strong {
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zito-glass-app .course-preview-scrim,
+  .zito-glass-app .course-preview { transition: none; }
+}
+
 @media (max-width: 520px) {
   .zito-glass-landing .otp-entry {
     width: 100%;

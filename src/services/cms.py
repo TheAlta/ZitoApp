@@ -281,6 +281,7 @@ def _required_string(value: Any, label: str, maximum: int = 2000) -> str:
 
 
 def _assessment_config_from_content(content: dict[str, Any]) -> dict[str, Any]:
+    questions: list[dict[str, Any]] = []
     for block in content.get("blocks", []):
         if not isinstance(block, dict) or block.get("kind") != "quiz":
             continue
@@ -290,14 +291,13 @@ def _assessment_config_from_content(content: dict[str, Any]) -> dict[str, Any]:
             options = item.get("options")
             if isinstance(options, list) and options and str(options[0]).strip():
                 question_id = str(item.get("id") or "q1").strip()
-                return {
-                    "pass_score": 60,
-                    "questions": [{
-                        "id": question_id,
-                        "correct_option": str(options[0]).strip(),
-                        "weight": 100,
-                    }],
-                }
+                questions.append({
+                    "id": question_id,
+                    "correct_option": str(options[0]).strip(),
+                    "weight": 100,
+                })
+    if questions:
+        return {"pass_score": 60, "questions": questions}
     raise CmsError("AI برای آزمونک سرفصل، گزینه‌های معتبر تولید نکرد.")
 
 
@@ -387,8 +387,14 @@ def _uses_prompt_json(model: str) -> bool:
     return model.strip().lower().startswith("gpt-")
 
 
+def _supports_rich_module_generation(model: str) -> bool:
+    """Return whether a gateway model supports Zito's full module contract."""
+
+    return model.strip().lower() == "gpt-4.1"
+
+
 def _generation_options(model: str, *, output_budget: int) -> dict[str, Any]:
-    if _uses_prompt_json(model):
+    if _uses_prompt_json(model) and not _supports_rich_module_generation(model):
         return {"max_completion_tokens": output_budget}
     return {
         "response_format": {"type": "json_object"},
@@ -566,22 +572,23 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
     async def generate_module(number: int, module_outline: Any) -> GeneratedModule:
         if not isinstance(module_outline, dict):
             raise CmsError("فهرست سرفصل‌های تولیدشده معتبر نیست.")
+        generation_payload = {
+            "brief": ai_brief,
+            "module_outline": module_outline,
+            "stage_count": stage_count,
+        }
         module_raw = await ask_ai(
             load_prompt("course_module_generation.md"),
-            json.dumps(
-                {
-                    "brief": ai_brief,
-                    "module": module_outline,
-                    "module_number": number,
-                },
-                ensure_ascii=False,
-            ),
+            json.dumps(generation_payload, ensure_ascii=False),
             temperature=0.2,
             model=model,
             api_base_url=settings.effective_content_generation_api_base_url,
             api_key=settings.effective_content_generation_api_key,
             timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-            **_generation_options(model, output_budget=2048),
+            **_generation_options(
+                model,
+                output_budget=3600 if _supports_rich_module_generation(model) else 2048,
+            ),
         )
         return _module_from_response(parse_json_object(module_raw), number, stage_count)
 

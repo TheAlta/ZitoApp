@@ -18,13 +18,13 @@ class Settings(BaseSettings):
     # Course authoring has a different quality/cost profile from short coach
     # replies. Empty values fall back to the normal Arvan gateway and key, but
     # an OpenAI-compatible generation service can be configured independently.
-    arvan_content_generation_model: str = Field("", alias="ARVAN_CONTENT_GENERATION_MODEL")
+    arvan_content_generation_model: str = Field("GPT-4.1", alias="ARVAN_CONTENT_GENERATION_MODEL")
     arvan_content_generation_api_base_url: str = Field(
         "", alias="ARVAN_CONTENT_GENERATION_API_BASE_URL"
     )
     arvan_content_generation_api_key: str = Field("", alias="ARVAN_CONTENT_GENERATION_API_KEY")
     arvan_content_generation_timeout_seconds: int = Field(
-        90, alias="ARVAN_CONTENT_GENERATION_TIMEOUT_SECONDS"
+        180, alias="ARVAN_CONTENT_GENERATION_TIMEOUT_SECONDS"
     )
     arvan_timeout_seconds: int = Field(45, alias="ARVAN_TIMEOUT_SECONDS")
     arvan_mock_ai: bool = Field(False, alias="ARVAN_MOCK_AI")

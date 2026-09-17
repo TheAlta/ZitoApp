@@ -418,6 +418,8 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("color-scheme: light", admin_template)
         self.assertIn("color-scheme: light", admin_login_template)
         self.assertIn("Light cosmic theme", chat_template)
+        self.assertIn("generation_instructions", admin_template)
+        self.assertIn("توضیحات تکمیلی برای هوش مصنوعی", admin_template)
         self.assertIn("user.education_level", admin_template)
         self.assertIn("user.learning_goal_interests", admin_template)
         self.assertIn("/api/admin/users/${id}/block", admin_template)

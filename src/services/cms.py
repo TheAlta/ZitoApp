@@ -11,7 +11,7 @@ import asyncio
 import json
 import re
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Any
 
@@ -35,8 +35,9 @@ from src.services.json_utils import parse_json_object
 from src.services.rag import document_content_checksum, ensure_course_rag_config, sync_document_chunks
 
 
-CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v2"
-CMS_MODULE_PROMPT_VERSION = "cms-course-module-v2"
+CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v3"
+CMS_MODULE_PROMPT_VERSION = "cms-course-module-v3"
+CMS_KNOWLEDGE_PROMPT_VERSION = "cms-module-knowledge-v1"
 CMS_MODULE_STAGE_COUNT = 8
 CMS_SUPPORTED_STAGE_COUNTS = {7, 8, 9}
 
@@ -50,6 +51,7 @@ _AI_BRIEF_FIELDS = (
     "level",
     "module_count",
     "estimated_learning_hours",
+    "generation_instructions",
     "module_stage_count",
 )
 
@@ -396,6 +398,11 @@ def _supports_rich_module_generation(model: str) -> bool:
 def _generation_options(model: str, *, output_budget: int) -> dict[str, Any]:
     if _uses_prompt_json(model) and not _supports_rich_module_generation(model):
         return {"max_completion_tokens": output_budget}
+    if _supports_rich_module_generation(model):
+        return {
+            "response_format": {"type": "json_object"},
+            "max_tokens": output_budget,
+        }
     return {
         "response_format": {"type": "json_object"},
         "max_tokens": output_budget,
@@ -410,6 +417,84 @@ def _ai_generation_brief(brief: dict[str, Any]) -> dict[str, Any]:
         for field in _AI_BRIEF_FIELDS
         if field in brief
     }
+
+
+def _block_items(content: dict[str, Any], *kinds: str) -> list[Any]:
+    items: list[Any] = []
+    for block in content.get("blocks", []):
+        if isinstance(block, dict) and block.get("kind") in kinds and isinstance(block.get("items"), list):
+            items.extend(block["items"])
+    return items
+
+
+def _block_body_length(content: dict[str, Any], *kinds: str) -> int:
+    return sum(
+        len(str(block.get("body") or "").strip())
+        for block in content.get("blocks", [])
+        if isinstance(block, dict) and block.get("kind") in kinds
+    )
+
+
+def _validate_generated_module_quality(module: GeneratedModule) -> None:
+    """Reject shallow AI output before it can become a learner-facing draft."""
+
+    if len(module.knowledge_base) < 1800:
+        raise CmsError(f"دانش پایه سرفصل «{module.title}» بیش از حد کوتاه است؛ دوباره تولید کن.")
+
+    stages = {stage["type"]: stage["content_json"] for stage in module.stages}
+    summary = stages["lesson_summary"]
+    if _block_body_length(summary, "paragraph", "highlight") < 800 or len(_block_items(summary, "bullets")) < 5:
+        raise CmsError(f"خلاصه آموزشی سرفصل «{module.title}» عمق کافی ندارد؛ دوباره تولید کن.")
+
+    flashcards = _block_items(stages["flashcards"], "flashcards")
+    if len(flashcards) < 6 or any(
+        not isinstance(card, dict) or len(str(card.get("back") or "").strip()) < 35
+        for card in flashcards
+    ):
+        raise CmsError(f"فلش‌کارت‌های سرفصل «{module.title}» کامل یا توضیح‌دار نیستند.")
+
+    tips = _block_items(stages["golden_tips"], "tips")
+    if len(tips) < 6 or any(len(str(item).strip()) < 18 for item in tips):
+        raise CmsError(f"نکات طلایی سرفصل «{module.title}» کافی و کاربردی نیستند.")
+
+    mistakes = _block_items(stages["common_mistakes"], "mistakes")
+    if len(mistakes) < 4 or any(
+        not isinstance(item, dict)
+        or len(str(item.get("mistake") or "").strip()) < 12
+        or len(str(item.get("correction") or "").strip()) < 20
+        for item in mistakes
+    ):
+        raise CmsError(f"خطاها و راه‌اصلاح‌های سرفصل «{module.title}» کامل نیستند.")
+
+    questions = _block_items(stages["module_assessment"], "quiz")
+    normalized_questions = {
+        re.sub(r"\s+", " ", str(item.get("question") or "").strip()).casefold()
+        for item in questions
+        if isinstance(item, dict)
+    }
+    if len(questions) < 4 or len(normalized_questions) != len(questions) or any(
+        not isinstance(item, dict)
+        or len(str(item.get("question") or "").strip()) < 20
+        or not isinstance(item.get("options"), list)
+        or len(item["options"]) < 4
+        for item in questions
+    ):
+        raise CmsError(f"آزمونک سرفصل «{module.title}» کافی، متنوع یا معتبر نیست.")
+
+    completion = stages["module_completion"]
+    if _block_body_length(completion, "paragraph", "highlight") < 250 or len(_block_items(completion, "checklist")) < 4:
+        raise CmsError(f"جمع‌بندی سرفصل «{module.title}» کامل نیست.")
+
+
+def _validate_curriculum_question_variety(modules: list[GeneratedModule]) -> None:
+    seen: set[str] = set()
+    for module in modules:
+        assessment = next(stage for stage in module.stages if stage["type"] == "module_assessment")
+        for item in _block_items(assessment["content_json"], "quiz"):
+            question = re.sub(r"\s+", " ", str(item.get("question") or "").strip()).casefold()
+            if question in seen:
+                raise CmsError("AI یک سوال آزمونک را در چند سرفصل تکرار کرد؛ دوباره تولید کن.")
+            seen.add(question)
 
 
 def _mock_stage_content(stage_type: str, module: dict[str, Any], brief: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any] | None]:
@@ -541,6 +626,11 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
 
     settings = get_settings()
     model = settings.effective_content_generation_model
+    if not _supports_rich_module_generation(model):
+        raise CmsError(
+            f"مدل «{model}» برای تولید کامل محتوای دوره تایید نشده است؛ "
+            "مدل تولید CMS را روی GPT-4.1 تنظیم کن."
+        )
     ai_brief = _ai_generation_brief(brief)
     outline_raw = await ask_ai(
         load_prompt("course_outline_generation.md"),
@@ -550,7 +640,7 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
         api_base_url=settings.effective_content_generation_api_base_url,
         api_key=settings.effective_content_generation_api_key,
         timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-        **_generation_options(model, output_budget=2048),
+        **_generation_options(model, output_budget=5000),
     )
     outline = parse_json_object(outline_raw)
     raw_modules = outline.get("modules")
@@ -559,44 +649,78 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
         raise CmsError("AI تعداد سرفصل‌های درخواستی را تولید نکرد.")
     overview = _overview_from_response(outline.get("overview") if isinstance(outline.get("overview"), dict) else {}, brief)
 
-    if _uses_prompt_json(model):
-        modules = [
-            _stages_from_outline(module_outline, brief, number)
-            for number, module_outline in enumerate(raw_modules, start=1)
-            if isinstance(module_outline, dict)
-        ]
-        if len(modules) != module_count:
-            raise CmsError("فهرست سرفصل‌های تولیدشده معتبر نیست.")
-        return GeneratedCurriculum(overview=overview, modules=modules)
-
     async def generate_module(number: int, module_outline: Any) -> GeneratedModule:
         if not isinstance(module_outline, dict):
             raise CmsError("فهرست سرفصل‌های تولیدشده معتبر نیست.")
-        generation_payload = {
-            "brief": ai_brief,
-            "module_outline": module_outline,
-            "stage_count": stage_count,
-        }
-        module_raw = await ask_ai(
-            load_prompt("course_module_generation.md"),
-            json.dumps(generation_payload, ensure_ascii=False),
-            temperature=0.2,
-            model=model,
-            api_base_url=settings.effective_content_generation_api_base_url,
-            api_key=settings.effective_content_generation_api_key,
-            timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-            **_generation_options(
-                model,
-                output_budget=3600 if _supports_rich_module_generation(model) else 2048,
-            ),
-        )
-        return _module_from_response(parse_json_object(module_raw), number, stage_count)
+        repair_feedback: str | None = None
+        for attempt in range(2):
+            generation_payload = {
+                "brief": ai_brief,
+                "module_outline": module_outline,
+                "stage_count": stage_count,
+            }
+            if repair_feedback:
+                generation_payload["repair_feedback"] = (
+                    "خروجی قبلی کنترل کیفیت را رد کرد. کل سرفصل را دوباره و کامل تولید کن. علت رد: "
+                    + repair_feedback
+                )
+            try:
+                module_raw = await ask_ai(
+                    load_prompt("course_module_generation.md"),
+                    json.dumps(generation_payload, ensure_ascii=False),
+                    temperature=0.2,
+                    model=model,
+                    api_base_url=settings.effective_content_generation_api_base_url,
+                    api_key=settings.effective_content_generation_api_key,
+                    timeout_seconds=settings.arvan_content_generation_timeout_seconds,
+                    **_generation_options(
+                        model,
+                        output_budget=10000 if _supports_rich_module_generation(model) else 2048,
+                    ),
+                )
+                generated = _module_from_response(parse_json_object(module_raw), number, stage_count)
+                if len(generated.knowledge_base) < 1800:
+                    knowledge_raw = await ask_ai(
+                        load_prompt("course_module_knowledge_expansion.md"),
+                        json.dumps(
+                            {
+                                "brief": ai_brief,
+                                "module": {
+                                    "title": generated.title,
+                                    "description": generated.description,
+                                    "learning_objectives": generated.learning_objectives,
+                                    "current_knowledge_base": generated.knowledge_base,
+                                },
+                            },
+                            ensure_ascii=False,
+                        ),
+                        temperature=0.2,
+                        model=model,
+                        api_base_url=settings.effective_content_generation_api_base_url,
+                        api_key=settings.effective_content_generation_api_key,
+                        timeout_seconds=settings.arvan_content_generation_timeout_seconds,
+                        **_generation_options(model, output_budget=6000),
+                    )
+                    knowledge = _required_string(
+                        parse_json_object(knowledge_raw).get("knowledge_base"),
+                        "knowledge_base",
+                    )
+                    generated = replace(generated, knowledge_base=knowledge)
+                _validate_generated_module_quality(generated)
+                return generated
+            except (CmsError, ValueError, TypeError) as exc:
+                if attempt == 1:
+                    raise
+                repair_feedback = str(exc)
+
+        raise CmsError("تولید محتوای کامل سرفصل پس از تلاش مجدد ناموفق بود.")
 
     modules = list(
         await asyncio.gather(
             *(generate_module(number, module_outline) for number, module_outline in enumerate(raw_modules, start=1))
         )
     )
+    _validate_curriculum_question_variety(modules)
     return GeneratedCurriculum(overview=overview, modules=modules)
 
 
@@ -651,7 +775,9 @@ def replace_draft_curriculum(db: Session, version: CourseVersion, curriculum: Ge
     version.overview_json = curriculum.overview
     version.generation_status = "generated"
     version.generation_model = get_settings().effective_content_generation_model
-    version.generation_prompt_version = f"{CMS_OUTLINE_PROMPT_VERSION}+{CMS_MODULE_PROMPT_VERSION}"
+    version.generation_prompt_version = (
+        f"{CMS_OUTLINE_PROMPT_VERSION}+{CMS_MODULE_PROMPT_VERSION}+{CMS_KNOWLEDGE_PROMPT_VERSION}"
+    )
     version.generation_error = None
     version.generated_at = datetime.now(timezone.utc)
     db.flush()

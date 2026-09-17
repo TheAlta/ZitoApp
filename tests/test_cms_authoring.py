@@ -28,6 +28,7 @@ COURSE_BRIEF = {
     "level": "مقدماتی تا متوسط",
     "module_count": 3,
     "estimated_learning_hours": 12,
+    "generation_instructions": "مثال‌ها واقعی، توضیح‌ها مفصل و آزمونک‌ها غیرتکراری باشند.",
     "module_stage_count": 8,
     "slug": "product-management-small-teams",
 }
@@ -82,6 +83,10 @@ class CmsAuthoringTests(unittest.TestCase):
             draft = created.json()
             self.assertEqual(draft["status"], "draft")
             self.assertEqual(draft["generation_status"], "not_requested")
+            self.assertEqual(
+                draft["authoring_brief"]["generation_instructions"],
+                COURSE_BRIEF["generation_instructions"],
+            )
             self.assertEqual(draft["modules"], [])
 
             generated = client.post(

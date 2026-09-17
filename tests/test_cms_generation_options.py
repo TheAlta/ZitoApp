@@ -1,4 +1,8 @@
+import asyncio
+import json
 import unittest
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 from tests._env import setup_test_environment
 
@@ -10,6 +14,10 @@ from src.services.cms import (
     _module_from_response,
     _supports_rich_module_generation,
     _stages_from_outline,
+    _validate_generated_module_quality,
+    CmsError,
+    GeneratedModule,
+    generate_curriculum,
     stage_flow,
 )
 
@@ -35,6 +43,15 @@ class CmsGenerationOptionsTests(unittest.TestCase):
         self.assertTrue(_supports_rich_module_generation("GPT-4.1"))
         self.assertFalse(_supports_rich_module_generation("GPT-5.1"))
         self.assertFalse(_supports_rich_module_generation("GLM-5.3"))
+
+    def test_gpt_41_uses_json_mode_without_unsupported_reasoning_option(self) -> None:
+        self.assertEqual(
+            _generation_options("GPT-4.1", output_budget=10000),
+            {
+                "response_format": {"type": "json_object"},
+                "max_tokens": 10000,
+            },
+        )
 
     def test_assessment_key_is_derived_from_the_first_public_option(self) -> None:
         stages = []
@@ -117,6 +134,7 @@ class CmsGenerationOptionsTests(unittest.TestCase):
             "module_count": 2,
             "estimated_learning_hours": 6,
             "module_stage_count": 8,
+            "generation_instructions": "Use realistic workplace scenarios.",
             "slug": "internal-slug",
             "domain": "internal-domain",
             "requires_final_exam": True,
@@ -126,6 +144,7 @@ class CmsGenerationOptionsTests(unittest.TestCase):
         self.assertNotIn("slug", ai_brief)
         self.assertNotIn("domain", ai_brief)
         self.assertNotIn("requires_final_exam", ai_brief)
+        self.assertEqual(ai_brief["generation_instructions"], "Use realistic workplace scenarios.")
 
         module = _stages_from_outline(
             {
@@ -140,3 +159,133 @@ class CmsGenerationOptionsTests(unittest.TestCase):
         self.assertEqual(len(module.stages), 8)
         self.assertEqual(module.stages[-2]["type"], "module_assessment")
         self.assertIsNotNone(module.stages[-2]["evaluation_config_json"])
+
+    def test_shallow_generated_module_is_rejected(self) -> None:
+        module = _stages_from_outline(
+            {
+                "title": "Shallow module",
+                "description": "Only an outline, not a complete lesson.",
+                "learning_objectives": ["Learn something"],
+                "tags": ["test"],
+            },
+            {"title": "Course", "topic": "Topic", "goal": "Goal"},
+            number=1,
+        )
+        with self.assertRaisesRegex(ValueError, "بیش از حد کوتاه"):
+            _validate_generated_module_quality(module)
+
+    def test_gpt_41_generates_each_module_with_ai_instead_of_static_stages(self) -> None:
+        brief = {
+            "title": "Deep course",
+            "topic": "Deep topic",
+            "goal": "Build a real skill",
+            "duration": "Four weeks",
+            "audience": "Learners",
+            "target_group": "Professionals",
+            "level": "Beginner",
+            "module_count": 1,
+            "estimated_learning_hours": 12,
+            "generation_instructions": "Use complete explanations.",
+        }
+        outline = json.dumps({
+            "overview": {
+                "summary": "Course summary",
+                "description": "Course description",
+                "learning_outcomes": ["Outcome"],
+                "career_outcomes": ["Career"],
+                "daily_life_outcomes": ["Daily"],
+            },
+            "modules": [{
+                "title": "Module one",
+                "description": "Module description",
+                "learning_objectives": ["Objective"],
+                "tags": ["tag"],
+            }],
+        })
+        generated_module = GeneratedModule(
+            number=1,
+            title="Module one",
+            description="Module description",
+            learning_objectives=["Objective"],
+            tags=["tag"],
+            stages=[],
+            knowledge_base="k" * 2000,
+        )
+        settings = SimpleNamespace(
+            arvan_mock_ai=False,
+            effective_content_generation_model="GPT-4.1",
+            effective_content_generation_api_base_url="https://example.invalid/v1",
+            effective_content_generation_api_key="test",
+            arvan_content_generation_timeout_seconds=180,
+        )
+        ai = AsyncMock(side_effect=[outline, "{}"])
+        with (
+            patch("src.services.cms.get_settings", return_value=settings),
+            patch("src.services.cms.ask_ai", ai),
+            patch("src.services.cms._module_from_response", return_value=generated_module),
+            patch("src.services.cms._validate_generated_module_quality"),
+            patch("src.services.cms._validate_curriculum_question_variety"),
+        ):
+            curriculum = asyncio.run(generate_curriculum(brief))
+
+        self.assertEqual(curriculum.modules, [generated_module])
+        self.assertEqual(ai.await_count, 2)
+        module_request = ai.await_args_list[1]
+        self.assertIn("generation_instructions", module_request.args[1])
+        self.assertEqual(module_request.kwargs["max_tokens"], 10000)
+
+    def test_failed_module_quality_is_retried_with_feedback(self) -> None:
+        brief = {
+            "title": "Deep course",
+            "topic": "Deep topic",
+            "goal": "Build a real skill",
+            "duration": "Four weeks",
+            "audience": "Learners",
+            "target_group": "Professionals",
+            "level": "Beginner",
+            "module_count": 1,
+            "estimated_learning_hours": 12,
+        }
+        outline = json.dumps({
+            "overview": {
+                "summary": "Course summary",
+                "description": "Course description",
+                "learning_outcomes": ["Outcome"],
+                "career_outcomes": ["Career"],
+                "daily_life_outcomes": ["Daily"],
+            },
+            "modules": [{"title": "Module one", "description": "Description"}],
+        })
+        generated_module = GeneratedModule(
+            number=1,
+            title="Module one",
+            description="Description",
+            learning_objectives=["Objective"],
+            tags=["tag"],
+            stages=[],
+            knowledge_base="k" * 2000,
+        )
+        settings = SimpleNamespace(
+            arvan_mock_ai=False,
+            effective_content_generation_model="GPT-4.1",
+            effective_content_generation_api_base_url="https://example.invalid/v1",
+            effective_content_generation_api_key="test",
+            arvan_content_generation_timeout_seconds=180,
+        )
+        ai = AsyncMock(side_effect=[outline, "{}", "{}"])
+        with (
+            patch("src.services.cms.get_settings", return_value=settings),
+            patch("src.services.cms.ask_ai", ai),
+            patch("src.services.cms._module_from_response", return_value=generated_module),
+            patch(
+                "src.services.cms._validate_generated_module_quality",
+                side_effect=[CmsError("knowledge base is short"), None],
+            ),
+            patch("src.services.cms._validate_curriculum_question_variety"),
+        ):
+            curriculum = asyncio.run(generate_curriculum(brief))
+
+        self.assertEqual(curriculum.modules, [generated_module])
+        self.assertEqual(ai.await_count, 3)
+        retry_payload = json.loads(ai.await_args_list[2].args[1])
+        self.assertIn("knowledge base is short", retry_payload["repair_feedback"])

@@ -2123,6 +2123,7 @@ def patch_admin_course_brief(
         "level",
         "module_count",
         "estimated_learning_hours",
+        "generation_instructions",
         "domain",
     }
     curriculum_changed = previous_stage_count != CMS_MODULE_STAGE_COUNT or any(
@@ -2238,7 +2239,7 @@ async def generate_admin_course(
             version.generation_status = "failed"
             version.generation_error = str(exc)[:1000]
             db.commit()
-        raise HTTPException(status_code=422, detail="تولید دوره کامل نشد؛ جزئیات خطا در پیش‌نویس ثبت شد.") from exc
+        raise HTTPException(status_code=422, detail=f"تولید دوره کامل نشد: {str(exc)[:700]}") from exc
     return _cms_version_out(db, course, version)
 
 

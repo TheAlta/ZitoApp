@@ -348,6 +348,7 @@ class CmsCourseCreateIn(BaseModel):
     requires_final_exam: bool = True
     domain: str | None = Field(default=None, max_length=120)
     slug: str | None = Field(default=None, max_length=120)
+    client_request_id: str | None = Field(default=None, min_length=8, max_length=80)
 
 
 class CmsCourseBriefPatchIn(BaseModel):

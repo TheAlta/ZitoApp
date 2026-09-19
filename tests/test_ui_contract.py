@@ -437,6 +437,8 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("courseRequestSequence", admin_template)
         self.assertIn("generationPollSequence", admin_template)
         self.assertIn("function monitorGeneration", admin_template)
+        self.assertIn("client_request_id", admin_template)
+        self.assertIn("networkFailure", admin_template)
         self.assertIn("requestSequence!==courseRequestSequence", admin_template)
         self.assertIn("const target={courseId:active.course_id", admin_template)
         self.assertIn("const selectionUnchanged=active?.id===target.versionId", admin_template)

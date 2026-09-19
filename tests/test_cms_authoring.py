@@ -128,6 +128,22 @@ class CmsAuthoringTests(unittest.TestCase):
             self.assertEqual(edited_body["modules"][0]["stages"][0]["title"], "نقشه شروع محصول")
             self.assertEqual(edited_body["modules"][0]["stages"][0]["content"]["intro"], "متن ویرایش‌شده")
 
+    def test_course_creation_is_idempotent_for_client_request_id(self) -> None:
+        payload = {
+            **COURSE_BRIEF,
+            "title": "Idempotent course creation",
+            "slug": "idempotent-course-creation",
+            "client_request_id": "cms-request-12345678",
+        }
+        with self._admin_client() as client:
+            first = client.post("/api/admin/courses", json=payload)
+            second = client.post("/api/admin/courses", json=payload)
+
+            self.assertEqual(first.status_code, 201, first.text)
+            self.assertEqual(second.status_code, 201, second.text)
+            self.assertEqual(first.json()["course_id"], second.json()["course_id"])
+            self.assertEqual(first.json()["id"], second.json()["id"])
+
     def test_curriculum_brief_change_requires_regeneration_before_publish(self) -> None:
         with self._admin_client() as client:
             created = client.post(

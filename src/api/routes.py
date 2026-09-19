@@ -2032,6 +2032,19 @@ def list_admin_courses(db: Session = Depends(get_db)) -> list[CmsCourseVersionOu
     dependencies=[Depends(require_admin)],
 )
 def create_admin_course(payload: CmsCourseCreateIn, db: Session = Depends(get_db)) -> CmsCourseVersionOut:
+    if payload.client_request_id:
+        recent_versions = db.scalars(
+            select(CourseVersion).order_by(CourseVersion.id.desc()).limit(100)
+        ).all()
+        for existing_version in recent_versions:
+            existing_brief = existing_version.authoring_brief_json
+            if (
+                isinstance(existing_brief, dict)
+                and existing_brief.get("client_request_id") == payload.client_request_id
+            ):
+                existing_course = db.get(Course, existing_version.course_id)
+                if existing_course:
+                    return _cms_version_out(db, existing_course, existing_version)
     try:
         course, version = create_course_draft(db, payload.model_dump())
         db.commit()

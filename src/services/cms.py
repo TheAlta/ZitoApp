@@ -35,9 +35,9 @@ from src.services.json_utils import parse_json_object
 from src.services.rag import document_content_checksum, ensure_course_rag_config, sync_document_chunks
 
 
-CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v3"
-CMS_MODULE_PROMPT_VERSION = "cms-course-module-v3"
-CMS_KNOWLEDGE_PROMPT_VERSION = "cms-module-knowledge-v1"
+CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v4"
+CMS_MODULE_PROMPT_VERSION = "cms-course-module-v4"
+CMS_KNOWLEDGE_PROMPT_VERSION = "cms-module-knowledge-v2"
 CMS_MODULE_STAGE_COUNT = 8
 CMS_SUPPORTED_STAGE_COUNTS = {7, 8, 9}
 
@@ -319,8 +319,23 @@ def _module_from_response(data: dict[str, Any], number: int, stage_count: int) -
         content = raw_stage.get("content")
         if not isinstance(content, dict):
             raise CmsError(f"محتوای ایستگاه {index} معتبر نیست.")
+        blocks = content.get("blocks")
+        normalized_blocks = list(blocks) if isinstance(blocks, list) else []
+        if stage_type == "personalized_work_example" and not any(
+            isinstance(block, dict) and block.get("kind") == "personalized_example"
+            for block in normalized_blocks
+        ):
+            normalized_blocks.insert(
+                0,
+                {
+                    "kind": "personalized_example",
+                    "title": "مثال متناسب با مسیر تو",
+                    "body": "زیتو در حال آماده‌سازی یک مثال بر اساس مسیر شغلی و اطلاعات یادگیری تو است.",
+                },
+            )
         content = {
             **content,
+            "blocks": normalized_blocks,
             "coaching": content.get("coaching") if isinstance(content.get("coaching"), dict) else {
                 "prompt": "هر سوالی درباره این بخش داری از زیتو بپرس.",
                 "mode": "live",
@@ -373,9 +388,9 @@ def _overview_from_response(data: dict[str, Any], brief: dict[str, Any]) -> dict
         "description": _required_string(data.get("description"), "توضیح دوره", 3000),
         "estimated_learning_minutes": hours * 60 if hours > 0 else None,
         "estimated_duration_label": str(brief.get("duration") or "").strip(),
-        "learning_outcomes": _as_strings(data.get("learning_outcomes"), limit=6),
-        "career_outcomes": _as_strings(data.get("career_outcomes"), limit=5),
-        "daily_life_outcomes": _as_strings(data.get("daily_life_outcomes"), limit=5),
+        "learning_outcomes": _as_strings(data.get("learning_outcomes"), limit=8),
+        "career_outcomes": _as_strings(data.get("career_outcomes"), limit=8),
+        "daily_life_outcomes": _as_strings(data.get("daily_life_outcomes"), limit=8),
         "final_exam_label": str(data.get("final_exam_label") or "آزمون نهایی دوره").strip()[:255],
         "topic": str(brief.get("topic") or "").strip(),
         "audience": str(brief.get("audience") or "").strip(),
@@ -443,22 +458,23 @@ def _validate_generated_module_quality(module: GeneratedModule) -> None:
 
     stages = {stage["type"]: stage["content_json"] for stage in module.stages}
     summary = stages["lesson_summary"]
-    if _block_body_length(summary, "paragraph", "highlight") < 800 or len(_block_items(summary, "bullets")) < 5:
+    synthesis_items = _block_items(summary, "bullets", "cards")
+    if _block_body_length(summary, "paragraph", "highlight") < 650 or len(synthesis_items) < 3:
         raise CmsError(f"خلاصه آموزشی سرفصل «{module.title}» عمق کافی ندارد؛ دوباره تولید کن.")
 
     flashcards = _block_items(stages["flashcards"], "flashcards")
-    if len(flashcards) < 6 or any(
+    if len(flashcards) < 4 or any(
         not isinstance(card, dict) or len(str(card.get("back") or "").strip()) < 35
         for card in flashcards
     ):
         raise CmsError(f"فلش‌کارت‌های سرفصل «{module.title}» کامل یا توضیح‌دار نیستند.")
 
     tips = _block_items(stages["golden_tips"], "tips")
-    if len(tips) < 6 or any(len(str(item).strip()) < 18 for item in tips):
+    if len(tips) < 3 or any(len(str(item).strip()) < 18 for item in tips):
         raise CmsError(f"نکات طلایی سرفصل «{module.title}» کافی و کاربردی نیستند.")
 
     mistakes = _block_items(stages["common_mistakes"], "mistakes")
-    if len(mistakes) < 4 or any(
+    if len(mistakes) < 3 or any(
         not isinstance(item, dict)
         or len(str(item.get("mistake") or "").strip()) < 12
         or len(str(item.get("correction") or "").strip()) < 20
@@ -472,17 +488,17 @@ def _validate_generated_module_quality(module: GeneratedModule) -> None:
         for item in questions
         if isinstance(item, dict)
     }
-    if len(questions) < 4 or len(normalized_questions) != len(questions) or any(
+    if len(questions) < 3 or len(normalized_questions) != len(questions) or any(
         not isinstance(item, dict)
         or len(str(item.get("question") or "").strip()) < 20
         or not isinstance(item.get("options"), list)
-        or len(item["options"]) < 4
+        or len(item["options"]) < 3
         for item in questions
     ):
         raise CmsError(f"آزمونک سرفصل «{module.title}» کافی، متنوع یا معتبر نیست.")
 
     completion = stages["module_completion"]
-    if _block_body_length(completion, "paragraph", "highlight") < 250 or len(_block_items(completion, "checklist")) < 4:
+    if _block_body_length(completion, "paragraph", "highlight") < 250 or len(_block_items(completion, "checklist")) < 3:
         raise CmsError(f"جمع‌بندی سرفصل «{module.title}» کامل نیست.")
 
 
@@ -656,6 +672,10 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
         for attempt in range(2):
             generation_payload = {
                 "brief": ai_brief,
+                "course_outline": {
+                    "overview": outline.get("overview", {}),
+                    "modules": raw_modules,
+                },
                 "module_outline": module_outline,
                 "stage_count": stage_count,
             }

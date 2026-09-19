@@ -1,6 +1,7 @@
 import asyncio
 import json
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -173,6 +174,95 @@ class CmsGenerationOptionsTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "بیش از حد کوتاه"):
             _validate_generated_module_quality(module)
+
+    def test_adaptive_content_counts_pass_quality_without_fixed_six_item_quotas(self) -> None:
+        contents = {
+            "learning_path": {"blocks": []},
+            "lesson_summary": {"blocks": [
+                {"kind": "paragraph", "body": "a" * 700},
+                {"kind": "bullets", "items": ["one", "two", "three"]},
+            ]},
+            "flashcards": {"blocks": [{"kind": "flashcards", "items": [
+                {"front": f"concept {index}", "back": "A detailed explanation with a practical application and context."}
+                for index in range(4)
+            ]}]},
+            "golden_tips": {"blocks": [{"kind": "tips", "items": [
+                "A detailed and practical recommendation for the learner."
+            ] * 3}]},
+            "common_mistakes": {"blocks": [{"kind": "mistakes", "items": [
+                {"mistake": "A realistic mistake", "correction": "Use this better approach because it addresses the cause."}
+            ] * 3}]},
+            "personalized_work_example": {"blocks": [{"kind": "personalized_example"}]},
+            "module_assessment": {"blocks": [{"kind": "quiz", "items": [
+                {
+                    "id": f"q{index}",
+                    "question": f"A distinct scenario question number {index} with enough detail?",
+                    "options": ["Correct", "Plausible", "Alternative"],
+                }
+                for index in range(3)
+            ]}]},
+            "module_completion": {"blocks": [
+                {"kind": "paragraph", "body": "c" * 260},
+                {"kind": "checklist", "items": ["one", "two", "three"]},
+            ]},
+        }
+        module = GeneratedModule(
+            number=1,
+            title="Adaptive module",
+            description="Complete adaptive module",
+            learning_objectives=["Apply the skill"],
+            tags=["adaptive"],
+            stages=[
+                {"type": stage_type, "content_json": contents[stage_type]}
+                for stage_type in stage_flow(8)
+            ],
+            knowledge_base="k" * 1800,
+        )
+
+        _validate_generated_module_quality(module)
+
+    def test_personalized_stage_placeholder_is_restored_when_ai_omits_it(self) -> None:
+        stages = []
+        for stage_type in stage_flow(8):
+            blocks = [{"kind": "steps", "items": ["Apply it"]}]
+            if stage_type == "module_assessment":
+                blocks = [{"kind": "quiz", "items": [{
+                    "id": "q1",
+                    "question": "Which practical option is correct?",
+                    "options": ["Correct", "Wrong", "Other"],
+                }]}]
+            stages.append({
+                "type": stage_type,
+                "title": stage_type,
+                "content": {"intro": "Intro", "blocks": blocks, "activity": {}},
+            })
+
+        module = _module_from_response({
+            "title": "Personalized module",
+            "description": "Description",
+            "learning_objectives": ["Objective"],
+            "tags": ["tag"],
+            "knowledge_base": "Knowledge",
+            "stages": stages,
+        }, number=1, stage_count=8)
+
+        personalized = next(
+            stage for stage in module.stages
+            if stage["type"] == "personalized_work_example"
+        )
+        blocks = personalized["content_json"]["blocks"]
+        self.assertEqual(sum(block.get("kind") == "personalized_example" for block in blocks), 1)
+        self.assertEqual(blocks[1]["kind"], "steps")
+
+    def test_generation_prompts_define_adaptive_depth(self) -> None:
+        outline = Path("src/prompts/course_outline_generation.md").read_text(encoding="utf-8")
+        module = Path("src/prompts/course_module_generation.md").read_text(encoding="utf-8")
+
+        self.assertIn("depth_profile", outline)
+        self.assertIn("content_blueprint", outline)
+        self.assertIn("stage is adaptive", module)
+        self.assertIn('"personalized_example"', module)
+        self.assertNotIn("exactly six", module.lower())
 
     def test_gpt_41_generates_each_module_with_ai_instead_of_static_stages(self) -> None:
         brief = {

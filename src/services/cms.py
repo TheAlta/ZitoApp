@@ -101,6 +101,10 @@ _STAGE_TITLES = {
 }
 
 
+def cms_generation_prompt_version() -> str:
+    return f"{CMS_OUTLINE_PROMPT_VERSION}+{CMS_MODULE_PROMPT_VERSION}+{CMS_KNOWLEDGE_PROMPT_VERSION}"
+
+
 class CmsError(ValueError):
     """A user-actionable course authoring error."""
 
@@ -213,6 +217,7 @@ def create_course_revision(db: Session, course: Course) -> CourseVersion:
     ).first()
     if not source:
         raise CmsError("برای این دوره نسخه منتشرشده‌ای برای ویرایش وجود ندارد.")
+    requires_regeneration = source.generation_prompt_version != cms_generation_prompt_version()
     version = CourseVersion(
         course_id=course.id,
         version_number=_next_version_number(db, course.id),
@@ -222,7 +227,7 @@ def create_course_revision(db: Session, course: Course) -> CourseVersion:
         authoring_brief_json=deepcopy(source.authoring_brief_json),
         module_stage_count=CMS_MODULE_STAGE_COUNT,
         requires_final_exam=source.requires_final_exam,
-        generation_status="edited",
+        generation_status="needs_regeneration" if requires_regeneration else "edited",
         generation_model=source.generation_model,
         generation_prompt_version=source.generation_prompt_version,
     )
@@ -450,6 +455,25 @@ def _block_body_length(content: dict[str, Any], *kinds: str) -> int:
     )
 
 
+def _instructional_block_text_length(content: dict[str, Any]) -> int:
+    """Count explanatory learner text regardless of its visual block shape."""
+
+    total = 0
+    for block in content.get("blocks", []):
+        if not isinstance(block, dict) or block.get("kind") in {"quiz", "flashcards", "checklist"}:
+            continue
+        total += len(str(block.get("body") or "").strip())
+        for item in block.get("items", []):
+            if isinstance(item, str):
+                total += len(item.strip())
+            elif isinstance(item, dict):
+                total += sum(
+                    len(str(item.get(field) or "").strip())
+                    for field in ("title", "body", "answer", "correction")
+                )
+    return total
+
+
 def _validate_generated_module_quality(module: GeneratedModule) -> None:
     """Reject shallow AI output before it can become a learner-facing draft."""
 
@@ -459,7 +483,7 @@ def _validate_generated_module_quality(module: GeneratedModule) -> None:
     stages = {stage["type"]: stage["content_json"] for stage in module.stages}
     summary = stages["lesson_summary"]
     synthesis_items = _block_items(summary, "bullets", "cards")
-    if _block_body_length(summary, "paragraph", "highlight") < 650 or len(synthesis_items) < 3:
+    if _instructional_block_text_length(summary) < 650 or len(synthesis_items) < 3:
         raise CmsError(f"خلاصه آموزشی سرفصل «{module.title}» عمق کافی ندارد؛ دوباره تولید کن.")
 
     flashcards = _block_items(stages["flashcards"], "flashcards")
@@ -795,9 +819,7 @@ def replace_draft_curriculum(db: Session, version: CourseVersion, curriculum: Ge
     version.overview_json = curriculum.overview
     version.generation_status = "generated"
     version.generation_model = get_settings().effective_content_generation_model
-    version.generation_prompt_version = (
-        f"{CMS_OUTLINE_PROMPT_VERSION}+{CMS_MODULE_PROMPT_VERSION}+{CMS_KNOWLEDGE_PROMPT_VERSION}"
-    )
+    version.generation_prompt_version = cms_generation_prompt_version()
     version.generation_error = None
     version.generated_at = datetime.now(timezone.utc)
     db.flush()

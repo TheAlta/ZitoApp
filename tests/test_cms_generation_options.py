@@ -179,8 +179,10 @@ class CmsGenerationOptionsTests(unittest.TestCase):
         contents = {
             "learning_path": {"blocks": []},
             "lesson_summary": {"blocks": [
-                {"kind": "paragraph", "body": "a" * 700},
-                {"kind": "bullets", "items": ["one", "two", "three"]},
+                {"kind": "cards", "items": [
+                    {"title": f"section {index}", "body": "a" * 230}
+                    for index in range(3)
+                ]},
             ]},
             "flashcards": {"blocks": [{"kind": "flashcards", "items": [
                 {"front": f"concept {index}", "back": "A detailed explanation with a practical application and context."}

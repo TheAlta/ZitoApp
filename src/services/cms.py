@@ -447,18 +447,10 @@ def _block_items(content: dict[str, Any], *kinds: str) -> list[Any]:
     return items
 
 
-def _block_body_length(content: dict[str, Any], *kinds: str) -> int:
-    return sum(
-        len(str(block.get("body") or "").strip())
-        for block in content.get("blocks", [])
-        if isinstance(block, dict) and block.get("kind") in kinds
-    )
-
-
 def _instructional_block_text_length(content: dict[str, Any]) -> int:
     """Count explanatory learner text regardless of its visual block shape."""
 
-    total = 0
+    total = len(str(content.get("intro") or "").strip())
     for block in content.get("blocks", []):
         if not isinstance(block, dict) or block.get("kind") in {"quiz", "flashcards", "checklist"}:
             continue
@@ -522,7 +514,8 @@ def _validate_generated_module_quality(module: GeneratedModule) -> None:
         raise CmsError(f"آزمونک سرفصل «{module.title}» کافی، متنوع یا معتبر نیست.")
 
     completion = stages["module_completion"]
-    if _block_body_length(completion, "paragraph", "highlight") < 250 or len(_block_items(completion, "checklist")) < 3:
+    completion_actions = _block_items(completion, "checklist", "steps", "bullets")
+    if _instructional_block_text_length(completion) < 250 or len(completion_actions) < 3:
         raise CmsError(f"جمع‌بندی سرفصل «{module.title}» کامل نیست.")
 
 

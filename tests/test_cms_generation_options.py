@@ -203,9 +203,8 @@ class CmsGenerationOptionsTests(unittest.TestCase):
                 }
                 for index in range(3)
             ]}]},
-            "module_completion": {"blocks": [
-                {"kind": "paragraph", "body": "c" * 260},
-                {"kind": "checklist", "items": ["one", "two", "three"]},
+            "module_completion": {"intro": "c" * 260, "blocks": [
+                {"kind": "steps", "items": ["one", "two", "three"]},
             ]},
         }
         module = GeneratedModule(

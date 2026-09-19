@@ -6,8 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session, selectinload
 
-from src.db import get_db
-from src.lib.arvan_client import ArvanAIError
+from src.db import SessionLocal, get_db
 from src.models import (
     Certificate,
     CoachMessage,
@@ -2208,11 +2207,13 @@ def restore_admin_course(course_id: int, version_number: int, db: Session = Depe
 @router.post(
     "/api/admin/courses/{course_id}/versions/{version_number}/generate",
     response_model=CmsCourseVersionOut,
+    status_code=202,
     dependencies=[Depends(require_admin)],
 )
 async def generate_admin_course(
     course_id: int,
     version_number: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> CmsCourseVersionOut:
     course, version = _cms_course_and_version(db, course_id, version_number)
@@ -2221,6 +2222,8 @@ async def generate_admin_course(
     brief = version.authoring_brief_json if isinstance(version.authoring_brief_json, dict) else None
     if not brief:
         raise HTTPException(status_code=422, detail="فرم تدوین دوره کامل نیست.")
+    if version.generation_status == "generating":
+        return _cms_version_out(db, course, version)
 
     brief = {**brief, "module_stage_count": CMS_MODULE_STAGE_COUNT}
     version.authoring_brief_json = brief
@@ -2228,19 +2231,39 @@ async def generate_admin_course(
     version.generation_status = "generating"
     version.generation_error = None
     db.commit()
-    try:
-        curriculum = await generate_curriculum(brief)
-        replace_draft_curriculum(db, version, curriculum)
-        db.commit()
-    except (ArvanAIError, CmsError, ValueError, TypeError) as exc:
-        db.rollback()
-        version = db.get(CourseVersion, version.id)
-        if version:
-            version.generation_status = "failed"
-            version.generation_error = str(exc)[:1000]
+    response = _cms_version_out(db, course, version)
+    background_tasks.add_task(
+        _run_admin_course_generation,
+        course.id,
+        version.id,
+        brief,
+    )
+    return response
+
+
+async def _run_admin_course_generation(
+    course_id: int,
+    version_id: int,
+    brief: dict,
+) -> None:
+    """Run slow AI authoring outside the HTTP request that starts it."""
+
+    with SessionLocal() as db:
+        course = db.get(Course, course_id)
+        version = db.get(CourseVersion, version_id)
+        if not course or not version or version.generation_status != "generating":
+            return
+        try:
+            curriculum = await generate_curriculum(brief)
+            replace_draft_curriculum(db, version, curriculum)
             db.commit()
-        raise HTTPException(status_code=422, detail=f"تولید دوره کامل نشد: {str(exc)[:700]}") from exc
-    return _cms_version_out(db, course, version)
+        except Exception as exc:
+            db.rollback()
+            version = db.get(CourseVersion, version_id)
+            if version:
+                version.generation_status = "failed"
+                version.generation_error = str(exc)[:1000]
+                db.commit()
 
 
 @router.patch(

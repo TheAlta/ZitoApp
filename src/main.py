@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from src.api.routes import router
 from src.config import get_settings
 from src.db import Base, SessionLocal, engine, get_db
+from src.models import CourseVersion
 from src.security import get_admin_from_request
 from src.seed import seed_defaults
 
@@ -28,6 +29,15 @@ def startup() -> None:
         Base.metadata.create_all(bind=engine)
         with SessionLocal() as db:
             seed_defaults(db)
+    with SessionLocal() as db:
+        interrupted = db.query(CourseVersion).filter(
+            CourseVersion.generation_status == "generating"
+        ).all()
+        for version in interrupted:
+            version.generation_status = "failed"
+            version.generation_error = "تولید قبلی با توقف سرویس نیمه‌کاره ماند؛ دوباره تولید را شروع کن."
+        if interrupted:
+            db.commit()
 
 
 def _html(name: str) -> HTMLResponse:

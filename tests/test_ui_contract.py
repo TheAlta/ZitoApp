@@ -435,6 +435,8 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("publishBlocked=['not_requested','generating','needs_regeneration','failed']", admin_template)
         self.assertIn("تلاش دوباره تولید با AI", admin_template)
         self.assertIn("courseRequestSequence", admin_template)
+        self.assertIn("generationPollSequence", admin_template)
+        self.assertIn("function monitorGeneration", admin_template)
         self.assertIn("requestSequence!==courseRequestSequence", admin_template)
         self.assertIn("const target={courseId:active.course_id", admin_template)
         self.assertIn("const selectionUnchanged=active?.id===target.versionId", admin_template)

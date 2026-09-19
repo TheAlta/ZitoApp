@@ -92,8 +92,11 @@ class CmsAuthoringTests(unittest.TestCase):
             generated = client.post(
                 f"/api/admin/courses/{draft['course_id']}/versions/{draft['version_number']}/generate"
             )
-            self.assertEqual(generated.status_code, 200, generated.text)
-            generated_body = generated.json()
+            self.assertEqual(generated.status_code, 202, generated.text)
+            self.assertEqual(generated.json()["generation_status"], "generating")
+            generated_body = client.get(
+                f"/api/admin/courses/{draft['course_id']}/versions/{draft['version_number']}"
+            ).json()
             self.assertEqual(generated_body["generation_status"], "generated")
             self.assertEqual(len(generated_body["modules"]), COURSE_BRIEF["module_count"])
             self.assertTrue(all(len(module["stages"]) == 8 for module in generated_body["modules"]))
@@ -136,7 +139,7 @@ class CmsAuthoringTests(unittest.TestCase):
             generated = client.post(
                 f"/api/admin/courses/{draft['course_id']}/versions/{draft['version_number']}/generate"
             )
-            self.assertEqual(generated.status_code, 200, generated.text)
+            self.assertEqual(generated.status_code, 202, generated.text)
             changed = client.patch(
                 f"/api/admin/courses/{draft['course_id']}/versions/{draft['version_number']}/brief",
                 json={
@@ -178,7 +181,8 @@ class CmsAuthoringTests(unittest.TestCase):
                     f"{draft['version_number']}/generate"
                 )
 
-            self.assertEqual(generated.status_code, 422, generated.text)
+            self.assertEqual(generated.status_code, 202, generated.text)
+            self.assertEqual(generated.json()["generation_status"], "generating")
             current = client.get(
                 f"/api/admin/courses/{draft['course_id']}/versions/"
                 f"{draft['version_number']}"
@@ -197,7 +201,7 @@ class CmsAuthoringTests(unittest.TestCase):
             generated = client.post(
                 f"/api/admin/courses/{draft['course_id']}/versions/{draft['version_number']}/generate"
             )
-            self.assertEqual(generated.status_code, 200, generated.text)
+            self.assertEqual(generated.status_code, 202, generated.text)
             published = client.post(
                 f"/api/admin/courses/{draft['course_id']}/versions/{draft['version_number']}/publish"
             )
@@ -301,7 +305,7 @@ class CmsAuthoringTests(unittest.TestCase):
             generated = client.post(
                 f"/api/admin/courses/{draft['course_id']}/versions/1/generate"
             )
-            self.assertEqual(generated.status_code, 200, generated.text)
+            self.assertEqual(generated.status_code, 202, generated.text)
             published = client.post(
                 f"/api/admin/courses/{draft['course_id']}/versions/1/publish"
             )
@@ -381,7 +385,7 @@ class CmsAuthoringTests(unittest.TestCase):
             regenerated = client.post(
                 f"/api/admin/courses/{source['course_id']}/versions/2/generate"
             )
-            self.assertEqual(regenerated.status_code, 200, regenerated.text)
+            self.assertEqual(regenerated.status_code, 202, regenerated.text)
             republished = client.post(f"/api/admin/courses/{source['course_id']}/versions/2/publish")
             self.assertEqual(republished.status_code, 200, republished.text)
 

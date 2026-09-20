@@ -2157,11 +2157,13 @@
         option.setAttribute("aria-haspopup", "dialog");
         option.setAttribute("aria-label", `مشاهده و شروع دوره ${course.title}`);
         option.innerHTML = `
+          <span class="course-orb-shell" aria-hidden="true">
+            <span class="course-orb-art">
+              <img src="${visual.icon}" alt="">
+            </span>
+          </span>
           <span class="course-option-copy">
             <strong>${escapeHtml(course.title)}</strong>
-          </span>
-          <span class="course-orb-art" aria-hidden="true">
-            <img src="${visual.icon}" alt="">
           </span>`;
         option.addEventListener("pointerenter", (event) => {
           if (event.pointerType === "touch") return;

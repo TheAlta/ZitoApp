@@ -35,11 +35,13 @@ from src.services.json_utils import parse_json_object
 from src.services.rag import document_content_checksum, ensure_course_rag_config, sync_document_chunks
 
 
-CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v4"
+CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v5"
 CMS_MODULE_PROMPT_VERSION = "cms-course-module-v4"
 CMS_KNOWLEDGE_PROMPT_VERSION = "cms-module-knowledge-v2"
 CMS_MODULE_STAGE_COUNT = 8
 CMS_SUPPORTED_STAGE_COUNTS = {7, 8, 9}
+CMS_OUTLINE_JSON_ATTEMPTS = 3
+CMS_CONTENT_JSON_ATTEMPTS = 2
 
 _AI_BRIEF_FIELDS = (
     "title",
@@ -430,6 +432,71 @@ def _generation_options(model: str, *, output_budget: int) -> dict[str, Any]:
     }
 
 
+def _should_retry_generation_error(exc: Exception) -> bool:
+    """Retry malformed output and transient gateway failures, not configuration errors."""
+
+    if not isinstance(exc, ArvanAIError):
+        return True
+    message = str(exc).lower()
+    return any(marker in message for marker in (
+        "http 429",
+        "http 5",
+        "could not call",
+        "empty response",
+        "unexpected ai gateway response",
+    ))
+
+
+async def _request_generated_json(
+    system_prompt: str,
+    user_message: str,
+    *,
+    model: str,
+    api_base_url: str,
+    api_key: str,
+    timeout_seconds: int,
+    output_budget: int,
+    task_label: str,
+    attempts: int,
+) -> dict[str, Any]:
+    """Call the gateway with bounded retries for malformed structured output."""
+
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        retry_instruction = ""
+        if attempt:
+            retry_instruction = (
+                "\n\nThe previous response was not valid JSON. Return the complete object again, "
+                "with every string correctly escaped and no text outside the JSON object."
+            )
+        try:
+            raw = await ask_ai(
+                system_prompt + retry_instruction,
+                user_message,
+                temperature=0.2,
+                model=model,
+                api_base_url=api_base_url,
+                api_key=api_key,
+                timeout_seconds=timeout_seconds,
+                **_generation_options(model, output_budget=output_budget),
+            )
+            return parse_json_object(raw)
+        except (ArvanAIError, ValueError, TypeError) as exc:
+            last_error = exc
+            if not _should_retry_generation_error(exc):
+                raise CmsError(
+                    f"درگاه هوش مصنوعی برای {task_label} پاسخ قابل استفاده نداد: {exc}"
+                ) from exc
+            if attempt + 1 == attempts:
+                break
+            await asyncio.sleep(0.35 * (attempt + 1))
+
+    raise CmsError(
+        f"هوش مصنوعی پس از {attempt + 1} تلاش، پاسخ ساختاریافته معتبر برای {task_label} نداد. "
+        "دوباره تولید را شروع کن."
+    ) from last_error
+
+
 def _ai_generation_brief(brief: dict[str, Any]) -> dict[str, Any]:
     """Keep internal CMS metadata out of the external generation payload."""
     return {
@@ -665,17 +732,17 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
             "مدل تولید CMS را روی GPT-4.1 تنظیم کن."
         )
     ai_brief = _ai_generation_brief(brief)
-    outline_raw = await ask_ai(
+    outline = await _request_generated_json(
         load_prompt("course_outline_generation.md"),
         json.dumps({"brief": ai_brief}, ensure_ascii=False),
-        temperature=0.2,
         model=model,
         api_base_url=settings.effective_content_generation_api_base_url,
         api_key=settings.effective_content_generation_api_key,
         timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-        **_generation_options(model, output_budget=5000),
+        output_budget=3600,
+        task_label="نقشه دوره",
+        attempts=CMS_OUTLINE_JSON_ATTEMPTS,
     )
-    outline = parse_json_object(outline_raw)
     raw_modules = outline.get("modules")
     module_count = int(brief.get("module_count") or 0)
     if not isinstance(raw_modules, list) or len(raw_modules) != module_count:
@@ -689,9 +756,17 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
         for attempt in range(2):
             generation_payload = {
                 "brief": ai_brief,
-                "course_outline": {
-                    "overview": outline.get("overview", {}),
-                    "modules": raw_modules,
+                "course_context": {
+                    "summary": str((outline.get("overview") or {}).get("summary") or ""),
+                    "module_sequence": [
+                        {
+                            "number": index,
+                            "title": str(item.get("title") or ""),
+                            "role_in_course": str((item.get("depth_profile") or {}).get("role_in_course") or ""),
+                        }
+                        for index, item in enumerate(raw_modules, start=1)
+                        if isinstance(item, dict)
+                    ],
                 },
                 "module_outline": module_outline,
                 "stage_count": stage_count,
@@ -702,22 +777,20 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
                     + repair_feedback
                 )
             try:
-                module_raw = await ask_ai(
+                module_response = await _request_generated_json(
                     load_prompt("course_module_generation.md"),
                     json.dumps(generation_payload, ensure_ascii=False),
-                    temperature=0.2,
                     model=model,
                     api_base_url=settings.effective_content_generation_api_base_url,
                     api_key=settings.effective_content_generation_api_key,
                     timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-                    **_generation_options(
-                        model,
-                        output_budget=10000 if _supports_rich_module_generation(model) else 2048,
-                    ),
+                    output_budget=10000 if _supports_rich_module_generation(model) else 2048,
+                    task_label=f"سرفصل {number}",
+                    attempts=CMS_CONTENT_JSON_ATTEMPTS,
                 )
-                generated = _module_from_response(parse_json_object(module_raw), number, stage_count)
+                generated = _module_from_response(module_response, number, stage_count)
                 if len(generated.knowledge_base) < 1800:
-                    knowledge_raw = await ask_ai(
+                    knowledge_response = await _request_generated_json(
                         load_prompt("course_module_knowledge_expansion.md"),
                         json.dumps(
                             {
@@ -731,32 +804,32 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
                             },
                             ensure_ascii=False,
                         ),
-                        temperature=0.2,
                         model=model,
                         api_base_url=settings.effective_content_generation_api_base_url,
                         api_key=settings.effective_content_generation_api_key,
                         timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-                        **_generation_options(model, output_budget=6000),
+                        output_budget=6000,
+                        task_label=f"دانش پایه سرفصل {number}",
+                        attempts=CMS_CONTENT_JSON_ATTEMPTS,
                     )
                     knowledge = _required_string(
-                        parse_json_object(knowledge_raw).get("knowledge_base"),
+                        knowledge_response.get("knowledge_base"),
                         "knowledge_base",
                     )
                     generated = replace(generated, knowledge_base=knowledge)
                 _validate_generated_module_quality(generated)
                 return generated
-            except (CmsError, ValueError, TypeError) as exc:
+            except (CmsError, ArvanAIError, ValueError, TypeError) as exc:
                 if attempt == 1:
                     raise
                 repair_feedback = str(exc)
 
         raise CmsError("تولید محتوای کامل سرفصل پس از تلاش مجدد ناموفق بود.")
 
-    modules = list(
-        await asyncio.gather(
-            *(generate_module(number, module_outline) for number, module_outline in enumerate(raw_modules, start=1))
-        )
-    )
+    # Long Persian JSON responses are more reliable when the gateway authors one module at a time.
+    modules = []
+    for number, module_outline in enumerate(raw_modules, start=1):
+        modules.append(await generate_module(number, module_outline))
     _validate_curriculum_question_variety(modules)
     return GeneratedCurriculum(overview=overview, modules=modules)
 

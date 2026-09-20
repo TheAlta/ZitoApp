@@ -43,18 +43,23 @@ blueprint to communicate what deserves depth; do not make every module the
 same size or shape. Foundational modules may need more definitions, applied
 modules more scenarios, and mastery modules more judgment and synthesis.
 
+Keep this planning response compact. The detailed teaching material belongs in
+the module-generation step, not in this outline. This keeps the JSON reliable
+even for long courses.
+
 Quality requirements:
-- summary: 120-200 Persian words explaining what the course teaches and how.
-- description: 250-450 Persian words describing progression, practice,
+- summary: 70-120 Persian words explaining what the course teaches and how.
+- description: 120-220 Persian words describing progression, practice,
   expected effort, prerequisites, and honest boundaries.
-- each outcome list: 3-8 specific, observable, non-repetitive outcomes.
-- each module: a focused description of 90-180 Persian words, 2-6 measurable
-  learning objectives, and 2-6 precise tags.
-- content_blueprint lists must contain only items genuinely needed for that
+- each outcome list: 3-5 specific, observable, non-repetitive outcomes.
+- each module: a focused description of 35-75 Persian words, 2-5 measurable
+  learning objectives, and 2-5 precise tags.
+- content_blueprint lists must contain 2-5 items genuinely needed for that
   module. Choose their length according to conceptual complexity.
 - estimated_minutes across modules should be plausible for
   brief.estimated_learning_hours; do not mechanically divide time when some
   modules clearly need more practice.
 
 Do not make unsupported claims. Do not use Markdown fences or prose before or
-after the JSON.
+after the JSON. Escape every JSON string correctly; never place literal line
+breaks inside a JSON string.

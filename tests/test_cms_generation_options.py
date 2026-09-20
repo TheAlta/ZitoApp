@@ -13,6 +13,7 @@ from src.services.cms import (
     _ai_generation_brief,
     _generation_options,
     _module_from_response,
+    _request_generated_json,
     _supports_rich_module_generation,
     _stages_from_outline,
     _validate_generated_module_quality,
@@ -53,6 +54,56 @@ class CmsGenerationOptionsTests(unittest.TestCase):
                 "max_tokens": 10000,
             },
         )
+
+    def test_malformed_json_is_retried_before_course_generation_fails(self) -> None:
+        settings = {
+            "model": "GPT-4.1",
+            "api_base_url": "https://example.invalid/v1",
+            "api_key": "test",
+            "timeout_seconds": 180,
+        }
+        ai = AsyncMock(side_effect=['{"overview": {"summary": "broken"}', '{"overview": {}}'])
+
+        with patch("src.services.cms.ask_ai", ai):
+            result = asyncio.run(
+                _request_generated_json(
+                    "Return JSON only.",
+                    "{}",
+                    **settings,
+                    output_budget=100,
+                    task_label="نقشه دوره",
+                    attempts=3,
+                )
+            )
+
+        self.assertEqual(result, {"overview": {}})
+        self.assertEqual(ai.await_count, 2)
+        self.assertIn("previous response was not valid JSON", ai.await_args_list[1].args[0])
+
+    def test_permanently_malformed_json_has_a_friendly_cms_error(self) -> None:
+        settings = {
+            "model": "GPT-4.1",
+            "api_base_url": "https://example.invalid/v1",
+            "api_key": "test",
+            "timeout_seconds": 180,
+        }
+        ai = AsyncMock(return_value='{"overview": {"summary": "broken"}')
+
+        with patch("src.services.cms.ask_ai", ai):
+            with self.assertRaisesRegex(CmsError, "پاسخ ساختاریافته معتبر") as error:
+                asyncio.run(
+                    _request_generated_json(
+                        "Return JSON only.",
+                        "{}",
+                        **settings,
+                        output_budget=100,
+                        task_label="نقشه دوره",
+                        attempts=3,
+                    )
+                )
+
+        self.assertNotIn("Expecting", str(error.exception))
+        self.assertEqual(ai.await_count, 3)
 
     def test_assessment_key_is_derived_from_the_first_public_option(self) -> None:
         stages = []
@@ -261,6 +312,7 @@ class CmsGenerationOptionsTests(unittest.TestCase):
 
         self.assertIn("depth_profile", outline)
         self.assertIn("content_blueprint", outline)
+        self.assertIn("planning response compact", outline)
         self.assertIn("stage is adaptive", module)
         self.assertIn('"personalized_example"', module)
         self.assertNotIn("exactly six", module.lower())

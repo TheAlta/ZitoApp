@@ -13,7 +13,7 @@ import re
 from copy import deepcopy
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -35,13 +35,16 @@ from src.services.json_utils import parse_json_object
 from src.services.rag import document_content_checksum, ensure_course_rag_config, sync_document_chunks
 
 
-CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v5"
+CMS_OUTLINE_PROMPT_VERSION = "cms-course-outline-v6"
 CMS_MODULE_PROMPT_VERSION = "cms-course-module-v4"
 CMS_KNOWLEDGE_PROMPT_VERSION = "cms-module-knowledge-v2"
 CMS_MODULE_STAGE_COUNT = 8
 CMS_SUPPORTED_STAGE_COUNTS = {7, 8, 9}
 CMS_OUTLINE_JSON_ATTEMPTS = 3
 CMS_CONTENT_JSON_ATTEMPTS = 2
+CMS_MODULE_QUALITY_ATTEMPTS = 3
+CMS_OUTLINE_MAX_OUTPUT_BUDGET = 10000
+CMS_OUTLINE_FALLBACK_BATCH_SIZE = 4
 
 _AI_BRIEF_FIELDS = (
     "title",
@@ -109,6 +112,10 @@ def cms_generation_prompt_version() -> str:
 
 class CmsError(ValueError):
     """A user-actionable course authoring error."""
+
+
+class CmsGatewayError(CmsError):
+    """An AI gateway failure that cannot be recovered by reshaping a draft."""
 
 
 @dataclass(frozen=True)
@@ -458,16 +465,20 @@ async def _request_generated_json(
     output_budget: int,
     task_label: str,
     attempts: int,
+    validator: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
-    """Call the gateway with bounded retries for malformed structured output."""
+    """Call the gateway with bounded retries for malformed or incomplete output."""
 
     last_error: Exception | None = None
     for attempt in range(attempts):
         retry_instruction = ""
         if attempt:
+            feedback = str(last_error or "The JSON contract was incomplete.")[:900]
             retry_instruction = (
-                "\n\nThe previous response was not valid JSON. Return the complete object again, "
-                "with every string correctly escaped and no text outside the JSON object."
+                "\n\nThe previous response did not satisfy the required JSON contract. "
+                f"Validation feedback: {feedback}\n"
+                "Return the complete corrected object again, with every string correctly escaped "
+                "and no text outside the JSON object."
             )
         try:
             raw = await ask_ai(
@@ -480,21 +491,210 @@ async def _request_generated_json(
                 timeout_seconds=timeout_seconds,
                 **_generation_options(model, output_budget=output_budget),
             )
-            return parse_json_object(raw)
-        except (ArvanAIError, ValueError, TypeError) as exc:
+            parsed = parse_json_object(raw)
+            if validator:
+                validator(parsed)
+            return parsed
+        except (ArvanAIError, CmsError, ValueError, TypeError) as exc:
             last_error = exc
             if not _should_retry_generation_error(exc):
-                raise CmsError(
+                raise CmsGatewayError(
                     f"درگاه هوش مصنوعی برای {task_label} پاسخ قابل استفاده نداد: {exc}"
                 ) from exc
             if attempt + 1 == attempts:
                 break
             await asyncio.sleep(0.35 * (attempt + 1))
 
-    raise CmsError(
+    error_type = CmsGatewayError if isinstance(last_error, ArvanAIError) else CmsError
+    raise error_type(
         f"هوش مصنوعی پس از {attempt + 1} تلاش، پاسخ ساختاریافته معتبر برای {task_label} نداد. "
         "دوباره تولید را شروع کن."
     ) from last_error
+
+
+def _outline_output_budget(module_count: int) -> int:
+    """Allocate enough planning tokens without requesting an unbounded response."""
+
+    return min(CMS_OUTLINE_MAX_OUTPUT_BUDGET, max(3000, 1800 + (module_count * 450)))
+
+
+def _outline_modules(data: dict[str, Any], brief: dict[str, Any]) -> list[dict[str, Any]]:
+    """Validate the complete outline contract before any learner content is generated."""
+
+    expected_count = int(brief.get("module_count") or 0)
+    raw_modules = data.get("modules")
+    if not isinstance(raw_modules, list) or len(raw_modules) != expected_count:
+        received_count = len(raw_modules) if isinstance(raw_modules, list) else 0
+        raise CmsError(
+            "The outline must contain exactly "
+            f"{expected_count} modules; it returned {received_count}."
+        )
+
+    overview_data = data.get("overview") if isinstance(data.get("overview"), dict) else {}
+    _overview_from_response(overview_data, brief)
+
+    modules: list[dict[str, Any]] = []
+    normalized_titles: set[str] = set()
+    for number, raw_module in enumerate(raw_modules, start=1):
+        if not isinstance(raw_module, dict):
+            raise CmsError(f"Module {number} in the outline must be a JSON object.")
+        title = _required_string(raw_module.get("title"), f"title for module {number}", 255)
+        normalized_title = re.sub(r"\s+", " ", title).casefold()
+        if normalized_title in normalized_titles:
+            raise CmsError("Every outline module must have a distinct title.")
+        normalized_titles.add(normalized_title)
+        _required_string(raw_module.get("description"), f"description for module {number}")
+        objectives = _as_strings(raw_module.get("learning_objectives"), limit=6)
+        tags = _as_strings(raw_module.get("tags"), limit=10)
+        modules.append(
+            {
+                **raw_module,
+                "learning_objectives": objectives or [
+                    f"به‌کارگیری {brief.get('topic') or title} در یک موقعیت واقعی"
+                ],
+                "tags": tags or [str(brief.get("topic") or title)],
+            }
+        )
+    return modules
+
+
+def _fallback_overview(brief: dict[str, Any]) -> dict[str, Any]:
+    """Keep a draft usable if the gateway only fails while planning the overview."""
+
+    title = str(brief.get("title") or "این دوره").strip()
+    topic = str(brief.get("topic") or "موضوع دوره").strip()
+    goal = str(brief.get("goal") or "رسیدن به یک توانایی عملی").strip()
+    audience = str(brief.get("audience") or "یادگیرنده").strip()
+    overview = {
+        "summary": f"{title} یک مسیر مرحله‌به‌مرحله برای یادگیری {topic} و رسیدن به {goal} است.",
+        "description": (
+            f"این دوره برای {audience} طراحی شده است و مفاهیم، تصمیم‌ها و تمرین‌های {topic} "
+            "را از پایه تا کاربرد واقعی پیش می‌برد. جزئیات آموزشی هر سرفصل به‌صورت مستقل "
+            "تولید می‌شود تا مسیر با زمان، سطح و هدفی که مدیر تعیین کرده هماهنگ بماند."
+        ),
+        "learning_outcomes": [f"به‌کارگیری {topic} در یک موقعیت واقعی"],
+        "career_outcomes": ["تبدیل یادگیری به تصمیم و اقدام قابل مشاهده"],
+        "daily_life_outcomes": ["ساخت یک روش منظم برای تمرین و بازبینی"],
+    }
+    return _overview_from_response(overview, brief)
+
+
+def _fallback_module_outline(brief: dict[str, Any], number: int, total: int) -> dict[str, Any]:
+    """Provide a valid planning skeleton; the learner-facing material is still AI-authored."""
+
+    topic = str(brief.get("topic") or "موضوع دوره").strip()
+    goal = str(brief.get("goal") or "هدف دوره").strip()
+    phases = (
+        ("مبانی و نقطه شروع", "foundation", "مفاهیم پایه و مسئله اصلی را روشن کن."),
+        ("روش‌ها و تصمیم‌های کلیدی", "build", "روش را به گام‌های قابل اجرا تبدیل کن."),
+        ("تمرین در موقعیت واقعی", "apply", "روش را در یک موقعیت واقعی اجرا و بازبینی کن."),
+        ("یکپارچه‌سازی و تسلط", "mastery", "تصمیم‌ها را با معیار و بازخورد بهبود بده."),
+    )
+    phase_index = min(len(phases) - 1, ((number - 1) * len(phases)) // max(total, 1))
+    phase_title, role, direction = phases[phase_index]
+    return {
+        "title": f"{topic}: {phase_title} (گام {number})",
+        "description": f"در سرفصل {number} از {total}، {direction} تا به «{goal}» نزدیک شوی.",
+        "learning_objectives": [
+            f"مفاهیم و تصمیم‌های کلیدی {topic} را در این گام توضیح دهد.",
+            "یک تمرین قابل مشاهده را اجرا و نتیجه آن را مرور کند.",
+        ],
+        "tags": [topic, role, f"module-{number}"],
+        "depth_profile": {
+            "role_in_course": role,
+            "prerequisite": "سرفصل‌های پیشین این مسیر",
+            "mastery_target": goal,
+            "practice_intensity": "medium",
+        },
+        "content_blueprint": {
+            "core_concepts": [topic],
+            "misconceptions": ["شروع کردن بدون روشن‌کردن مسئله و معیار تصمیم"],
+            "practice_contexts": ["یک موقعیت واقعی از کار، تحصیل یا زندگی یادگیرنده"],
+            "assessment_focus": ["انتخاب اقدام مناسب و توضیح دلیل آن"],
+        },
+    }
+
+
+def _outline_slice_modules(data: dict[str, Any], expected_count: int) -> list[dict[str, Any]]:
+    """Validate a smaller recovery slice without weakening the outline contract."""
+
+    raw_modules = data.get("modules")
+    if not isinstance(raw_modules, list) or len(raw_modules) != expected_count:
+        received_count = len(raw_modules) if isinstance(raw_modules, list) else 0
+        raise CmsError(
+            "The outline recovery slice must contain exactly "
+            f"{expected_count} modules; it returned {received_count}."
+        )
+    for number, raw_module in enumerate(raw_modules, start=1):
+        if not isinstance(raw_module, dict):
+            raise CmsError(f"Recovery module {number} must be a JSON object.")
+        _required_string(raw_module.get("title"), f"title for recovery module {number}", 255)
+        _required_string(raw_module.get("description"), f"description for recovery module {number}")
+    return raw_modules
+
+
+async def _recover_outline_modules(
+    brief: dict[str, Any],
+    *,
+    model: str,
+    api_base_url: str,
+    api_key: str,
+    timeout_seconds: int,
+) -> list[dict[str, Any]]:
+    """Recover an oversized or incomplete outline in bounded, small AI batches."""
+
+    module_count = int(brief.get("module_count") or 0)
+    modules: list[dict[str, Any]] = []
+    for start in range(1, module_count + 1, CMS_OUTLINE_FALLBACK_BATCH_SIZE):
+        requested_count = min(CMS_OUTLINE_FALLBACK_BATCH_SIZE, module_count - start + 1)
+        try:
+            response = await _request_generated_json(
+                load_prompt("course_outline_slice_generation.md"),
+                json.dumps(
+                    {
+                        "brief": _ai_generation_brief(brief),
+                        "start_module_number": start,
+                        "requested_module_count": requested_count,
+                    },
+                    ensure_ascii=False,
+                ),
+                model=model,
+                api_base_url=api_base_url,
+                api_key=api_key,
+                timeout_seconds=timeout_seconds,
+                output_budget=_outline_output_budget(requested_count),
+                task_label=f"outline recovery modules {start}-{start + requested_count - 1}",
+                attempts=CMS_OUTLINE_JSON_ATTEMPTS,
+                validator=lambda response, count=requested_count: _outline_slice_modules(response, count),
+            )
+            modules.extend(_outline_slice_modules(response, requested_count))
+        except CmsGatewayError:
+            raise
+        except CmsError:
+            # The actual lesson modules are still generated by AI. This only
+            # prevents an outline-count defect from discarding the whole draft.
+            modules.extend(
+                _fallback_module_outline(brief, number, module_count)
+                for number in range(start, start + requested_count)
+            )
+    return _make_recovered_titles_distinct(modules)
+
+
+def _make_recovered_titles_distinct(modules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Avoid a bad recovery batch collapsing two distinct course positions."""
+
+    normalized_titles: set[str] = set()
+    distinct_modules: list[dict[str, Any]] = []
+    for number, module in enumerate(modules, start=1):
+        title = _required_string(module.get("title"), f"title for recovery module {number}", 255)
+        candidate = title
+        normalized = re.sub(r"\s+", " ", candidate).casefold()
+        if normalized in normalized_titles:
+            candidate = f"{title} (گام {number})"[:255]
+            normalized = re.sub(r"\s+", " ", candidate).casefold()
+        normalized_titles.add(normalized)
+        distinct_modules.append({**module, "title": candidate})
+    return distinct_modules
 
 
 def _ai_generation_brief(brief: dict[str, Any]) -> dict[str, Any]:
@@ -732,28 +932,46 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
             "مدل تولید CMS را روی GPT-4.1 تنظیم کن."
         )
     ai_brief = _ai_generation_brief(brief)
-    outline = await _request_generated_json(
-        load_prompt("course_outline_generation.md"),
-        json.dumps({"brief": ai_brief}, ensure_ascii=False),
-        model=model,
-        api_base_url=settings.effective_content_generation_api_base_url,
-        api_key=settings.effective_content_generation_api_key,
-        timeout_seconds=settings.arvan_content_generation_timeout_seconds,
-        output_budget=3600,
-        task_label="نقشه دوره",
-        attempts=CMS_OUTLINE_JSON_ATTEMPTS,
-    )
-    raw_modules = outline.get("modules")
     module_count = int(brief.get("module_count") or 0)
-    if not isinstance(raw_modules, list) or len(raw_modules) != module_count:
-        raise CmsError("AI تعداد سرفصل‌های درخواستی را تولید نکرد.")
-    overview = _overview_from_response(outline.get("overview") if isinstance(outline.get("overview"), dict) else {}, brief)
+    try:
+        outline = await _request_generated_json(
+            load_prompt("course_outline_generation.md"),
+            json.dumps({"brief": ai_brief}, ensure_ascii=False),
+            model=model,
+            api_base_url=settings.effective_content_generation_api_base_url,
+            api_key=settings.effective_content_generation_api_key,
+            timeout_seconds=settings.arvan_content_generation_timeout_seconds,
+            output_budget=_outline_output_budget(module_count),
+            task_label="نقشه دوره",
+            attempts=CMS_OUTLINE_JSON_ATTEMPTS,
+            validator=lambda response: _outline_modules(response, brief),
+        )
+        raw_modules = _outline_modules(outline, brief)
+        overview = _overview_from_response(
+            outline.get("overview") if isinstance(outline.get("overview"), dict) else {},
+            brief,
+        )
+    except CmsGatewayError:
+        raise
+    except CmsError:
+        raw_modules = await _recover_outline_modules(
+            brief,
+            model=model,
+            api_base_url=settings.effective_content_generation_api_base_url,
+            api_key=settings.effective_content_generation_api_key,
+            timeout_seconds=settings.arvan_content_generation_timeout_seconds,
+        )
+        overview = _fallback_overview(brief)
+        raw_modules = _outline_modules({"overview": overview, "modules": raw_modules}, brief)
+        outline = {"overview": overview, "modules": raw_modules}
+
+    modules: list[GeneratedModule] = []
 
     async def generate_module(number: int, module_outline: Any) -> GeneratedModule:
         if not isinstance(module_outline, dict):
             raise CmsError("فهرست سرفصل‌های تولیدشده معتبر نیست.")
         repair_feedback: str | None = None
-        for attempt in range(2):
+        for attempt in range(CMS_MODULE_QUALITY_ATTEMPTS):
             generation_payload = {
                 "brief": ai_brief,
                 "course_context": {
@@ -767,6 +985,14 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
                         for index, item in enumerate(raw_modules, start=1)
                         if isinstance(item, dict)
                     ],
+                    "prior_assessment_questions": [
+                        str(question.get("question") or "")
+                        for previous_module in modules
+                        for assessment_stage in previous_module.stages
+                        if assessment_stage["type"] == "module_assessment"
+                        for question in _block_items(assessment_stage["content_json"], "quiz")
+                        if isinstance(question, dict)
+                    ][-24:],
                 },
                 "module_outline": module_outline,
                 "stage_count": stage_count,
@@ -818,16 +1044,16 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
                     )
                     generated = replace(generated, knowledge_base=knowledge)
                 _validate_generated_module_quality(generated)
+                _validate_curriculum_question_variety([*modules, generated])
                 return generated
             except (CmsError, ArvanAIError, ValueError, TypeError) as exc:
-                if attempt == 1:
+                if attempt + 1 == CMS_MODULE_QUALITY_ATTEMPTS:
                     raise
                 repair_feedback = str(exc)
 
         raise CmsError("تولید محتوای کامل سرفصل پس از تلاش مجدد ناموفق بود.")
 
     # Long Persian JSON responses are more reliable when the gateway authors one module at a time.
-    modules = []
     for number, module_outline in enumerate(raw_modules, start=1):
         modules.append(await generate_module(number, module_outline))
     _validate_curriculum_question_variety(modules)

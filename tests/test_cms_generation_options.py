@@ -78,7 +78,7 @@ class CmsGenerationOptionsTests(unittest.TestCase):
 
         self.assertEqual(result, {"overview": {}})
         self.assertEqual(ai.await_count, 2)
-        self.assertIn("previous response was not valid JSON", ai.await_args_list[1].args[0])
+        self.assertIn("previous response did not satisfy the required JSON contract", ai.await_args_list[1].args[0])
 
     def test_permanently_malformed_json_has_a_friendly_cms_error(self) -> None:
         settings = {
@@ -104,6 +104,126 @@ class CmsGenerationOptionsTests(unittest.TestCase):
 
         self.assertNotIn("Expecting", str(error.exception))
         self.assertEqual(ai.await_count, 3)
+
+    def test_outline_count_contract_is_retried_before_module_generation(self) -> None:
+        brief = {
+            "title": "Deep course",
+            "topic": "Deep topic",
+            "goal": "Build a real skill",
+            "duration": "Four weeks",
+            "audience": "Learners",
+            "target_group": "Professionals",
+            "level": "Beginner",
+            "module_count": 2,
+            "estimated_learning_hours": 12,
+        }
+        overview = {
+            "summary": "Course summary",
+            "description": "Course description",
+            "learning_outcomes": ["Outcome"],
+            "career_outcomes": ["Career"],
+            "daily_life_outcomes": ["Daily"],
+        }
+        first_module = {
+            "title": "Module one",
+            "description": "Module one description",
+            "learning_objectives": ["Objective one"],
+            "tags": ["first"],
+        }
+        second_module = {
+            "title": "Module two",
+            "description": "Module two description",
+            "learning_objectives": ["Objective two"],
+            "tags": ["second"],
+        }
+        incomplete_outline = json.dumps({"overview": overview, "modules": [first_module]})
+        complete_outline = json.dumps({"overview": overview, "modules": [first_module, second_module]})
+        generated_modules = [
+            GeneratedModule(1, "Module one", "Description", ["Objective"], ["first"], [], "k" * 2000),
+            GeneratedModule(2, "Module two", "Description", ["Objective"], ["second"], [], "k" * 2000),
+        ]
+        settings = SimpleNamespace(
+            arvan_mock_ai=False,
+            effective_content_generation_model="GPT-4.1",
+            effective_content_generation_api_base_url="https://example.invalid/v1",
+            effective_content_generation_api_key="test",
+            arvan_content_generation_timeout_seconds=180,
+        )
+        ai = AsyncMock(side_effect=[incomplete_outline, complete_outline, "{}", "{}"])
+
+        with (
+            patch("src.services.cms.get_settings", return_value=settings),
+            patch("src.services.cms.ask_ai", ai),
+            patch("src.services.cms._module_from_response", side_effect=generated_modules),
+            patch("src.services.cms._validate_generated_module_quality"),
+            patch("src.services.cms._validate_curriculum_question_variety"),
+        ):
+            curriculum = asyncio.run(generate_curriculum(brief))
+
+        self.assertEqual(len(curriculum.modules), 2)
+        self.assertEqual(ai.await_count, 4)
+        retry_prompt = ai.await_args_list[1].args[0]
+        self.assertIn("exactly 2 modules", retry_prompt)
+
+    def test_outline_count_recovery_builds_all_requested_modules_after_retries(self) -> None:
+        brief = {
+            "title": "Recovery course",
+            "topic": "Recovery topic",
+            "goal": "Build a real skill",
+            "duration": "Four weeks",
+            "audience": "Learners",
+            "target_group": "Professionals",
+            "level": "Beginner",
+            "module_count": 2,
+            "estimated_learning_hours": 12,
+        }
+        overview = {"summary": "Course summary", "description": "Course description"}
+        first_module = {
+            "title": "Module one",
+            "description": "Module one description",
+            "learning_objectives": ["Objective one"],
+            "tags": ["first"],
+        }
+        second_module = {
+            "title": "Module two",
+            "description": "Module two description",
+            "learning_objectives": ["Objective two"],
+            "tags": ["second"],
+        }
+        incomplete_outline = json.dumps({"overview": overview, "modules": [first_module]})
+        recovery_slice = json.dumps({"modules": [first_module, second_module]})
+        generated_modules = [
+            GeneratedModule(1, "Module one", "Description", ["Objective"], ["first"], [], "k" * 2000),
+            GeneratedModule(2, "Module two", "Description", ["Objective"], ["second"], [], "k" * 2000),
+        ]
+        settings = SimpleNamespace(
+            arvan_mock_ai=False,
+            effective_content_generation_model="GPT-4.1",
+            effective_content_generation_api_base_url="https://example.invalid/v1",
+            effective_content_generation_api_key="test",
+            arvan_content_generation_timeout_seconds=180,
+        )
+        ai = AsyncMock(side_effect=[
+            incomplete_outline,
+            incomplete_outline,
+            incomplete_outline,
+            recovery_slice,
+            "{}",
+            "{}",
+        ])
+
+        with (
+            patch("src.services.cms.get_settings", return_value=settings),
+            patch("src.services.cms.ask_ai", ai),
+            patch("src.services.cms._module_from_response", side_effect=generated_modules),
+            patch("src.services.cms._validate_generated_module_quality"),
+            patch("src.services.cms._validate_curriculum_question_variety"),
+        ):
+            curriculum = asyncio.run(generate_curriculum(brief))
+
+        self.assertEqual(len(curriculum.modules), 2)
+        self.assertEqual(ai.await_count, 6)
+        self.assertIn("ZITO_CMS_COURSE_OUTLINE_SLICE_V1", ai.await_args_list[3].args[0])
 
     def test_assessment_key_is_derived_from_the_first_public_option(self) -> None:
         stages = []

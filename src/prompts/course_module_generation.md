@@ -45,6 +45,9 @@ Explain concepts before asking the learner to act, connect every recommendation
 to the module topic, use concrete examples, and do not reuse a question, tip,
 flashcard, or paragraph from another stage. If repair_feedback is present,
 regenerate the entire module and explicitly fix every issue described there.
+The course_context may contain prior_assessment_questions from earlier modules.
+Never repeat or lightly reword any of them; assess this module's own mastery
+targets with distinct scenarios.
 
 Adaptive stage contracts:
 - learning_path: a concise orientation paragraph and a timeline of 3-6

@@ -41,41 +41,43 @@ body.zito-glass-certificate {
   background: var(--zito-canvas) !important;
 }
 
-/* Scrollbars stay visible for usability, but belong to the liquid material. */
+/* Quiet, native-feeling scrollbars for every glass surface. */
 .zito-glass,
 .zito-glass * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(108, 87, 168, .54) transparent;
+  scrollbar-color: rgba(80, 69, 108, .30) transparent;
 }
 
 .zito-glass::-webkit-scrollbar,
 .zito-glass *::-webkit-scrollbar {
-  width: 11px;
-  height: 11px;
+  width: 6px;
+  height: 6px;
+}
+
+.zito-glass::-webkit-scrollbar-button,
+.zito-glass *::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .zito-glass::-webkit-scrollbar-track,
 .zito-glass *::-webkit-scrollbar-track {
-  border: 3px solid transparent;
-  border-radius: 999px;
   background: transparent;
-  background-clip: padding-box;
 }
 
 .zito-glass::-webkit-scrollbar-thumb,
 .zito-glass *::-webkit-scrollbar-thumb {
-  min-height: 36px;
-  border: 3px solid transparent;
+  min-height: 44px;
+  border: 0;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(151, 112, 207, .76), rgba(78, 169, 188, .74));
-  background-clip: padding-box;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .44);
+  background: rgba(80, 69, 108, .27);
+  box-shadow: none;
 }
 
 .zito-glass::-webkit-scrollbar-thumb:hover,
 .zito-glass *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(136, 95, 201, .92), rgba(65, 172, 191, .90));
-  background-clip: padding-box;
+  background: rgba(80, 69, 108, .46);
 }
 
 .zito-glass::-webkit-scrollbar-corner,
@@ -86,11 +88,20 @@ body.zito-glass-certificate {
 /* Keep lesson scrollbars inside their panes without changing Persian content flow. */
 .zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-stage) {
   direction: ltr;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   background-clip: border-box !important;
 }
 
 .zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-stage) > * {
+  direction: rtl;
+}
+
+/* Put catalog scrolling on the conventional edge while its content stays RTL. */
+.zito-glass-app .phone-shell.mode-planet .planet-stage {
+  direction: ltr;
+}
+
+.zito-glass-app .phone-shell.mode-planet .planet-stage > * {
   direction: rtl;
 }
 
@@ -1179,7 +1190,7 @@ body.zito-glass-certificate {
   display: block;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   padding: clamp(20px, 4vw, 34px) clamp(14px, 4vw, 28px);
 }
 
@@ -2433,11 +2444,11 @@ body.zito-glass-certificate {
 
 .zito-glass-app .phone-shell.mode-lesson .module-path-list {
   scrollbar-width: thin;
-  scrollbar-color: rgba(108, 91, 144, .42) transparent;
+  scrollbar-color: rgba(80, 69, 108, .27) transparent;
 }
 
 .zito-glass-app .phone-shell.mode-lesson .module-path-list::-webkit-scrollbar {
-  width: 7px;
+  width: 6px;
 }
 
 .zito-glass-app .phone-shell.mode-lesson .module-path-list::-webkit-scrollbar-track {
@@ -2446,10 +2457,10 @@ body.zito-glass-certificate {
 }
 
 .zito-glass-app .phone-shell.mode-lesson .module-path-list::-webkit-scrollbar-thumb {
-  min-height: 32px;
-  border: 2px solid transparent;
+  min-height: 40px;
+  border: 0;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(142, 114, 194, .60), rgba(75, 173, 188, .56)) padding-box;
+  background: rgba(80, 69, 108, .27);
 }
 
 .zito-glass-app .phone-shell.mode-lesson .stage-header {
@@ -2771,11 +2782,11 @@ body.zito-glass-certificate {
 
 .zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-card) {
   scrollbar-width: thin;
-  scrollbar-color: rgba(108, 91, 144, .42) transparent;
+  scrollbar-color: rgba(80, 69, 108, .27) transparent;
 }
 
 .zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-card)::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-card)::-webkit-scrollbar-track {
@@ -2785,9 +2796,9 @@ body.zito-glass-certificate {
 
 .zito-glass-app .phone-shell.mode-lesson :is(.lesson-dock, .planet-card)::-webkit-scrollbar-thumb {
   min-height: 42px;
-  border: 2px solid transparent;
+  border: 0;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(142, 114, 194, .64), rgba(75, 173, 188, .60)) padding-box;
+  background: rgba(80, 69, 108, .27);
 }
 
 .zito-glass-app .learning-toast {

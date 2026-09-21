@@ -1667,7 +1667,7 @@
       .stage-header { padding: 17px 15px; }
     }
   </style>
-  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260920-scrollbar-1">
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260921-stage-canvas-1">
 </head>
 <body class="zito-glass zito-glass-app">
   <main id="appShell" class="phone-shell mode-onboarding">
@@ -3064,17 +3064,28 @@
           </section>`
         : "";
       lessonPanel.innerHTML = `
-        <article class="lesson-article" data-stage-type="${escapeHtml(lesson.stage_type)}">
+        <article class="lesson-article lesson-stage-canvas" data-stage-type="${escapeHtml(lesson.stage_type)}">
           <header class="stage-header">
             <div class="stage-heading-copy">
               <div class="stage-number">${lesson.module_title ? `سرفصل ${lesson.module_number} از ${lesson.total_module_count} · قدم ${lesson.module_stage_number} از ${moduleStageCount}` : `مرحله ${lesson.stage_number} از ${lesson.total_stage_count}`}</div>
               <h2>${escapeHtml(lesson.title)}</h2>
               <div class="stage-type"><span aria-hidden="true"></span>${escapeHtml(templateLabel)}</div>
             </div>
-            <div class="stage-progress-badge"><strong>${lesson.progress_percentage}٪</strong><small>پیشرفت دوره</small></div>
+            <div class="stage-header-side">
+              <div class="stage-progress-badge"><strong>${lesson.progress_percentage}٪</strong><small>پیشرفت دوره</small></div>
+              <div class="stage-header-visual">${renderStageVisual(lesson.stage_type)}</div>
+            </div>
           </header>
-          <p class="stage-intro">${escapeHtml(content.intro || "محتوای تاییدشده این مرحله آماده است.")}</p>
-          ${renderStageVisual(lesson.stage_type)}
+          <section class="stage-opening" aria-label="تمرکز این مرحله">
+            <div class="stage-opening-copy">
+              <span class="stage-opening-kicker">تمرکز این مرحله</span>
+              <p class="stage-intro">${escapeHtml(content.intro || "محتوای تاییدشده این مرحله آماده است.")}</p>
+            </div>
+            <div class="stage-opening-route" aria-label="جایگاه در مسیر یادگیری">
+              <span>در مسیر تو</span>
+              <strong>${escapeHtml(templateLabel)}</strong>
+            </div>
+          </section>
           <div class="stage-content">${blocks.map(renderContentBlock).join("")}</div>
           ${renderMediaSlots(content.media_slots)}
           <section class="stage-activity">

@@ -8,7 +8,7 @@
 
   <link rel="preload" href="/landing-static/fonts/Yekan.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/landing-static/zito-ambient.mp3?v=20260928-euphoria-1" as="audio" type="audio/mpeg">
-  <script src="/landing-static/ambient-audio.js?v=20260928-euphoria-1"></script>
+  <script src="/landing-static/ambient-audio.js?v=20261010-fade-1"></script>
   <script defer src="/landing-static/zito-mascot.js"></script>
   <script defer src="/landing-static/zito-intro-mascot.js"></script>
 
@@ -1063,6 +1063,13 @@
     .phone-copy,
     .phone-helper,
     .phone-link { color: #766e88; }
+    .phone-field[hidden], .phone-switch[hidden] { display: none !important; }
+    /* "Edit" and "resend" belong to the code step only. */
+    .phone-edit-link.is-hidden, .phone-link.is-hidden { display: none !important; }
+    .phone-switch { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px; color: #766e88; font-family: var(--font-fa); font-size: 12px; }
+    .phone-switch-link { width: auto; min-height: 44px; padding: 0 4px; border: 0; background: transparent; box-shadow: none; color: #735f86; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+    .phone-switch-link:hover { color: #584769; }
+    .phone-switch-link:focus-visible { outline: 3px solid rgba(128, 95, 195, .32); outline-offset: 2px; border-radius: 8px; }
     .phone-field label { color: #706782; }
     .phone-field:focus-within label { color: #805fc3; }
 
@@ -1395,10 +1402,10 @@
       <div class="phone-card-visual" aria-hidden="true">
         <img src="/landing-static/zito-mascot.svg?v=20260831-static-2" alt="">
       </div>
-      <div class="phone-title">ورود به زیتو</div>
-      <div class="phone-copy" id="phoneCopy" aria-live="polite">نام و شماره موبایلت را وارد کن تا کد ورود را بفرستیم.</div>
-      <form class="phone-form" id="phoneForm" data-step="details">
-        <div class="phone-field">
+      <div class="phone-title" id="phoneTitle">ورود به زیتو</div>
+      <div class="phone-copy" id="phoneCopy" aria-live="polite">شماره موبایلت را وارد کن تا کد ورود را بفرستیم.</div>
+      <form class="phone-form" id="phoneForm" data-step="details" data-mode="login">
+        <div class="phone-field" id="fullNameField" hidden>
           <div class="phone-field-heading">
             <label for="fullNameInput">اسمی که دوست داری صدات کنیم</label>
           </div>
@@ -1431,6 +1438,10 @@
       <div class="phone-helper" id="phoneHelper" aria-live="polite"></div>
       <div class="phone-error" id="phoneError" aria-live="assertive"></div>
       <button class="phone-link is-hidden" id="resendOtp" type="button">ارسال دوباره کد</button>
+      <div class="phone-switch" id="authSwitch">
+        <span id="authSwitchCopy">حساب نداری؟</span>
+        <button class="phone-switch-link" id="authSwitchLink" type="button">ثبت‌نام کن</button>
+      </div>
     </div>
   </div>
 
@@ -1483,8 +1494,29 @@
     const phoneError = document.getElementById('phoneError');
     const changePhone = document.getElementById('changePhone');
     const resendOtp = document.getElementById('resendOtp');
+    const phoneTitle = document.getElementById('phoneTitle');
+    const fullNameField = document.getElementById('fullNameField');
+    const authSwitch = document.getElementById('authSwitch');
+    const authSwitchCopy = document.getElementById('authSwitchCopy');
+    const authSwitchLink = document.getElementById('authSwitchLink');
     let pendingPhone = '';
     let pendingFullName = '';
+    let authMode = 'login';
+    // True while the code step is also collecting a name, for a number that has no account yet.
+    let nameNeededAtOtp = false;
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      const signup = mode === 'signup';
+      phoneForm.dataset.mode = mode;
+      fullNameField.hidden = !signup;
+      phoneTitle.textContent = signup ? 'ثبت‌نام در زیتو' : 'ورود به زیتو';
+      phoneCopy.textContent = signup
+        ? 'نام و شماره موبایلت را وارد کن تا کد ورود را بفرستیم.'
+        : 'شماره موبایلت را وارد کن تا کد ورود را بفرستیم.';
+      authSwitchCopy.textContent = signup ? 'حساب داری؟' : 'حساب نداری؟';
+      authSwitchLink.textContent = signup ? 'وارد شو' : 'ثبت‌نام کن';
+    }
     const fullText = 'سلام من زیتو هستم و قراره به تمام سوالاتی که تو حوزه کاریت داری جواب بدم. اگه آماده ای شروع کنیم؟';
 
     function updateSoundToggle(state) {
@@ -1558,7 +1590,7 @@
     function showLoginModal() {
       phoneModal.classList.add('show');
       phoneModal.setAttribute('aria-hidden', 'false');
-      const focusTarget = phoneForm.dataset.step === 'otp' ? otpInput : fullNameInput;
+      const focusTarget = phoneForm.dataset.step === 'otp' ? otpInput : authMode === 'signup' ? fullNameInput : phoneInput;
       setTimeout(() => focusTarget.focus(), 120);
     }
 
@@ -1632,20 +1664,26 @@
       phoneForm.dataset.step = 'otp';
       phoneSubmit.hidden = true;
       otpEntry.hidden = false;
-      fullNameInput.readOnly = true;
+      // A login attempt for a number without an account continues as a sign-up with the same code.
+      nameNeededAtOtp = Boolean(data.requires_display_name) && !fullNameInput.value.trim();
+      if (nameNeededAtOtp) setAuthMode('signup');
+      authSwitch.hidden = true;
+      fullNameInput.readOnly = !nameNeededAtOtp;
       phoneInput.readOnly = true;
-      fullNameInput.tabIndex = -1;
+      fullNameInput.tabIndex = nameNeededAtOtp ? 0 : -1;
       phoneInput.tabIndex = -1;
       changePhone.classList.remove('is-hidden');
       resendOtp.classList.remove('is-hidden');
       resendOtp.disabled = false;
-      phoneCopy.textContent = `کد تایید برای ${phone} ارسال شد.`;
+      phoneCopy.textContent = nameNeededAtOtp
+        ? `با ${phone} حسابی پیدا نشد. اسمت را بنویس و کد ارسال‌شده را وارد کن تا حسابت ساخته شود.`
+        : `کد تایید برای ${phone} ارسال شد.`;
       const validityMinutes = Math.max(1, Math.ceil(Number(data.expires_in_seconds || 0) / 60));
       phoneHelper.textContent = data.mock_code
         ? `حالت تست: کد تایید ${data.mock_code}`
         : `کد پیامک‌شده را وارد کن. این کد تا ${validityMinutes} دقیقه معتبر است.`;
       otpInput.value = '';
-      otpInput.focus();
+      (nameNeededAtOtp ? fullNameInput : otpInput).focus();
     }
 
     function showDetailsStep() {
@@ -1659,13 +1697,21 @@
       phoneInput.tabIndex = 0;
       changePhone.classList.add('is-hidden');
       resendOtp.classList.add('is-hidden');
-      phoneCopy.textContent = 'نام و شماره موبایلت را وارد کن تا کد ورود را بفرستیم.';
+      nameNeededAtOtp = false;
+      authSwitch.hidden = false;
+      setAuthMode(authMode);
       phoneHelper.textContent = '';
       phoneError.textContent = '';
       phoneInput.focus();
     }
 
     changePhone.addEventListener('click', showDetailsStep);
+
+    authSwitchLink.addEventListener('click', () => {
+      setAuthMode(authMode === 'login' ? 'signup' : 'login');
+      phoneError.textContent = '';
+      (authMode === 'signup' ? fullNameInput : phoneInput).focus();
+    });
 
     resendOtp.addEventListener('click', async () => {
       if (!pendingPhone) {
@@ -1692,7 +1738,14 @@
         try {
           if (!pendingPhone) {
             showDetailsStep();
-            throw new Error('اول نام و شماره موبایل را وارد کن.');
+            throw new Error('اول شماره موبایل را وارد کن.');
+          }
+          if (nameNeededAtOtp) {
+            pendingFullName = fullNameInput.value.trim();
+            if (!pendingFullName) {
+              fullNameInput.focus();
+              throw new Error('برای ساخت حساب، اسمت را وارد کن.');
+            }
           }
           const response = await fetch('/api/auth/otp/verify', {
             method: 'POST',
@@ -1719,8 +1772,10 @@
       phoneHelper.textContent = '';
       phoneSubmit.disabled = true;
       try {
+        // Logging in never asks for a name; a leftover value from the sign-up panel is dropped.
+        if (authMode === 'login') fullNameInput.value = '';
         const fullName = fullNameInput.value.trim();
-        if (!fullName) throw new Error('یک نام وارد کن.');
+        if (authMode === 'signup' && !fullName) throw new Error('یک نام وارد کن.');
         const phone = normalizeDigits(phoneInput.value).trim();
         phoneInput.value = phone;
         pendingPhone = phone;

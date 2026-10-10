@@ -27,8 +27,9 @@
     const initialVolume = track.volume;
     const startedAt = window.performance.now();
     const tick = (now) => {
-      const progress = Math.min((now - startedAt) / duration, 1);
-      track.volume = initialVolume + (volume - initialVolume) * progress;
+      // A frame timestamp can precede startedAt, so both values are clamped to what the element accepts.
+      const progress = Math.min(Math.max((now - startedAt) / duration, 0), 1);
+      track.volume = Math.min(Math.max(initialVolume + (volume - initialVolume) * progress, 0), 1);
       if (progress < 1) {
         fadeFrame = window.requestAnimationFrame(tick);
         return;

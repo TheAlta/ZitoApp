@@ -149,6 +149,111 @@ def ensure_course_rag_config(db: Session, course_version_id: int) -> CourseRagCo
     return config
 
 
+def refresh_course_rag_status(db: Session, course_version_id: int) -> CourseRagConfig:
+    """Reflect the current document/index state instead of assuming publish means ready."""
+    settings = get_settings()
+    config = ensure_course_rag_config(db, course_version_id)
+    documents = db.scalars(
+        select(CourseKbDocument).where(
+            CourseKbDocument.course_version_id == course_version_id,
+            CourseKbDocument.status == "approved",
+        )
+    ).all()
+    if not documents:
+        config.status = "ready"
+        config.last_error = None
+        return config
+
+    jobs = db.scalars(
+        select(CourseKbIndexJob)
+        .where(CourseKbIndexJob.course_version_id == course_version_id)
+        .order_by(CourseKbIndexJob.id.desc())
+    ).all()
+    latest_by_document: dict[int, CourseKbIndexJob] = {}
+    for job in jobs:
+        latest_by_document.setdefault(job.document_id, job)
+
+    document_states = []
+    for document in documents:
+        job = latest_by_document.get(document.id)
+        if (
+            job is None
+            or job.source_checksum != document.content_checksum
+            or job.embedding_model != settings.arvan_embedding_model
+        ):
+            document_states.append("queued")
+        else:
+            document_states.append(job.status)
+
+    if all(state == "succeeded" for state in document_states):
+        config.status = "ready"
+        config.last_error = None
+    elif any(state == "failed" for state in document_states):
+        config.status = "failed"
+        failed = next(
+            job for document in documents
+            if (job := latest_by_document.get(document.id)) is not None and job.status == "failed"
+        )
+        config.last_error = failed.error_message
+    else:
+        config.status = "indexing"
+        config.last_error = next(
+            (
+                job.error_message
+                for document in documents
+                if (job := latest_by_document.get(document.id)) is not None
+                and job.status in {"queued", "running", "retry"}
+                and job.error_message
+            ),
+            None,
+        )
+    return config
+
+
+def retry_failed_index_jobs(db: Session, course_version_id: int) -> int:
+    """Requeue only the latest failed jobs for unchanged, approved source documents."""
+    settings = get_settings()
+    documents = db.scalars(
+        select(CourseKbDocument).where(
+            CourseKbDocument.course_version_id == course_version_id,
+            CourseKbDocument.status == "approved",
+        )
+    ).all()
+    jobs = db.scalars(
+        select(CourseKbIndexJob)
+        .where(CourseKbIndexJob.course_version_id == course_version_id)
+        .order_by(CourseKbIndexJob.id.desc())
+    ).all()
+    latest_by_document: dict[int, CourseKbIndexJob] = {}
+    for job in jobs:
+        latest_by_document.setdefault(job.document_id, job)
+
+    requeued = 0
+    now = datetime.now(timezone.utc)
+    for document in documents:
+        job = latest_by_document.get(document.id)
+        if (
+            job is None
+            or job.status != "failed"
+            or job.source_checksum != document.content_checksum
+            or job.embedding_model != settings.arvan_embedding_model
+        ):
+            continue
+        job.status = "queued"
+        job.attempt_count = 0
+        job.max_attempts = settings.rag_index_job_max_attempts
+        job.requested_at = now
+        job.started_at = None
+        job.finished_at = None
+        job.next_attempt_at = None
+        job.error_message = None
+        requeued += 1
+
+    refresh_course_rag_status(db, course_version_id)
+    db.flush()
+    return requeued
+
+
 def enqueue_document_index_job(
     db: Session,
     document: CourseKbDocument,
@@ -310,7 +415,7 @@ async def retrieve_course_chunks(
     ).first()
     if not config:
         return RetrievalResult(rag_config=None, method="not_configured", chunks=[])
-    if config.status != "ready":
+    if config.status not in {"ready", "indexing", "failed", "degraded"}:
         return RetrievalResult(rag_config=config, method="disabled", chunks=[])
     if not clean_question:
         return RetrievalResult(rag_config=config, method="empty_question", chunks=[])
@@ -424,13 +529,22 @@ def _record_index_job_failure(db: Session, job: CourseKbIndexJob, error_message:
     config = ensure_course_rag_config(db, job.course_version_id)
     config.last_error = error_message
     job.error_message = error_message
-    if job.attempt_count >= job.max_attempts:
+    response_status = re.search(r"\bHTTP\s+(\d{3})\b", error_message, re.IGNORECASE)
+    status_code = int(response_status.group(1)) if response_status else None
+    permanent_client_error = (
+        status_code is not None
+        and 400 <= status_code < 500
+        and status_code not in {408, 409, 425, 429}
+    )
+    if permanent_client_error or job.attempt_count >= job.max_attempts:
         job.status = "failed"
         job.finished_at = now
         job.next_attempt_at = None
     else:
         job.status = "retry"
-        job.next_attempt_at = now + timedelta(seconds=60 * max(1, job.attempt_count))
+        delay = min(60 * (2 ** max(0, job.attempt_count - 1)), 15 * 60)
+        job.next_attempt_at = now + timedelta(seconds=delay)
+    refresh_course_rag_status(db, job.course_version_id)
     db.flush()
 
 
@@ -534,10 +648,10 @@ async def process_index_job(db: Session, job_id: int) -> CourseKbIndexJob:
         config.embedding_model = settings.arvan_embedding_model
         config.embedding_dimensions = settings.arvan_embedding_dimensions
         config.last_indexed_at = indexed_at
-        config.last_error = None
         job.status = "succeeded"
         job.finished_at = indexed_at
         job.next_attempt_at = None
+        refresh_course_rag_status(db, document.course_version_id)
         db.flush()
     except ArvanEmbeddingError as exc:
         _record_index_job_failure(db, job, str(exc)[:1000])

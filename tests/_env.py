@@ -1,4 +1,5 @@
 import os
+import tempfile
 from pathlib import Path
 
 
@@ -13,6 +14,7 @@ def setup_test_environment() -> None:
     os.environ["ARVAN_MODEL"] = "GPT-5.4-Mini"
     os.environ["ARVAN_TIMEOUT_SECONDS"] = "5"
     os.environ["ARVAN_MOCK_AI"] = "true"
+    os.environ["GENERATED_MEDIA_DIR"] = str(Path(tempfile.gettempdir()) / "zito_test_generated_media")
     os.environ["ARVAN_EMBEDDING_DIMENSIONS"] = "3072"
     os.environ["RAG_MIN_SIMILARITY"] = "0.0"
     os.environ["RAG_INDEX_JOB_LEASE_SECONDS"] = "30"

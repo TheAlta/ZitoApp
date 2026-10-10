@@ -1,4 +1,5 @@
-﻿import json
+﻿import asyncio
+import json
 import re
 from typing import Any
 
@@ -6,6 +7,8 @@ import httpx
 
 from src.config import get_settings
 
+TRANSIENT_STATUS_CODES = {401, 429, 502, 503, 504}
+TRANSIENT_ATTEMPTS = 3
 
 class ArvanAIError(RuntimeError):
     pass
@@ -350,7 +353,18 @@ async def ask_ai(
             timeout=timeout_seconds or settings.arvan_timeout_seconds,
             trust_env=False,
         ) as client:
-            response = await client.post(url, headers=headers, json=payload)
+            # The gateway sporadically answers a valid request with 401/429/5xx or drops the
+            # connection. Those fail fast, so retrying is cheap; a timeout is never retried here.
+            for attempt in range(1, TRANSIENT_ATTEMPTS + 1):
+                try:
+                    response = await client.post(url, headers=headers, json=payload)
+                except (httpx.ConnectError, httpx.RemoteProtocolError):
+                    if attempt == TRANSIENT_ATTEMPTS:
+                        raise
+                else:
+                    if response.status_code not in TRANSIENT_STATUS_CODES or attempt == TRANSIENT_ATTEMPTS:
+                        break
+                await asyncio.sleep(0.5 * attempt)
             response.raise_for_status()
             data = response.json()
     except httpx.HTTPStatusError as exc:

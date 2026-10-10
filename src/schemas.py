@@ -427,6 +427,22 @@ class CmsPublishOut(BaseModel):
     rag_status: str
 
 
+class CmsImageGenerateIn(BaseModel):
+    module_id: int = Field(gt=0)
+    stage_id: int = Field(gt=0)
+    prompt: str = Field(min_length=8, max_length=3000)
+    size: str = Field(default="landscape", pattern="^(square|landscape|portrait)$")
+
+
+class CmsImageRegenerateIn(BaseModel):
+    prompt: str = Field(min_length=8, max_length=3000)
+    size: str = Field(default="landscape", pattern="^(square|landscape|portrait)$")
+
+
+class CmsImagePublishIn(BaseModel):
+    asset_ids: list[int] = Field(min_length=1, max_length=100)
+
+
 class CmsRagStatusOut(BaseModel):
     course_id: int
     course_version_id: int

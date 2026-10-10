@@ -326,6 +326,27 @@ class CourseModuleStageContent(Base):
     coach_messages: Mapped[list["CoachMessage"]] = relationship(back_populates="module_stage_content")
 
 
+class CourseGeneratedImage(Base):
+    __tablename__ = "course_generated_images"
+    __table_args__ = (
+        Index("ix_course_generated_images_stage_created", "stage_content_id", "created_at"),
+        Index("ix_course_generated_images_status", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    course_version_id: Mapped[int] = mapped_column(ForeignKey("course_versions.id", ondelete="CASCADE"), nullable=False)
+    course_module_id: Mapped[int] = mapped_column(ForeignKey("course_modules.id", ondelete="CASCADE"), nullable=False)
+    stage_content_id: Mapped[int] = mapped_column(ForeignKey("course_module_stage_contents.id", ondelete="CASCADE"), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    model: Mapped[str] = mapped_column(String(120), nullable=False)
+    size: Mapped[str] = mapped_column(String(20), nullable=False)
+    # draft: generated and awaiting review; published: attached to its stage as an image block.
+    status: Mapped[str] = mapped_column(String(20), default="draft", server_default="published", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class CourseRagConfig(Base):
     """Non-secret RAG routing configuration pinned to a published course version."""
 

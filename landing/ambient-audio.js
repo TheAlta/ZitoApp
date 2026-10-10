@@ -2,7 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "zito:landing-sound-muted";
-  const TRACK_URL = "/landing-static/zito-ambient.mp3";
+  const TRACK_URL = "/landing-static/zito-ambient.mp3?v=20260928-euphoria-1";
   const TARGET_VOLUME = 0.18;
   const listeners = new Set();
   const track = new Audio(TRACK_URL);

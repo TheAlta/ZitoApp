@@ -6,17 +6,10 @@
   <title>Zito Chat</title>
   <link rel="preload" href="/landing-static/fonts/Yekan.woff2" as="font" type="font/woff2" crossorigin>
   <style>
-    @font-face {
-      font-family: "YekanZito";
-      src: url("/landing-static/fonts/Yekan.woff2") format("woff2"), local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan");
-      font-style: normal;
-      font-weight: 400;
-      font-display: swap;
-    }
     * { box-sizing: border-box; }
     :root {
       color-scheme: light;
-      --font-yekan: "YekanZito", "Yekan", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif;
+      --font-yekan: "YekanZito", Tahoma, Arial, sans-serif;
       --bg-0: #030615;
       --bg-1: #070d24;
       --card: rgba(12, 21, 48, .74);
@@ -151,13 +144,13 @@
       filter: drop-shadow(0 0 13px rgba(72, 139, 255, .62));
     }
     h1 { margin: 0; font-size: 18px; letter-spacing: 0; }
-    .subtitle { margin-top: 3px; color: var(--soft); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
+    .subtitle { margin-top: 3px; color: var(--soft); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
     .status-pill {
       flex: none;
       min-width: 92px;
       text-align: center;
       color: #dfe7ff;
-      font-size: 11px;
+      font-size: 12px;
       padding: 8px 10px;
       border: 1px solid var(--line);
       border-radius: 999px;
@@ -251,7 +244,7 @@
     .zito-orb .eye.left { left: 48px; }
     .zito-orb .eye.right { right: 48px; }
     .zito-orb .smile { position: absolute; top: 99px; left: 56px; width: 18px; height: 10px; border-bottom: 3px solid white; border-radius: 0 0 18px 18px; }
-    .zito-orb .z { position: absolute; top: 112px; left: 56px; font-weight: 900; font-size: 24px; }
+    .zito-orb .z { position: absolute; top: 112px; left: 56px; font-weight: 700; font-size: 24px; }
     .orbit {
       position: absolute;
       width: 146px;
@@ -264,7 +257,7 @@
       transform: rotate(-15deg);
       box-shadow: 0 0 18px rgba(60, 130, 255, .55);
     }
-    .welcome-title { font-size: 22px; font-weight: 900; margin: 0 0 6px; }
+    .welcome-title { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
     .welcome-sub { color: var(--soft); font-size: 13px; line-height: 1.95; margin: 0; white-space: pre-line; }
     .msg {
       width: fit-content;
@@ -290,7 +283,7 @@
       box-shadow: 0 16px 38px rgba(87, 74, 255, .27);
     }
     .profile-choice-set { align-self: flex-start; display: flex; flex-wrap: wrap; gap: 8px; max-width: 92%; margin-top: -4px; animation: pop .24s ease both; }
-    .profile-choice { flex: 1 1 132px; width: auto; min-height: 42px; height: auto; padding: 8px 13px; color: #edefff; border: 1px solid rgba(151, 164, 255, .34); border-radius: 14px; background: rgba(32, 44, 94, .78); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 18px rgba(0, 0, 0, .16); font: inherit; font-size: 12px; font-weight: 800; line-height: 1.55; }
+    .profile-choice { flex: 1 1 132px; width: auto; min-height: 42px; height: auto; padding: 8px 13px; color: #edefff; border: 1px solid rgba(151, 164, 255, .34); border-radius: 14px; background: rgba(32, 44, 94, .78); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 18px rgba(0, 0, 0, .16); font: inherit; font-size: 12px; font-weight: 700; line-height: 1.55; }
     .profile-choice:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(93, 211, 255, .70); background: rgba(54, 66, 132, .88); }
     .profile-choice:focus-visible { outline: 3px solid rgba(83, 210, 255, .44); outline-offset: 2px; }
     .profile-choice.is-selected { color: #fff; border-color: rgba(182, 207, 255, .82); background: linear-gradient(135deg, #735ec6, #58a5b7); }
@@ -373,8 +366,8 @@
       filter: blur(8px);
       z-index: -1;
     }
-    .planet-name { position: relative; z-index: 1; font-size: 20px; font-weight: 900; text-shadow: 0 3px 18px rgba(0,0,0,.46); }
-    .planet-title { margin: 0 0 8px; font-size: 24px; font-weight: 900; }
+    .planet-name { position: relative; z-index: 1; font-size: 20px; font-weight: 700; text-shadow: 0 3px 18px rgba(0,0,0,.46); }
+    .planet-title { margin: 0 0 8px; font-size: 24px; font-weight: 700; }
     .planet-copy { margin: 0 auto 18px; color: var(--soft); line-height: 2; max-width: 340px; }
     .planet-cta {
       width: auto;
@@ -407,7 +400,7 @@
     }
     .lesson-dock h2 { margin: 0 0 10px; font-size: 18px; }
     .lesson-dock ul { margin: 12px 0; padding-right: 21px; color: #dce6ff; }
-    .lesson-dock .label { margin-top: 12px; color: #b79cff; font-weight: 900; }
+    .lesson-dock .label { margin-top: 12px; color: #b79cff; font-weight: 700; }
     .lesson-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
     .lesson-action {
       width: auto;
@@ -423,8 +416,8 @@
       border-radius: 50%;
       display: grid;
       place-items: center;
-      font-size: 11px;
-      font-weight: 900;
+      font-size: 12px;
+      font-weight: 700;
       text-align: center;
       background:
         radial-gradient(circle at 35% 26%, rgba(255,255,255,.54), transparent 12%),
@@ -477,7 +470,7 @@
     .lesson-avatar .eye.left { left: 28px; }
     .lesson-avatar .eye.right { right: 28px; }
     .lesson-avatar .smile { position: absolute; top: 57px; left: 31px; width: 10px; height: 7px; border-bottom: 2px solid white; border-radius: 0 0 12px 12px; }
-    .lesson-empty-title { margin: 12px 0 6px; font-size: 18px; font-weight: 900; color: var(--text); }
+    .lesson-empty-title { margin: 12px 0 6px; font-size: 18px; font-weight: 700; color: var(--text); }
     .lesson-empty-copy { margin: 0; max-width: 300px; line-height: 2; }
     .meter { height: 8px; margin-top: 16px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
     .bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #9c3fff, #2372ff 68%, #37e6ff); box-shadow: 0 0 18px rgba(71, 112, 255, .75); transition: width .55s ease; }
@@ -496,7 +489,7 @@
       box-shadow: 0 20px 64px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.06);
       backdrop-filter: blur(18px);
     }
-    .hint { color: var(--muted); font-size: 11px; text-align: center; margin-bottom: 8px; }
+    .hint { color: var(--muted); font-size: 12px; text-align: center; margin-bottom: 8px; }
     form { display: flex; align-items: center; gap: 9px; }
     input {
       flex: 1;
@@ -553,7 +546,7 @@
       direction: rtl;
     }
     .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 16px; border-bottom: 1px solid rgba(151, 164, 255, .12); }
-    .modal-title { font-weight: 900; }
+    .modal-title { font-weight: 700; }
     .modal-close { width: 38px; height: 38px; border-radius: 13px; font-size: 18px; background: rgba(255,255,255,.08); box-shadow: none; }
     .modal-messages { min-height: 0; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
     .modal-form { padding: 12px; border-top: 1px solid rgba(151, 164, 255, .12); background: rgba(5, 11, 31, .58); }
@@ -787,8 +780,8 @@
       display: inline-flex;
       margin-bottom: 7px;
       color: #7b5bad;
-      font-size: 11px;
-      font-weight: 900;
+      font-size: 12px;
+      font-weight: 700;
     }
     .course-list { display: grid; gap: 10px; margin-top: 18px; }
     .course-option {
@@ -817,7 +810,7 @@
     }
     .course-option-copy { min-width: 0; }
     .course-option-copy strong { display: block; font-size: 14px; }
-    .course-option-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .course-option-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
     .course-option-arrow { color: #785db8; font-size: 22px; }
     .course-empty { padding: 18px; color: var(--muted); border: 1px dashed var(--line); border-radius: 16px; }
     .phone-shell.mode-lesson { width: min(1180px, 100%); grid-template-columns: minmax(520px, 1fr) minmax(300px, 340px); }
@@ -850,11 +843,11 @@
       border-radius: 999px;
       background: rgba(255, 253, 250, .64);
       box-shadow: none;
-      font-size: 11px;
+      font-size: 12px;
     }
     .path-switch-course:hover { background: rgba(244, 237, 249, .88); box-shadow: none; }
     .path-course-head h2 { margin: 0; color: #443b5d; font-size: 18px; }
-    .path-progress-text { margin-top: 7px; color: var(--muted); font-size: 11px; }
+    .path-progress-text { margin-top: 7px; color: var(--muted); font-size: 12px; }
     .stage-path-list { display: grid; gap: 7px; margin-top: 18px; }
     .path-stage {
       display: grid;
@@ -866,7 +859,7 @@
       border: 1px solid rgba(142, 109, 181, .11);
       border-radius: 12px;
       background: rgba(255, 253, 250, .58);
-      font-size: 11px;
+      font-size: 12px;
     }
     .path-stage.current { color: #4c3d69; border-color: rgba(112, 84, 193, .36); background: rgba(238, 229, 249, .86); }
     .path-stage.completed { color: #32775e; background: rgba(229, 247, 238, .80); }
@@ -936,20 +929,20 @@
     .path-module-copy > small {
       margin-top: 2px;
       color: var(--muted);
-      font-size: 10px;
+      font-size: 12px;
       line-height: 1.65;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    .path-module-kicker { color: #8d779e; font-size: 9px; font-weight: 900; }
+    .path-module-kicker { color: #8d779e; font-size: 12px; font-weight: 700; }
     .path-module-meter { height: 3px; margin-top: 8px; border-radius: 999px; background: rgba(145, 119, 171, .11); overflow: hidden; }
     .path-module-meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #8e70cb, #5aa0c7, #5cafad); }
     .path-module-count { align-self: center; color: #7f718c; text-align: center; line-height: 1.2; }
     .path-module-count strong, .path-module-count small { display: block; }
     .path-module-count strong { font-size: 14px; }
-    .path-module-count small { margin-top: 3px; font-size: 9px; }
+    .path-module-count small { margin-top: 3px; font-size: 12px; }
     .path-stage-number {
       position: relative;
       z-index: 1;
@@ -961,8 +954,8 @@
       border-radius: 50%;
       background: #eee7f4;
       box-shadow: 0 4px 12px rgba(108, 83, 133, .10);
-      font-size: 11px;
-      font-weight: 900;
+      font-size: 12px;
+      font-weight: 700;
     }
     .path-stage-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .path-stage-state { font-size: 12px; }
@@ -977,7 +970,7 @@
     .module-stage-overview[hidden] { display: none; }
     .module-stage-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
     .module-stage-heading h3 { margin: 3px 0 0; color: #4b405f; font-size: 15px; line-height: 1.65; }
-    .module-stage-eyebrow { color: #8b67a5; font-size: 9px; font-weight: 900; }
+    .module-stage-eyebrow { color: #8b67a5; font-size: 12px; font-weight: 700; }
     .module-stage-progress {
       flex: none;
       padding: 5px 9px;
@@ -985,10 +978,10 @@
       border: 1px solid rgba(126, 93, 174, .14);
       border-radius: 999px;
       background: rgba(248, 242, 250, .72);
-      font-size: 10px;
-      font-weight: 900;
+      font-size: 12px;
+      font-weight: 700;
     }
-    .module-stage-description { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.8; }
+    .module-stage-description { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
     .module-stage-focus {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1005,8 +998,8 @@
     .module-stage-focus > div { min-width: 0; padding: 10px 11px; }
     .module-stage-focus > div + div { border-right: 1px solid rgba(127, 102, 161, .10); }
     .module-stage-focus span, .module-stage-focus strong { display: block; }
-    .module-stage-focus span { color: #927f9d; font-size: 9px; }
-    .module-stage-focus strong { margin-top: 3px; color: #574768; font-size: 10px; line-height: 1.65; }
+    .module-stage-focus span { color: #927f9d; font-size: 12px; }
+    .module-stage-focus strong { margin-top: 3px; color: #574768; font-size: 12px; line-height: 1.65; }
     .module-stage-rail {
       display: flex;
       gap: 7px;
@@ -1042,13 +1035,13 @@
     }
     .module-stage-item.completed { color: #3f7461; background: rgba(233, 246, 239, .60); }
     .module-stage-item.locked { opacity: .60; }
-    .module-stage-index { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(126, 96, 174, .10); font-size: 9px; font-weight: 900; }
+    .module-stage-index { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(126, 96, 174, .10); font-size: 12px; font-weight: 700; }
     .module-stage-item.current .module-stage-index { color: #fff; background: linear-gradient(145deg, #9470ce, #579bc8 70%, #62b2b2); }
     .module-stage-copy { min-width: 0; }
     .module-stage-copy strong, .module-stage-copy small { display: block; }
-    .module-stage-copy strong { font-size: 9px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .module-stage-copy small { margin-top: 2px; color: var(--muted); font-size: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .module-stage-state { font-size: 9px; }
+    .module-stage-copy strong { font-size: 12px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .module-stage-copy small { margin-top: 2px; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .module-stage-state { font-size: 12px; }
 
     .phone-shell.mode-lesson .planet-stage { place-items: start stretch; padding: 16px; overflow-y: auto; }
     .phone-shell.mode-lesson .planet-card { width: 100%; }
@@ -1087,14 +1080,14 @@
       animation: holoFlow 7s ease-in-out infinite alternate;
     }
     .stage-heading-copy { min-width: 0; }
-    .stage-number { color: #7b5bad; font-size: 11px; font-weight: 900; }
+    .stage-number { color: #7b5bad; font-size: 12px; font-weight: 700; }
     .stage-header h2 { margin: 5px 0 7px; color: #3f3855; font-size: 23px; line-height: 1.55; }
-    .stage-type { display: inline-flex; align-items: center; gap: 6px; color: #766b82; font-size: 10px; }
+    .stage-type { display: inline-flex; align-items: center; gap: 6px; color: #766b82; font-size: 12px; }
     .stage-type span { width: 6px; height: 6px; border-radius: 50%; background: linear-gradient(145deg, #9872ce, #54a6b3); box-shadow: 0 0 10px rgba(98, 142, 186, .35); }
     .stage-progress-badge { flex: none; min-width: 76px; padding: 9px 11px; text-align: center; color: #655080; border-radius: 14px; background: rgba(255, 253, 250, .62); }
     .stage-progress-badge strong, .stage-progress-badge small { display: block; }
     .stage-progress-badge strong { font-size: 17px; }
-    .stage-progress-badge small { margin-top: 2px; color: var(--muted); font-size: 8px; }
+    .stage-progress-badge small { margin-top: 2px; color: var(--muted); font-size: 12px; }
     .stage-intro {
       position: relative;
       margin: 0 2px 8px;
@@ -1105,6 +1098,8 @@
     }
     .stage-intro::before { content: ""; position: absolute; top: 7px; right: 0; bottom: 7px; width: 3px; border-radius: 999px; background: linear-gradient(180deg, #9872ce, #58a8b0); }
     .stage-content { display: grid; gap: 0; }
+    .block-image { margin: 20px 0; }
+    .block-image img { display: block; width: auto; max-width: min(100%, 840px); height: auto; max-height: min(560px, 64svh); margin-inline: auto; border: 1px solid rgba(255,255,255,.78); border-radius: 18px; background: rgba(255,255,255,.32); box-shadow: 0 18px 44px rgba(88,72,130,.12); }
     .content-block {
       padding: 21px 2px;
       border: 0;
@@ -1119,7 +1114,7 @@
     .content-block p { margin: 0; color: #686173; line-height: 2; }
     .content-block ul, .content-block ol { margin: 9px 0 0; padding: 0; color: #625b70; list-style: none; counter-reset: lesson-step; }
     .content-block li { position: relative; margin-top: 8px; padding: 4px 36px 4px 2px; line-height: 1.9; }
-    .content-block ul li::before, .content-block ol li::before { position: absolute; top: 4px; right: 0; width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; color: #745b91; background: rgba(235, 226, 244, .78); font-size: 9px; font-weight: 900; }
+    .content-block ul li::before, .content-block ol li::before { position: absolute; top: 4px; right: 0; width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; color: #745b91; background: rgba(235, 226, 244, .78); font-size: 12px; font-weight: 700; }
     .content-block ul li::before { content: ""; width: 8px; height: 8px; top: 13px; right: 8px; background: linear-gradient(145deg, #9572cc, #54a7b2); box-shadow: 0 0 0 5px rgba(145, 110, 194, .09); }
     .content-block ol li { counter-increment: lesson-step; }
     .content-block ol li::before { content: counter(lesson-step); }
@@ -1165,11 +1160,11 @@
     .concept-item::before { content: ""; position: absolute; top: 20px; right: 15px; width: 7px; height: 7px; border-radius: 50%; background: linear-gradient(145deg, #9470ca, #55a8b1); box-shadow: 0 0 0 5px rgba(139, 105, 190, .08); }
     .steps-grid { counter-reset: visual-step; }
     .step-item { padding-right: 52px; counter-increment: visual-step; }
-    .step-item::before { content: counter(visual-step); position: absolute; top: 13px; right: 13px; width: 27px; height: 27px; display: grid; place-items: center; color: #fff; border-radius: 9px; background: linear-gradient(145deg, #9571cc, #55a5b4); font-size: 10px; font-weight: 900; }
+    .step-item::before { content: counter(visual-step); position: absolute; top: 13px; right: 13px; width: 27px; height: 27px; display: grid; place-items: center; color: #fff; border-radius: 9px; background: linear-gradient(145deg, #9571cc, #55a5b4); font-size: 12px; font-weight: 700; }
     .learning-timeline { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px; }
     .learning-timeline::before { content: ""; position: absolute; top: 18px; right: 7%; left: 7%; height: 2px; background: linear-gradient(90deg, rgba(148,112,202,.32), rgba(78,169,180,.62), rgba(148,112,202,.32)); }
     .timeline-node { position: relative; padding-top: 43px; color: #625b70; text-align: center; line-height: 1.8; font-size: 12px; }
-    .timeline-node::before { content: attr(data-index); position: absolute; z-index: 1; top: 0; right: calc(50% - 18px); width: 36px; height: 36px; display: grid; place-items: center; color: #fff; border: 4px solid rgba(255,255,255,.86); border-radius: 50%; background: linear-gradient(145deg, #9771ce, #53a5b5); box-shadow: 0 7px 16px rgba(105, 83, 158, .17); font-size: 10px; font-weight: 900; }
+    .timeline-node::before { content: attr(data-index); position: absolute; z-index: 1; top: 0; right: calc(50% - 18px); width: 36px; height: 36px; display: grid; place-items: center; color: #fff; border: 4px solid rgba(255,255,255,.86); border-radius: 50%; background: linear-gradient(145deg, #9771ce, #53a5b5); box-shadow: 0 7px 16px rgba(105, 83, 158, .17); font-size: 12px; font-weight: 700; }
     .tips-grid {
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       perspective: 900px;
@@ -1221,7 +1216,7 @@
     .content-card strong, .mistake-item strong, .dialog-item strong { display: block; margin-bottom: 4px; color: #5a4475; }
     .content-card span, .mistake-item span, .dialog-item span { color: #6d6577; line-height: 1.85; }
     .qa-item { padding: 0; overflow: hidden; }
-    .qa-item summary { position: relative; padding: 12px 38px 12px 13px; color: #5a4475; cursor: pointer; font-weight: 900; list-style: none; }
+    .qa-item summary { position: relative; padding: 12px 38px 12px 13px; color: #5a4475; cursor: pointer; font-weight: 700; list-style: none; }
     .qa-item summary::-webkit-details-marker { display: none; }
     .qa-item summary::before { content: "+"; position: absolute; top: 11px; right: 13px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; color: #765995; background: rgba(224, 213, 239, .76); font-size: 13px; }
     .qa-item[open] summary::before { content: "−"; }
@@ -1231,20 +1226,20 @@
     .dialog-item:nth-child(even) { margin-right: 24px; background: rgba(237, 246, 247, .68); }
     .quiz-item { margin-top: 14px; padding: 17px; border: 1px solid rgba(130, 100, 171, .13); border-radius: 17px; background: linear-gradient(135deg, rgba(255, 253, 251, .76), rgba(244, 239, 250, .62)); box-shadow: 0 8px 22px rgba(108, 82, 141, .05); }
     .quiz-item:first-child { margin-top: 0; }
-    .quiz-question { display: grid; grid-template-columns: 31px minmax(0, 1fr); align-items: start; gap: 10px; margin-bottom: 13px; color: #4e405f; font-weight: 900; line-height: 1.85; }
+    .quiz-question { display: grid; grid-template-columns: 31px minmax(0, 1fr); align-items: start; gap: 10px; margin-bottom: 13px; color: #4e405f; font-weight: 700; line-height: 1.85; }
     .quiz-question p { margin: 1px 0 0; }
-    .quiz-question-index { width: 31px; height: 31px; display: grid; place-items: center; color: #fff; border-radius: 11px; background: linear-gradient(145deg, #9571cc, #55a3ba); box-shadow: 0 6px 14px rgba(110, 83, 164, .19); font-size: 11px; }
+    .quiz-question-index { width: 31px; height: 31px; display: grid; place-items: center; color: #fff; border-radius: 11px; background: linear-gradient(145deg, #9571cc, #55a3ba); box-shadow: 0 6px 14px rgba(110, 83, 164, .19); font-size: 12px; }
     .choice-list { display: grid; gap: 7px; }
     .choice-option, .check-option { position: relative; display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 10px 12px; color: #665e72; border: 1px solid rgba(137, 108, 174, .12); border-radius: 13px; background: rgba(255, 253, 250, .66); font-size: 12px; cursor: pointer; transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease; }
     .choice-option:hover, .check-option:hover { border-color: rgba(113, 86, 177, .32); background: rgba(250, 246, 253, .92); transform: translateX(-2px); }
     .choice-option input, .check-option input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
     .choice-option-indicator { flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: transparent; border: 1px solid rgba(118, 91, 158, .22); border-radius: 50%; background: rgba(255, 255, 255, .74); box-shadow: inset 0 1px 2px rgba(93, 64, 133, .06); transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease; }
     .choice-option-indicator::before { content: ""; width: 7px; height: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translate(-1px, -1px); }
-    .choice-option-copy { min-width: 0; font-weight: 800; line-height: 1.75; }
+    .choice-option-copy { min-width: 0; font-weight: 700; line-height: 1.75; }
     .choice-option.is-selected, .choice-option:has(input:checked) { color: #51406b; border-color: rgba(99, 135, 199, .55); background: linear-gradient(120deg, rgba(239, 229, 250, .93), rgba(226, 246, 248, .90)); box-shadow: 0 7px 18px rgba(91, 109, 172, .11); }
     .choice-option.is-selected .choice-option-indicator, .choice-option:has(input:checked) .choice-option-indicator { color: #fff; border-color: transparent; background: linear-gradient(145deg, #916cc9, #50a5b8); transform: scale(1.05); }
     .choice-option input:focus-visible + .choice-option-indicator { outline: 3px solid rgba(83, 150, 192, .28); outline-offset: 3px; }
-    .assessment-ready-note { display: flex; align-items: center; gap: 7px; margin: 14px 1px 0; color: #81738f; font-size: 11px; font-weight: 800; }
+    .assessment-ready-note { display: flex; align-items: center; gap: 7px; margin: 14px 1px 0; color: #81738f; font-size: 12px; font-weight: 700; }
     .assessment-ready-note::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(134, 104, 180, .38); box-shadow: 0 0 0 4px rgba(136, 104, 181, .09); }
     .assessment-ready-note.is-ready { color: #377664; }
     .assessment-ready-note.is-ready::before { background: #4ea485; box-shadow: 0 0 0 4px rgba(78, 164, 133, .12); }
@@ -1307,13 +1302,13 @@
     .flashcard-corner::after { content: "✦"; color: #de966f; font-size: 13px; }
     .flashcard-logo { position: absolute; z-index: 2; left: clamp(18px, 4vw, 24px); bottom: clamp(18px, 4vw, 24px); width: 31px; height: 35px; display: block; object-fit: contain; pointer-events: none; filter: drop-shadow(0 5px 9px rgba(54, 77, 187, .17)); }
     .flashcard-body { position: relative; z-index: 1; display: grid; align-content: center; gap: 13px; min-height: 0; padding: 18px 12px 10px; }
-    .flashcard-kicker { color: #8a66aa; font-size: 11px; font-weight: 900; letter-spacing: .01em; }
+    .flashcard-kicker { color: #8a66aa; font-size: 12px; font-weight: 700; letter-spacing: .01em; }
     .flashcard-front { display: block; color: #49385a; font-size: clamp(22px, 4.1vw, 31px); line-height: 1.7; }
     .flashcard-back { display: block; color: #6c6275; font-size: clamp(13px, 2.3vw, 15px); line-height: 2.05; }
-    .flashcard-action { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 13px; padding-left: 50px; color: #765a95; border-top: 1px solid rgba(121, 91, 165, .14); font-size: 11px; font-weight: 900; }
+    .flashcard-action { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 13px; padding-left: 50px; color: #765a95; border-top: 1px solid rgba(121, 91, 165, .14); font-size: 12px; font-weight: 700; }
     .flashcard-action::after { content: "←"; font-family: Arial, sans-serif; font-size: 15px; }
-    .flashcard-footer { display: flex; align-items: center; justify-content: space-between; width: min(100%, 408px); padding: 0 4px; color: #85778e; font-size: 11px; }
-    .flashcard-count { color: #765996; font-weight: 900; }
+    .flashcard-footer { display: flex; align-items: center; justify-content: space-between; width: min(100%, 408px); padding: 0 4px; color: #85778e; font-size: 12px; }
+    .flashcard-count { color: #765996; font-weight: 700; }
     @keyframes flashcard-deal { to { opacity: 0; transform: translate(-42px, -22px) rotate(-8deg) scale(.97); } }
     @keyframes flashcard-arrive { from { opacity: 0; transform: translate(32px, 20px) rotate(5deg) scale(.96); } to { opacity: 1; transform: translateY(0) rotate(0) scale(1); } }
     .personalized-example { padding: 16px; border: 1px solid rgba(87, 151, 171, .22); border-radius: 16px; background: linear-gradient(135deg, rgba(232, 246, 245, .78), rgba(243, 235, 250, .72)); }
@@ -1322,8 +1317,8 @@
     .personalized-example p { color: #665f73; line-height: 2; }
     .personalized-example ol { margin: 10px 0 0; padding: 0; list-style: none; counter-reset: personal-step; }
     .personalized-example li { position: relative; padding: 4px 30px 4px 0; color: #625d70; line-height: 1.85; counter-increment: personal-step; }
-    .personalized-example li::before { content: counter(personal-step); position: absolute; top: 5px; right: 0; width: 20px; height: 20px; display: grid; place-items: center; color: #fff; border-radius: 50%; background: linear-gradient(145deg, #7a60bd, #58a5aa); font-size: 9px; font-weight: 900; }
-    .personalized-example-question { margin-top: 13px !important; padding-top: 11px; border-top: 1px solid rgba(100, 126, 154, .16); color: #5d4d73 !important; font-weight: 900; }
+    .personalized-example li::before { content: counter(personal-step); position: absolute; top: 5px; right: 0; width: 20px; height: 20px; display: grid; place-items: center; color: #fff; border-radius: 50%; background: linear-gradient(145deg, #7a60bd, #58a5aa); font-size: 12px; font-weight: 700; }
+    .personalized-example-question { margin-top: 13px !important; padding-top: 11px; border-top: 1px solid rgba(100, 126, 154, .16); color: #5d4d73 !important; font-weight: 700; }
     .assessment-feedback { margin-top: 15px; padding: 12px 14px; border-radius: 13px; background: rgba(239, 233, 249, .74); color: #62526f; line-height: 1.9; font-size: 12px; }
     .assessment-feedback.passed { color: #34725d; background: rgba(226, 245, 234, .82); }
     .final-exam-note { margin-top: 16px; padding: 14px 16px; color: #5d4a76; border: 1px solid rgba(121, 90, 183, .2); border-radius: 14px; background: rgba(241, 234, 250, .72); line-height: 1.9; }
@@ -1339,38 +1334,38 @@
       padding: 0 18px;
       border-radius: 14px;
       font-size: 13px;
-      font-weight: 900;
+      font-weight: 700;
     }
     .final-exam-modal { z-index: 42; }
     .final-exam-modal .modal-chat { width: min(760px, 100%); max-height: min(790px, 94svh); grid-template-rows: auto minmax(270px, 1fr); }
     .final-exam-body { min-height: 0; overflow-y: auto; padding: clamp(18px, 3vw, 28px); color: #4b4059; direction: rtl; }
     .final-exam-intro { position: relative; overflow: hidden; padding: 19px 20px; border: 1px solid rgba(124, 88, 175, .20); border-radius: 20px; background: linear-gradient(135deg, rgba(243, 234, 250, .94), rgba(232, 246, 245, .88)); }
     .final-exam-intro::after { content: ""; position: absolute; left: -38px; bottom: -48px; width: 132px; height: 132px; border: 1px solid rgba(95, 160, 174, .18); border-radius: 50%; box-shadow: 0 0 0 19px rgba(129, 91, 178, .05); }
-    .final-exam-kicker { position: relative; z-index: 1; display: block; color: #8964a7; font-size: 11px; font-weight: 900; }
+    .final-exam-kicker { position: relative; z-index: 1; display: block; color: #8964a7; font-size: 12px; font-weight: 700; }
     .final-exam-intro h3 { position: relative; z-index: 1; margin: 5px 0 8px; color: #4f3a65; font-size: clamp(19px, 3vw, 25px); }
     .final-exam-intro p { position: relative; z-index: 1; margin: 0; color: #73677e; line-height: 2; font-size: 13px; }
     .final-exam-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-    .final-exam-meta span { padding: 6px 10px; color: #675577; border: 1px solid rgba(122, 96, 162, .16); border-radius: 999px; background: rgba(255, 253, 251, .70); font-size: 11px; font-weight: 900; }
+    .final-exam-meta span { padding: 6px 10px; color: #675577; border: 1px solid rgba(122, 96, 162, .16); border-radius: 999px; background: rgba(255, 253, 251, .70); font-size: 12px; font-weight: 700; }
     .final-exam-form { display: grid; gap: 15px; margin-top: 18px; }
     .final-exam-question { padding: 17px; border: 1px solid rgba(132, 108, 165, .16); border-radius: 18px; background: rgba(255, 253, 250, .76); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .78); }
-    .final-exam-question-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #856b99; font-size: 11px; font-weight: 900; }
+    .final-exam-question-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #856b99; font-size: 12px; font-weight: 700; }
     .final-exam-question-head span:last-child { color: #5c9b94; }
-    .final-exam-question p { margin: 10px 0 12px; color: #4d445a; line-height: 2; font-size: 14px; font-weight: 800; }
+    .final-exam-question p { margin: 10px 0 12px; color: #4d445a; line-height: 2; font-size: 14px; font-weight: 700; }
     .final-exam-question textarea { width: 100%; min-height: 116px; resize: vertical; padding: 12px 13px; color: #3f3950; border: 1px solid rgba(128, 105, 158, .22); border-radius: 14px; outline: 0; background: rgba(255, 254, 252, .94); font: inherit; font-size: 13px; line-height: 1.9; transition: border-color .16s ease, box-shadow .16s ease; }
     .final-exam-question textarea:focus { border-color: rgba(92, 148, 192, .58); box-shadow: 0 0 0 4px rgba(104, 153, 201, .10); }
     .final-exam-question textarea::placeholder { color: #a094a4; }
     .final-exam-submit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 2px; }
-    .final-exam-submit-row small { color: #887c91; line-height: 1.8; font-size: 11px; }
+    .final-exam-submit-row small { color: #887c91; line-height: 1.8; font-size: 12px; }
     .final-exam-result { display: grid; gap: 15px; }
     .final-exam-score { display: grid; place-items: center; width: 126px; aspect-ratio: 1; margin: 2px auto 4px; color: #654280; border: 8px solid rgba(136, 102, 196, .20); border-radius: 50%; background: radial-gradient(circle, rgba(255, 253, 250, .95), rgba(241, 231, 250, .72)); box-shadow: 0 14px 30px rgba(128, 93, 150, .15); }
     .final-exam-score strong { font-size: 30px; line-height: 1; }
-    .final-exam-score span { margin-top: 3px; color: #8b7897; font-size: 10px; font-weight: 900; }
+    .final-exam-score span { margin-top: 3px; color: #8b7897; font-size: 12px; font-weight: 700; }
     .final-exam-feedback { padding: 16px; border-radius: 17px; background: rgba(246, 239, 249, .84); color: #655970; line-height: 2; font-size: 13px; }
     .final-exam-feedback.passed { color: #31725d; background: rgba(226, 245, 234, .88); }
     .final-exam-feedback strong { display: block; margin-bottom: 4px; color: inherit; }
     .final-exam-feedback-list { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
     .final-exam-feedback-list li { padding: 11px 12px; border: 1px solid rgba(131, 107, 164, .13); border-radius: 13px; background: rgba(255, 253, 250, .68); color: #70647b; font-size: 12px; line-height: 1.85; }
-    .certificate-link { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 18px; color: #fff; border-radius: 14px; background: linear-gradient(135deg, #956bd0, #4b9bd0); box-shadow: 0 13px 29px rgba(132, 101, 191, .20); font-size: 13px; font-weight: 900; text-decoration: none; }
+    .certificate-link { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 18px; color: #fff; border-radius: 14px; background: linear-gradient(135deg, #956bd0, #4b9bd0); box-shadow: 0 13px 29px rgba(132, 101, 191, .20); font-size: 13px; font-weight: 700; text-decoration: none; }
     .final-exam-loading { display: grid; place-items: center; min-height: 250px; color: #806d90; text-align: center; line-height: 2; }
     @media (max-width: 560px) {
       .final-exam-modal { padding: 10px; }
@@ -1395,10 +1390,10 @@
     .media-slot small { display: block; margin-top: 4px; color: #9a90a3; }
     .stage-activity { position: relative; margin-top: 20px; padding: 17px 18px; border: 1px solid rgba(129, 99, 170, .12); border-radius: 16px; background: linear-gradient(135deg, rgba(237, 227, 248, .82), rgba(230, 243, 245, .82)); overflow: hidden; }
     .stage-activity::after { content: ""; position: absolute; top: -28px; left: -18px; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, rgba(141, 105, 196, .13), transparent 70%); }
-    .stage-activity-label { display: block; margin-bottom: 4px; color: #8a7398; font-size: 9px; font-weight: 900; }
+    .stage-activity-label { display: block; margin-bottom: 4px; color: #8a7398; font-size: 12px; font-weight: 700; }
     .stage-activity strong { display: block; color: #5f4978; font-size: 14px; }
     .stage-activity p { margin: 5px 0 0; color: #696174; }
-    .stage-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; color: #8a8093; font-size: 10px; }
+    .stage-progress-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; color: #8a8093; font-size: 12px; }
     .stage-progress-footer strong { color: #695379; font-size: 12px; }
     .stage-complete-button { width: auto; min-width: 190px; height: 46px; padding: 0 20px; border-radius: 14px; font-size: 13px; }
     .stage-complete-button.done { color: #39775f; background: rgba(222, 244, 233, .90); box-shadow: none; cursor: default; }
@@ -1410,9 +1405,9 @@
     .coach-input-row input { flex: 1; min-width: 0; height: 40px; padding: 0 13px; color: #332847; background: rgba(255, 255, 255, .92); border: 1px solid rgba(125, 92, 169, .24); border-radius: 12px; outline: none; font: inherit; }
     .coach-input-row input:focus { border-color: rgba(110, 70, 219, .72); box-shadow: 0 0 0 3px rgba(113, 75, 227, .10); }
     .coach-input-row button { width: auto; min-width: 76px; height: 40px; padding: 0 13px; font-size: 12px; }
-    .coach-source-note { max-width: 84%; margin: -3px auto 8px; padding: 7px 10px; color: #6e6280; background: rgba(232, 224, 245, .55); border-radius: 10px; font-size: 10px; line-height: 1.7; }
+    .coach-source-note { max-width: 84%; margin: -3px auto 8px; padding: 7px 10px; color: #6e6280; background: rgba(232, 224, 245, .55); border-radius: 10px; font-size: 12px; line-height: 1.7; }
     .coaching-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-top: 1px solid rgba(142, 109, 181, .14); background: rgba(245, 240, 249, .82); }
-    .coaching-actions span { color: var(--muted); font-size: 11px; }
+    .coaching-actions span { color: var(--muted); font-size: 12px; }
     .coaching-actions button { width: auto; min-width: 130px; padding: 0 16px; font-size: 13px; }
 
     @keyframes holoFlow {
@@ -1499,7 +1494,7 @@
       border-radius: 16px 16px 5px 16px;
     }
     .phone-shell.mode-lesson .coach-bubble strong { font-size: 12px; }
-    .phone-shell.mode-lesson .coach-bubble p { font-size: 10px; line-height: 1.75; }
+    .phone-shell.mode-lesson .coach-bubble p { font-size: 12px; line-height: 1.75; }
     .learning-path { min-width: 0; }
     .path-course-head { padding: 0 3px 14px; }
     .path-course-head h2 { font-size: 16px; line-height: 1.65; }
@@ -1530,7 +1525,7 @@
       width: 30px;
       height: 30px;
       border-width: 2px;
-      font-size: 10px;
+      font-size: 12px;
     }
     .path-module-copy > strong {
       overflow: hidden;
@@ -1540,10 +1535,10 @@
       line-height: 1.55;
     }
     .path-module-copy > small { display: none; }
-    .path-module-kicker { font-size: 8px; }
+    .path-module-kicker { font-size: 12px; }
     .path-module-meter { height: 2px; margin-top: 5px; }
     .path-module-count strong { font-size: 12px; }
-    .path-module-count small { margin-top: 2px; font-size: 8px; }
+    .path-module-count small { margin-top: 2px; font-size: 12px; }
 
     .module-stage-overview {
       margin-top: 14px;
@@ -1562,7 +1557,7 @@
     }
     .module-stage-focus { margin-top: 11px; }
     .module-stage-focus > div { padding: 9px 10px; }
-    .module-stage-focus strong { font-size: 9px; }
+    .module-stage-focus strong { font-size: 12px; }
     .module-stage-map {
       margin-top: 12px;
       border-top: 1px solid rgba(132, 103, 173, .12);
@@ -1575,8 +1570,8 @@
       padding: 11px 0 1px;
       color: #695379;
       cursor: pointer;
-      font-size: 10px;
-      font-weight: 900;
+      font-size: 12px;
+      font-weight: 700;
       list-style: none;
     }
     .module-stage-map > summary::-webkit-details-marker { display: none; }
@@ -1597,7 +1592,7 @@
     .module-stage-map > summary small {
       margin-right: auto;
       color: var(--muted);
-      font-size: 8px;
+      font-size: 12px;
       font-weight: 400;
     }
     .module-stage-rail {
@@ -1619,14 +1614,14 @@
       border-radius: 10px;
       scroll-snap-align: none;
     }
-    .module-stage-index { width: 22px; height: 22px; font-size: 8px; }
+    .module-stage-index { width: 22px; height: 22px; font-size: 12px; }
     .module-stage-copy strong {
-      font-size: 8px;
+      font-size: 12px;
       line-height: 1.5;
       -webkit-line-clamp: 2;
     }
     .module-stage-copy small { display: none; }
-    .module-stage-state { font-size: 8px; }
+    .module-stage-state { font-size: 12px; }
 
     .lesson-article { width: min(840px, 100%); }
     .stage-header { padding: 22px 24px; }
@@ -1667,13 +1662,13 @@
       .stage-header { padding: 17px 15px; }
     }
   </style>
-  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260921-stage-canvas-1">
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260921-stage-canvas-1&glass=20261010-mobile-1">
 </head>
 <body class="zito-glass zito-glass-app">
   <main id="appShell" class="phone-shell mode-onboarding">
     <header class="topbar">
       <div class="brand">
-        <div class="mark"><img src="/landing-static/zito-logo.svg?v=20260905-unified-z-1" alt="لوگوی زیتو"></div>
+        <div class="mark"><img src="/landing-static/zito-logo.svg?v=20261008-palette-1" alt="لوگوی زیتو"></div>
         <div>
           <h1>زیتو</h1>
           <div class="subtitle">همراه هوشمند مسیر یادگیری تو</div>
@@ -1731,7 +1726,7 @@
         <section id="courseCatalog" class="course-catalog">
           <span class="section-kicker">انتخاب مسیر</span>
           <h2 class="planet-title">کدام دوره را شروع کنیم؟</h2>
-          <p class="planet-copy">محتوای هر دوره از نسخه منتشرشده و تاییدشده خوانده می‌شود.</p>
+          <p class="planet-copy">هر دوره را که انتخاب کنی، زیتو قدم‌به‌قدم کنارت است.</p>
           <div id="courseList" class="course-list"></div>
         </section>
 
@@ -2266,7 +2261,7 @@
       courseCatalog.hidden = true;
       learningPath.hidden = false;
       activeCourseTitle.textContent = path.course_title;
-      pathProgressText.textContent = `${path.completed_stage_count} / ${path.total_stage_count}`;
+      pathProgressText.textContent = `${toPersianNumber(path.completed_stage_count)} از ${toPersianNumber(path.total_stage_count)}`;
       pathProgressText.setAttribute("aria-label", `${path.completed_stage_count} مرحله از ${path.total_stage_count} مرحله تکمیل شده`);
       pathProgressBar.style.width = `${path.progress_percentage}%`;
       if (Array.isArray(path.modules) && path.modules.length) {
@@ -2278,7 +2273,7 @@
           const isActive = String(module.module_id) === String(activeModule?.module_id);
           const state = module.status === "completed" ? "completed" : module.is_current ? "current" : "upcoming";
           return `<div class="path-module ${module.status} ${isActive ? "selected" : ""}" role="listitem" ${isActive ? 'aria-current="step"' : ""} aria-label="${escapeHtml(`${module.title}، ${statusLabel}`)}">
-            <span class="path-stage-number">${module.module_number}</span>
+            <span class="path-stage-number">${toPersianNumber(module.module_number)}</span>
             <strong class="path-module-title">${escapeHtml(module.title)}</strong>
             <span class="path-module-state" data-state="${state}" aria-hidden="true"></span>
           </div>`;
@@ -2289,7 +2284,7 @@
           const stateIcon = item.status === "completed" ? "✓" : item.is_current ? "●" : "○";
           const stateClass = item.status === "completed" ? "completed" : item.is_current ? "current" : "locked";
           return `<div class="path-stage ${stateClass}">
-            <span class="path-stage-number">${item.stage_number}</span>
+            <span class="path-stage-number">${toPersianNumber(item.stage_number)}</span>
             <span class="path-stage-title">${escapeHtml(item.title)}</span>
             <span class="path-stage-state" aria-hidden="true">${stateIcon}</span>
           </div>`;
@@ -2301,7 +2296,7 @@
         ? "آفرین! این مسیر را کامل کردی. من برای مرور هم کنارت می‌مانم."
         : path.modules?.find((module) => module.is_current)
           ? `سرفصل «${path.modules.find((module) => module.is_current).title}» آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`
-          : `مرحله ${path.current_stage_number} آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`;
+          : `مرحله ${toPersianNumber(path.current_stage_number)} آماده است. قدم‌به‌قدم با هم جلو می‌رویم.`;
     }
     function addCoachCitations(citations) {
       if (!Array.isArray(citations) || !citations.length) return;
@@ -2402,11 +2397,11 @@
     }
 
     function finalExamIntroMarkup(title, passingScore, attemptNumber) {
-      const attemptLabel = attemptNumber ? `تلاش ${attemptNumber}` : "آماده شروع";
+      const attemptLabel = attemptNumber ? `تلاش ${toPersianNumber(attemptNumber)}` : "آماده شروع";
       return `<section class="final-exam-intro">
         <span class="final-exam-kicker">پایان مسیر آموزشی</span>
         <h3>${escapeHtml(title || "آزمون نهایی دوره")}</h3>
-        <p>سه پاسخ تشریحی کوتاه می‌نویسی تا جمع‌بندی یادگیریت بررسی شود. معیار عبور این آزمون ${escapeHtml(passingScore || 70)} از ۱۰۰ است.</p>
+        <p>سه پاسخ تشریحی کوتاه می‌نویسی تا جمع‌بندی یادگیریت بررسی شود. معیار عبور این آزمون ${toPersianNumber(escapeHtml(passingScore || 70))} از ۱۰۰ است.</p>
         <div class="final-exam-meta"><span>${escapeHtml(attemptLabel)}</span><span>ارزیابی هوشمند</span><span>بدون محدودیت زمانی</span></div>
       </section>`;
     }
@@ -2426,7 +2421,7 @@
       finalExamBody.innerHTML = `${finalExamIntroMarkup(attempt.title, attempt.passing_score, attempt.attempt_number)}
         <form id="finalExamForm" class="final-exam-form">
           ${questions.map((question, index) => `<section class="final-exam-question">
-            <div class="final-exam-question-head"><span>سؤال ${index + 1}</span><span>${escapeHtml(question.max_score)} امتیاز</span></div>
+            <div class="final-exam-question-head"><span>سؤال ${toPersianNumber(index + 1)}</span><span>${escapeHtml(question.max_score)} امتیاز</span></div>
             <p>${escapeHtml(question.question)}</p>
             <textarea data-final-exam-answer="${escapeHtml(question.id)}" maxlength="2500" required placeholder="پاسخ خودت را با توضیح و یک گام عملی بنویس..."></textarea>
           </section>`).join("")}
@@ -2447,7 +2442,7 @@
           <strong>${passed ? "آفرین، دوره را با موفقیت تمام کردی." : "این تلاش هنوز به حدنصاب نرسیده است."}</strong>
           ${escapeHtml(result.feedback || "نتیجه آزمون ثبت شد.")}
         </section>
-        ${feedbackRows.length ? `<ul class="final-exam-feedback-list">${feedbackRows.map((item, index) => `<li><strong>سؤال ${index + 1}${item.score === null || item.score === undefined ? "" : ` · ${escapeHtml(item.score)} امتیاز`}</strong><br>${escapeHtml(item.feedback || "بازخورد این بخش ثبت شد.")}</li>`).join("")}</ul>` : ""}
+        ${feedbackRows.length ? `<ul class="final-exam-feedback-list">${feedbackRows.map((item, index) => `<li><strong>سؤال ${toPersianNumber(index + 1)}${item.score === null || item.score === undefined ? "" : ` · ${toPersianNumber(escapeHtml(item.score))} امتیاز`}</strong><br>${escapeHtml(item.feedback || "بازخورد این بخش ثبت شد.")}</li>`).join("")}</ul>` : ""}
         ${passed ? certificateMarkup(result.certificate) : '<button class="final-exam-retry" type="button" data-retry-final-exam>شروع تلاش تازه</button>'}
       </div>`;
       const retryButton = finalExamBody.querySelector("[data-retry-final-exam]");
@@ -2461,7 +2456,7 @@
       }
       if (examState.status === "passed") {
         finalExamBody.innerHTML = `<div class="final-exam-result">
-          <div class="final-exam-score"><strong>${escapeHtml(examState.certificate?.score ?? "✓")}</strong><span>${examState.certificate ? "از ۱۰۰" : "تکمیل شد"}</span></div>
+          <div class="final-exam-score"><strong>${toPersianNumber(escapeHtml(examState.certificate?.score ?? "✓"))}</strong><span>${examState.certificate ? "از ۱۰۰" : "تکمیل شد"}</span></div>
           <section class="final-exam-feedback passed"><strong>این دوره را با موفقیت تمام کرده‌ای.</strong>مدرک این نسخه از دوره آماده مشاهده است.</section>
           ${certificateMarkup(examState.certificate)}
         </div>`;
@@ -2753,11 +2748,11 @@
         <div class="flashcard-deck" data-flashcard-deck data-flashcards="${escapeHtml(JSON.stringify(normalizedCards))}">
           <div class="flashcard-stack" data-flashcard-stack>
             ${layers}
-            <button class="flashcard is-active" type="button" data-flashcard data-flashcard-index="0" aria-label="کارت 1 از ${normalizedCards.length}; برای رفتن به کارت بعدی انتخاب کن">
+            <button class="flashcard is-active" type="button" data-flashcard data-flashcard-index="0" aria-label="کارت ۱ از ${toPersianNumber(normalizedCards.length)}; برای رفتن به کارت بعدی انتخاب کن">
               <span class="flashcard-corner" data-flashcard-corner>01</span>
-              <img class="flashcard-logo" src="/landing-static/zito-logo.svg?v=20260905-unified-z-1" alt="" aria-hidden="true">
+              <img class="flashcard-logo" src="/landing-static/zito-logo.svg?v=20261008-palette-1" alt="" aria-hidden="true">
               <span class="flashcard-body">
-                <span class="flashcard-kicker" data-flashcard-kicker>کارت 1 از ${normalizedCards.length}</span>
+                <span class="flashcard-kicker" data-flashcard-kicker>کارت ۱ از ${toPersianNumber(normalizedCards.length)}</span>
                 <strong class="flashcard-front" data-flashcard-front>${escapeHtml(firstCard.front)}</strong>
                 <span class="flashcard-back" data-flashcard-back>${escapeHtml(firstCard.back)}</span>
               </span>
@@ -2811,6 +2806,11 @@
     function renderContentBlock(block, blockIndex) {
       const kind = block.kind || "paragraph";
       const title = block.title ? `<div class="content-block-title"><span aria-hidden="true"></span><h3>${escapeHtml(block.title)}</h3></div>` : "";
+      if (kind === "image") {
+        const src = /^\/api\/course-images\/\d+$/.test(block.src || "") ? block.src : "";
+        if (!src) return "";
+        return `<figure class="content-block block-image">${title}<img src="${escapeHtml(src)}" alt="${escapeHtml(block.alt || "تصویر آموزشی")}" loading="lazy"></figure>`;
+      }
       if (kind === "highlight" || kind === "paragraph") {
         return `<section class="content-block block-${kind}">${title}<p>${escapeHtml(block.body || "")}</p></section>`;
       }
@@ -3067,19 +3067,19 @@
         <article class="lesson-article lesson-stage-canvas" data-stage-type="${escapeHtml(lesson.stage_type)}">
           <header class="stage-header">
             <div class="stage-heading-copy">
-              <div class="stage-number">${lesson.module_title ? `سرفصل ${lesson.module_number} از ${lesson.total_module_count} · قدم ${lesson.module_stage_number} از ${moduleStageCount}` : `مرحله ${lesson.stage_number} از ${lesson.total_stage_count}`}</div>
+              <div class="stage-number">${lesson.module_title ? `سرفصل ${toPersianNumber(lesson.module_number)} از ${toPersianNumber(lesson.total_module_count)} · قدم ${toPersianNumber(lesson.module_stage_number)} از ${toPersianNumber(moduleStageCount)}` : `مرحله ${toPersianNumber(lesson.stage_number)} از ${toPersianNumber(lesson.total_stage_count)}`}</div>
               <h2>${escapeHtml(lesson.title)}</h2>
               <div class="stage-type"><span aria-hidden="true"></span>${escapeHtml(templateLabel)}</div>
             </div>
             <div class="stage-header-side">
-              <div class="stage-progress-badge"><strong>${lesson.progress_percentage}٪</strong><small>پیشرفت دوره</small></div>
+              <div class="stage-progress-badge"><strong>${toPersianNumber(lesson.progress_percentage)}٪</strong><small>پیشرفت دوره</small></div>
               <div class="stage-header-visual">${renderStageVisual(lesson.stage_type)}</div>
             </div>
           </header>
           <section class="stage-opening" aria-label="تمرکز این مرحله">
             <div class="stage-opening-copy">
               <span class="stage-opening-kicker">تمرکز این مرحله</span>
-              <p class="stage-intro">${escapeHtml(content.intro || "محتوای تاییدشده این مرحله آماده است.")}</p>
+              <p class="stage-intro">${escapeHtml(content.intro || "این مرحله را با حوصله بخوان؛ در پایان یک قدم عملی کوتاه داری.")}</p>
             </div>
             <div class="stage-opening-route" aria-label="جایگاه در مسیر یادگیری">
               <span>در مسیر تو</span>
@@ -3098,7 +3098,7 @@
           ${finalExamNote}
           <div class="stage-progress-footer">
             <span>پیشرفت کل مسیر</span>
-            <strong>${lesson.progress_percentage}٪</strong>
+            <strong>${toPersianNumber(lesson.progress_percentage)}٪</strong>
           </div>
           <div class="meter"><div class="bar" style="width: ${lesson.progress_percentage}%"></div></div>
           <div class="lesson-actions">
@@ -3119,7 +3119,7 @@
           ? "این دوره کامل شده؛ هر زمان خواستی می‌توانی مرحله‌ها را مرور کنی."
           : lesson.module_title
             ? `من در سرفصل «${lesson.module_title}» کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`
-            : `من در تمام مرحله ${lesson.stage_number} کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`;
+            : `من در تمام مرحله ${toPersianNumber(lesson.stage_number)} کنار تو هستم. بعد از پایان، یک ایستگاه کوچینگ داریم.`;
       lessonPanel.scrollTop = 0;
     }
 
@@ -3154,14 +3154,14 @@
           return;
         }
         const finalExamAvailable = Boolean(result.path?.final_exam_available);
-        setStatus(result.course_completed ? "مسیر کامل شد" : finalExamAvailable ? "آماده آزمون نهایی" : `مرحله ${result.next_stage_number} آماده است`);
+        setStatus(result.course_completed ? "مسیر کامل شد" : finalExamAvailable ? "آماده آزمون نهایی" : `مرحله ${toPersianNumber(result.next_stage_number)} آماده است`);
         completeButton.textContent = "در حال باز کردن قدم بعدی...";
         showLearningAdvanceToast(
           result.course_completed
             ? "مسیر با موفقیت کامل شد."
             : finalExamAvailable
               ? "همه مرحله‌ها ثبت شدند؛ آزمون نهایی آماده است."
-              : `مرحله ثبت شد؛ قدم ${result.next_stage_number} باز شد.`
+              : `مرحله ثبت شد؛ قدم ${toPersianNumber(result.next_stage_number)} باز شد.`
         );
         if (!result.course_completed && !finalExamAvailable) {
           await new Promise((resolve) => window.setTimeout(resolve, 340));

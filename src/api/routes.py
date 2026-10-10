@@ -1,8 +1,10 @@
 ﻿import re
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
+from fastapi.responses import FileResponse
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session, selectinload
 
@@ -11,6 +13,7 @@ from src.models import (
     Certificate,
     CoachMessage,
     Course,
+    CourseGeneratedImage,
     CourseKbDocument,
     CourseKbIndexJob,
     CourseModule,
@@ -47,6 +50,9 @@ from src.schemas import (
     CmsRagStatusOut,
     CmsStageOut,
     CmsStagePatchIn,
+    CmsImageGenerateIn,
+    CmsImagePublishIn,
+    CmsImageRegenerateIn,
     CourseOverviewModuleOut,
     CourseOverviewOut,
     CourseOut,
@@ -107,6 +113,7 @@ from src.services.final_exam import (
     start_final_exam,
 )
 from src.services.personalized_stage import generate_personalized_work_example
+from src.services.rag import retry_failed_index_jobs
 from src.services.cms import (
     CMS_MODULE_STAGE_COUNT,
     CmsError,
@@ -117,6 +124,16 @@ from src.services.cms import (
     replace_draft_curriculum,
     stage_flow,
 )
+from src.services.course_images import (
+    CourseImageError,
+    delete_image_file,
+    generate_course_image,
+    image_generation_prompt,
+    lesson_knowledge,
+    save_image_file,
+)
+from src.config import get_settings
+from src.security import get_admin_from_request
 
 router = APIRouter()
 LEARNING_STAGE_COUNT = 20
@@ -1729,8 +1746,9 @@ async def get_personalized_stage_example(
     progress_rows = _ensure_module_stage_progress(db, enrollment, stages)
     progress = progress_rows[stage_number - 1]
     cached_content = progress.generated_content_json
-    if isinstance(cached_content, dict):
-        citations = _personalized_citations(progress.generated_content_sources_json)
+    cached_sources = progress.generated_content_sources_json
+    if isinstance(cached_content, dict) and progress.generated_content_model and cached_sources:
+        citations = _personalized_citations(cached_sources)
         return PersonalizedStageContentOut(
             cached=True,
             grounded=bool(citations),
@@ -1745,12 +1763,13 @@ async def get_personalized_stage_example(
         stage=stage,
         stage_number=stage_number,
     )
-    progress.generated_content_json = generated.content
-    progress.generated_content_sources_json = generated.citations
-    progress.generated_content_model = generated.model
-    progress.generated_content_prompt_version = generated.prompt_version
-    progress.generated_content_at = datetime.now(timezone.utc)
-    db.commit()
+    if generated.model and generated.grounded and generated.citations:
+        progress.generated_content_json = generated.content
+        progress.generated_content_sources_json = generated.citations
+        progress.generated_content_model = generated.model
+        progress.generated_content_prompt_version = generated.prompt_version
+        progress.generated_content_at = datetime.now(timezone.utc)
+        db.commit()
     return PersonalizedStageContentOut(
         cached=False,
         grounded=generated.grounded,
@@ -1969,14 +1988,19 @@ def _cms_rag_status_out(
     documents = db.scalars(
         select(CourseKbDocument).where(
             CourseKbDocument.course_version_id == version.id,
-            CourseKbDocument.source_type == "cms",
+            CourseKbDocument.status == "approved",
         )
     ).all()
     jobs = db.scalars(
         select(CourseKbIndexJob).where(CourseKbIndexJob.course_version_id == version.id)
+        .order_by(CourseKbIndexJob.id.desc())
     ).all()
+    latest_by_document: dict[int, CourseKbIndexJob] = {}
+    for job in jobs:
+        latest_by_document.setdefault(job.document_id, job)
+    current_jobs = list(latest_by_document.values())
     counts = {
-        status: sum(job.status == status for job in jobs)
+        status: sum(job.status == status for job in current_jobs)
         for status in ("queued", "running", "succeeded", "retry", "failed")
     }
     config = db.scalars(
@@ -2023,6 +2047,277 @@ def list_admin_courses(db: Session = Depends(get_db)) -> list[CmsCourseVersionOu
         .order_by(Course.updated_at.desc(), CourseVersion.version_number.desc())
     ).all()
     return [_cms_version_out(db, course, version) for course, version in rows]
+
+
+def _course_image_src(asset: CourseGeneratedImage) -> str:
+    return f"/api/course-images/{asset.id}"
+
+
+def _course_image_out(
+    asset: CourseGeneratedImage,
+    course: Course,
+    version: CourseVersion,
+    module: CourseModule,
+    stage: CourseModuleStageContent,
+) -> dict:
+    return {
+        "id": asset.id,
+        "src": _course_image_src(asset),
+        "revision": Path(asset.file_name).stem,
+        "status": asset.status,
+        "prompt": asset.prompt,
+        "size": asset.size,
+        "course_id": course.id,
+        "course_title": _version_display_title(course, version),
+        "version_number": version.version_number,
+        "version_status": version.status,
+        "module_id": module.id,
+        "module_number": module.module_number,
+        "module_title": module.title,
+        "stage_id": stage.id,
+        "stage_number": stage.stage_number,
+        "stage_title": stage.title,
+    }
+
+
+def _course_image_context(
+    db: Session, asset: CourseGeneratedImage
+) -> tuple[Course, CourseVersion, CourseModule, CourseModuleStageContent]:
+    version = db.get(CourseVersion, asset.course_version_id)
+    module = db.get(CourseModule, asset.course_module_id)
+    stage = db.get(CourseModuleStageContent, asset.stage_content_id)
+    course = db.get(Course, version.course_id) if version else None
+    if not version or not module or not stage or not course:
+        raise HTTPException(status_code=409, detail="دوره، سرفصل یا مرحله این عکس دیگر وجود ندارد.")
+    return course, version, module, stage
+
+
+def _admin_course_image(db: Session, asset_id: int) -> CourseGeneratedImage:
+    asset = db.get(CourseGeneratedImage, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="عکس پیدا نشد.")
+    return asset
+
+
+def _is_image_block(block: object, asset_id: int) -> bool:
+    return isinstance(block, dict) and block.get("kind") == "image" and block.get("asset_id") == asset_id
+
+
+def _attach_stage_image(
+    stage: CourseModuleStageContent, module: CourseModule, asset: CourseGeneratedImage
+) -> None:
+    content = dict(stage.content_json or {})
+    blocks = [block for block in (content.get("blocks") or []) if not _is_image_block(block, asset.id)]
+    # Images lead the stage in the order they were published, ahead of its text and activities.
+    lead = 0
+    while lead < len(blocks) and isinstance(blocks[lead], dict) and blocks[lead].get("kind") == "image":
+        lead += 1
+    blocks.insert(lead, {
+        "kind": "image",
+        "asset_id": asset.id,
+        "src": _course_image_src(asset),
+        "alt": f"تصویر آموزشی {module.title}، {stage.title}",
+    })
+    content["blocks"] = blocks
+    stage.content_json = content
+
+
+def _detach_stage_image(stage: CourseModuleStageContent, asset_id: int) -> bool:
+    content = dict(stage.content_json or {})
+    blocks = list(content.get("blocks") or [])
+    kept = [block for block in blocks if not _is_image_block(block, asset_id)]
+    if len(kept) == len(blocks):
+        return False
+    content["blocks"] = kept
+    stage.content_json = content
+    return True
+
+
+def _mark_draft_stage_edited(version: CourseVersion, stage: CourseModuleStageContent) -> None:
+    # Image blocks never reach the knowledge base, so a published version keeps its review state.
+    if version.status != "published":
+        stage.review_status = "pending"
+        stage.ai_generation_status = "edited"
+        version.generation_status = "edited"
+
+
+@router.post(
+    "/api/admin/courses/{course_id}/versions/{version_number}/images",
+    dependencies=[Depends(require_admin)],
+)
+async def generate_admin_course_image(
+    course_id: int,
+    version_number: int,
+    payload: CmsImageGenerateIn,
+    db: Session = Depends(get_db),
+) -> dict:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    module = db.get(CourseModule, payload.module_id)
+    stage = db.get(CourseModuleStageContent, payload.stage_id)
+    if not module or module.course_version_id != version.id or not stage or stage.course_module_id != module.id:
+        raise HTTPException(status_code=422, detail="سرفصل و مرحله انتخاب‌شده متعلق به این نسخه نیستند.")
+    knowledge, knowledge_source = await lesson_knowledge(db, version, module, stage, payload.prompt)
+    prompt = image_generation_prompt(
+        payload.prompt, course_title=_version_display_title(course, version),
+        module_title=module.title, stage_title=stage.title, knowledge=knowledge,
+    )
+    version_id, module_id, stage_id = version.id, module.id, stage.id
+    db.rollback()
+    try:
+        image_bytes, mime_type, extension = await generate_course_image(prompt, payload.size)
+    except CourseImageError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    file_name, file_path = save_image_file(image_bytes, extension)
+    try:
+        asset = CourseGeneratedImage(
+            course_version_id=version_id, course_module_id=module_id, stage_content_id=stage_id,
+            file_name=file_name, mime_type=mime_type, prompt=payload.prompt,
+            model=get_settings().arvan_image_generation_model, size=payload.size, status="draft",
+        )
+        db.add(asset)
+        db.commit()
+    except Exception:
+        db.rollback()
+        file_path.unlink(missing_ok=True)
+        raise
+    return {**_course_image_out(asset, *_course_image_context(db, asset)), "knowledge_source": knowledge_source}
+
+
+@router.get("/api/admin/course-images", dependencies=[Depends(require_admin)])
+def list_admin_course_images(
+    status: str | None = None,
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    statement = select(CourseGeneratedImage).order_by(CourseGeneratedImage.id.desc())
+    if status:
+        statement = statement.where(CourseGeneratedImage.status == status)
+    images = []
+    for asset in db.scalars(statement).all():
+        try:
+            images.append(_course_image_out(asset, *_course_image_context(db, asset)))
+        except HTTPException:
+            continue
+    return images
+
+
+@router.post("/api/admin/course-images/publish", dependencies=[Depends(require_admin)])
+def publish_admin_course_images(payload: CmsImagePublishIn, db: Session = Depends(get_db)) -> dict:
+    published = []
+    # Oldest first, so several images in one stage appear in the order they were generated.
+    for asset_id in sorted(set(payload.asset_ids)):
+        asset = _admin_course_image(db, asset_id)
+        if asset.status == "published":
+            continue
+        course, version, module, stage = _course_image_context(db, asset)
+        _attach_stage_image(stage, module, asset)
+        _mark_draft_stage_edited(version, stage)
+        asset.status = "published"
+        published.append(_course_image_out(asset, course, version, module, stage))
+    db.commit()
+    return {"published_count": len(published), "images": published}
+
+
+@router.post("/api/admin/course-images/{asset_id}/regenerate", dependencies=[Depends(require_admin)])
+async def regenerate_admin_course_image(
+    asset_id: int,
+    payload: CmsImageRegenerateIn,
+    db: Session = Depends(get_db),
+) -> dict:
+    asset = _admin_course_image(db, asset_id)
+    if asset.status != "draft":
+        raise HTTPException(status_code=409, detail="عکس منتشرشده را اول از مرحله بردار، بعد ویرایش کن.")
+    course, version, module, stage = _course_image_context(db, asset)
+    knowledge, knowledge_source = await lesson_knowledge(db, version, module, stage, payload.prompt)
+    prompt = image_generation_prompt(
+        payload.prompt, course_title=_version_display_title(course, version),
+        module_title=module.title, stage_title=stage.title, knowledge=knowledge,
+    )
+    db.rollback()
+    try:
+        image_bytes, mime_type, extension = await generate_course_image(prompt, payload.size)
+    except CourseImageError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    file_name, file_path = save_image_file(image_bytes, extension)
+    try:
+        asset = _admin_course_image(db, asset_id)
+        if asset.status != "draft":
+            raise HTTPException(status_code=409, detail="این عکس در حین ویرایش منتشر شد؛ نسخه جدید ذخیره نشد.")
+        previous_file = asset.file_name
+        asset.file_name = file_name
+        asset.mime_type = mime_type
+        asset.prompt = payload.prompt
+        asset.size = payload.size
+        asset.model = get_settings().arvan_image_generation_model
+        db.commit()
+    except Exception:
+        db.rollback()
+        file_path.unlink(missing_ok=True)
+        raise
+    delete_image_file(previous_file)
+    return {**_course_image_out(asset, *_course_image_context(db, asset)), "knowledge_source": knowledge_source}
+
+
+@router.delete("/api/admin/course-images/{asset_id}", dependencies=[Depends(require_admin)])
+def delete_admin_course_image(asset_id: int, db: Session = Depends(get_db)) -> dict:
+    asset = _admin_course_image(db, asset_id)
+    stage = db.get(CourseModuleStageContent, asset.stage_content_id)
+    version = db.get(CourseVersion, asset.course_version_id)
+    if stage and _detach_stage_image(stage, asset.id) and version:
+        _mark_draft_stage_edited(version, stage)
+    file_name = asset.file_name
+    db.delete(asset)
+    db.commit()
+    delete_image_file(file_name)
+    return {"deleted": True}
+
+
+@router.delete(
+    "/api/admin/courses/{course_id}/versions/{version_number}/stages/{stage_id}/images/{asset_id}",
+    response_model=CmsCourseVersionOut,
+    dependencies=[Depends(require_admin)],
+)
+def remove_admin_stage_image(
+    course_id: int,
+    version_number: int,
+    stage_id: int,
+    asset_id: int,
+    db: Session = Depends(get_db),
+) -> CmsCourseVersionOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    stage = db.get(CourseModuleStageContent, stage_id)
+    module = db.get(CourseModule, stage.course_module_id) if stage else None
+    if not stage or not module or module.course_version_id != version.id:
+        raise HTTPException(status_code=404, detail="مرحله این نسخه پیدا نشد.")
+    if not _detach_stage_image(stage, asset_id):
+        raise HTTPException(status_code=404, detail="این عکس در مرحله انتخاب‌شده نیست.")
+    _mark_draft_stage_edited(version, stage)
+    # A revision inherits image blocks of its published source; that asset stays untouched.
+    asset = db.get(CourseGeneratedImage, asset_id)
+    if asset and asset.stage_content_id == stage.id:
+        asset.status = "draft"
+    db.commit()
+    return _cms_version_out(db, course, version)
+
+
+@router.get("/api/course-images/{asset_id}")
+def get_course_image(asset_id: int, request: Request, db: Session = Depends(get_db)) -> FileResponse:
+    asset = db.get(CourseGeneratedImage, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="تصویر پیدا نشد.")
+    version = db.get(CourseVersion, asset.course_version_id)
+    if not version:
+        raise HTTPException(status_code=404, detail="نسخه دوره پیدا نشد.")
+    live = version.status == "published" and asset.status == "published"
+    if not live and not get_admin_from_request(request, db):
+        raise HTTPException(status_code=404, detail="تصویر منتشرنشده پیدا نشد.")
+    root = Path(get_settings().generated_media_dir).expanduser().resolve()
+    path = (root / asset.file_name).resolve()
+    if path.parent != root or not path.is_file():
+        raise HTTPException(status_code=404, detail="فایل تصویر پیدا نشد.")
+    cache = "private, max-age=3600" if asset.status == "published" else "no-store"
+    return FileResponse(path, media_type=asset.mime_type, headers={"Cache-Control": cache})
 
 
 @router.post(
@@ -2079,6 +2374,24 @@ def get_admin_course_rag_status(
     db: Session = Depends(get_db),
 ) -> CmsRagStatusOut:
     course, version = _cms_course_and_version(db, course_id, version_number)
+    return _cms_rag_status_out(db, course, version)
+
+
+@router.post(
+    "/api/admin/courses/{course_id}/versions/{version_number}/rag-retry-failed",
+    response_model=CmsRagStatusOut,
+    dependencies=[Depends(require_admin)],
+)
+def retry_admin_course_rag_failures(
+    course_id: int,
+    version_number: int,
+    db: Session = Depends(get_db),
+) -> CmsRagStatusOut:
+    course, version = _cms_course_and_version(db, course_id, version_number)
+    if version.status != "published":
+        raise HTTPException(status_code=409, detail="فقط نسخه منتشرشده را می‌توان دوباره ایندکس کرد.")
+    retry_failed_index_jobs(db, version.id)
+    db.commit()
     return _cms_rag_status_out(db, course, version)
 
 

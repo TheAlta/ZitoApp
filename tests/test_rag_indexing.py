@@ -14,12 +14,15 @@ from src.models import (
     CourseKbDocumentModule,
     CourseKbIndexJob,
     CourseModule,
+    CourseRagConfig,
     CourseVersion,
 )
 from src.seed import seed_defaults
 from src.services.rag import (
     document_content_checksum,
     retrieve_course_chunks,
+    retry_failed_index_jobs,
+    _record_index_job_failure,
     run_index_worker_once,
     sync_document_chunks,
 )
@@ -168,6 +171,50 @@ class RAGWorkerLeaseTests(unittest.IsolatedAsyncioTestCase):
             recovered = db.get(CourseKbIndexJob, expired_id)
             self.assertEqual(recovered.status, "retry")
             self.assertIn("lease expired", recovered.error_message)
+
+    async def test_failed_latest_index_job_can_be_requeued_without_touching_other_jobs(self) -> None:
+        with SessionLocal() as db:
+            job = db.scalars(
+                select(CourseKbIndexJob).where(CourseKbIndexJob.status == "queued")
+            ).first()
+            self.assertIsNotNone(job)
+            job.status = "failed"
+            job.attempt_count = job.max_attempts
+            job.error_message = "temporary timeout"
+            job.finished_at = datetime.now(timezone.utc)
+            version_id = job.course_version_id
+            job_id = job.id
+            db.commit()
+
+        with SessionLocal() as db:
+            requeued = retry_failed_index_jobs(db, version_id)
+            db.commit()
+
+        self.assertEqual(requeued, 1)
+        with SessionLocal() as db:
+            recovered = db.get(CourseKbIndexJob, job_id)
+            config = db.scalars(
+                select(CourseRagConfig).where(CourseRagConfig.course_version_id == version_id)
+            ).one()
+            self.assertEqual(recovered.status, "queued")
+            self.assertEqual(recovered.attempt_count, 0)
+            self.assertIsNone(recovered.error_message)
+            self.assertEqual(config.status, "indexing")
+
+    async def test_permanent_embedding_gateway_error_fails_without_retries(self) -> None:
+        with SessionLocal() as db:
+            job = db.scalars(
+                select(CourseKbIndexJob).where(CourseKbIndexJob.status == "queued")
+            ).first()
+            self.assertIsNotNone(job)
+            job.status = "running"
+            job.attempt_count = 1
+            _record_index_job_failure(
+                db, job, "Arvan embeddings returned HTTP 403: Account is debtor"
+            )
+            db.commit()
+            self.assertEqual(job.status, "failed")
+            self.assertIsNone(job.next_attempt_at)
 
 
 if __name__ == "__main__":

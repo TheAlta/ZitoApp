@@ -249,6 +249,13 @@ def _current_stage_fallback_source(stage: CourseModuleStageContent) -> Retrieved
     )
 
 
+MODEL_ATTEMPTS = 2
+
+
+class _UncitedAnswer(ValueError):
+    """The model replied without relying on any retrieved source."""
+
+
 def _citations_from_numbers(
     source_numbers: Any,
     chunks: list[RetrievedChunk],
@@ -267,7 +274,7 @@ def _citations_from_numbers(
         public.append(_public_citation(value, chunk))
         audit.append(_audit_citation(value, chunk))
     if not public:
-        raise ValueError("Coach response did not cite a retrieved source.")
+        raise _UncitedAnswer("Coach response did not cite a retrieved source.")
     return public, audit
 
 
@@ -366,19 +373,27 @@ async def answer_course_question(
                 ),
                 "retrieved_sources": format_retrieved_context(source_chunks),
             }
-            raw_response = await ask_ai(
-                load_prompt("course_coach_response.md"),
-                json.dumps(request_payload, ensure_ascii=False),
-                temperature=0.2,
-                # The prompt and parser both require an object. Request it at
-                # the gateway level too, so a conversational prose reply does
-                # not turn a grounded answer into an avoidable fallback.
-                response_format={"type": "json_object"},
-            )
-            parsed = parse_json_object(raw_response)
-            answer = str(parsed.get("answer") or "").strip()
-            if not answer:
-                raise ValueError("Coach response contains no answer.")
+            for attempt in range(1, MODEL_ATTEMPTS + 1):
+                try:
+                    raw_response = await ask_ai(
+                        load_prompt("course_coach_response.md"),
+                        json.dumps(request_payload, ensure_ascii=False),
+                        temperature=0.2,
+                        # The prompt and parser both require an object. Request it at
+                        # the gateway level too, so a conversational prose reply does
+                        # not turn a grounded answer into an avoidable fallback.
+                        response_format={"type": "json_object"},
+                    )
+                    parsed = parse_json_object(raw_response)
+                    answer = str(parsed.get("answer") or "").strip()
+                    if not answer:
+                        raise ValueError("Coach response contains no answer.")
+                    break
+                except (ArvanAIError, ValueError, TypeError):
+                    # The model occasionally returns prose or an empty object; one more
+                    # try is cheaper for the learner than an apology.
+                    if attempt == MODEL_ATTEMPTS:
+                        raise
             answer = answer[:2500]
             public_citations, audit_citations = _citations_from_numbers(
                 parsed.get("source_numbers"),
@@ -389,6 +404,13 @@ async def answer_course_question(
                 suggested_action = candidate_action.strip()[:500]
             grounded = True
             model = get_settings().arvan_model
+        except _UncitedAnswer as exc:
+            # The sources were retrieved by similarity, but the model found nothing in them that
+            # answers this question (typically an off-topic question). That is not an outage.
+            answer = _fallback_without_sources()
+            grounded = False
+            status = "out_of_scope"
+            error_message = str(exc)[:1000]
         except (ArvanAIError, ValueError, TypeError) as exc:
             answer = _fallback_after_model_error(source_chunks)
             public_citations = [_public_citation(index, chunk) for index, chunk in enumerate(source_chunks, start=1)]

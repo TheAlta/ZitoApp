@@ -22,6 +22,7 @@ from src.services.cms import (
     generate_curriculum,
     stage_flow,
 )
+from src.lib.arvan_client import ArvanAIError
 
 
 class CmsGenerationOptionsTests(unittest.TestCase):
@@ -79,6 +80,27 @@ class CmsGenerationOptionsTests(unittest.TestCase):
         self.assertEqual(result, {"overview": {}})
         self.assertEqual(ai.await_count, 2)
         self.assertIn("previous response did not satisfy the required JSON contract", ai.await_args_list[1].args[0])
+
+    def test_transient_gateway_401_is_retried_but_does_not_skip_validation(self) -> None:
+        settings = {
+            "model": "GPT-4.1",
+            "api_base_url": "https://example.invalid/v1",
+            "api_key": "test",
+            "timeout_seconds": 180,
+        }
+        ai = AsyncMock(side_effect=[ArvanAIError("AI gateway returned HTTP 401"), '{"ok": true}'])
+
+        with patch("src.services.cms.ask_ai", ai):
+            result = asyncio.run(
+                _request_generated_json(
+                    "Return JSON only.", "{}", **settings, output_budget=100,
+                    task_label="نقشه دوره", attempts=3,
+                    validator=lambda payload: self.assertTrue(payload.get("ok")),
+                )
+            )
+
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(ai.await_count, 2)
 
     def test_permanently_malformed_json_has_a_friendly_cms_error(self) -> None:
         settings = {

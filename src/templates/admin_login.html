@@ -4,11 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ورود مدیر زیتو</title>
-  <link href="https://cdn.jsdelivr.net/gh/hemedani/yekan@v3.0.0/font-face.css" rel="stylesheet" type="text/css">
+  <link rel="preload" href="/landing-static/fonts/Yekan.woff2" as="font" type="font/woff2" crossorigin>
   <style>
-    @font-face { font-family: "YekanZito"; src: local("Yekan Bakh"), local("IRANYekan"), local("B Yekan"), local("Yekan"); font-display: swap; }
     * { box-sizing: border-box; }
-    :root { color-scheme: light; --font-yekan: "YekanZito", "Yekan", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif; --text: #353354; --muted: #766e85; --line: rgba(138,116,172,.20); --purple: #8b67cf; --blue: #4f99d0; --danger: #cf5273; }
+    :root { color-scheme: light; --font-yekan: "YekanZito", Tahoma, Arial, sans-serif; --text: #353354; --muted: #766e85; --line: rgba(138,116,172,.20); --purple: #8b67cf; --blue: #4f99d0; --danger: #cf5273; }
     html, body, button, input, textarea, select { font-family: var(--font-yekan); }
     body * { font-family: inherit; }
     body {
@@ -35,11 +34,11 @@
       background: linear-gradient(180deg, rgba(255,253,250,.95), rgba(255,247,244,.92));
       box-shadow: 0 28px 90px rgba(125,91,126,.16), inset 0 1px 0 rgba(255,255,255,.96);
     }
-    .mark { width: 58px; height: 58px; margin: 0 auto 14px; border-radius: 20px; display: grid; place-items: center; font-size: 30px; font-weight: 900; background: linear-gradient(135deg, var(--purple), var(--blue) 70%, #37e6ff); box-shadow: 0 0 34px rgba(112,92,255,.5); }
+    .mark { width: 58px; height: 58px; margin: 0 auto 14px; border-radius: 20px; display: grid; place-items: center; font-size: 30px; font-weight: 700; background: linear-gradient(135deg, var(--purple), var(--blue) 70%, #37e6ff); box-shadow: 0 0 34px rgba(112,92,255,.5); }
     .mark img { width: 48px; height: 38px; display: block; object-fit: contain; }
     h1 { margin: 0; text-align: center; font-size: 23px; }
     p { margin: 8px 0 22px; text-align: center; color: var(--muted); line-height: 1.9; font-size: 13px; }
-    label { display: block; margin: 12px 0 7px; color: #706782; font-size: 13px; font-weight: 800; }
+    label { display: block; margin: 12px 0 7px; color: #706782; font-size: 13px; font-weight: 700; }
     input {
       width: 100%;
       height: 52px;
@@ -62,18 +61,18 @@
       cursor: pointer;
       color: white;
       font: inherit;
-      font-weight: 900;
+      font-weight: 700;
       background: linear-gradient(135deg, var(--purple), var(--blue));
       box-shadow: 0 14px 34px rgba(91,83,255,.34);
     }
     button:disabled { opacity: .62; cursor: wait; }
     .error { min-height: 25px; margin-top: 12px; text-align: center; color: var(--danger); font-size: 12px; line-height: 1.8; }
   </style>
-  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260920-scrollbar-1">
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260920-scrollbar-1&glass=20261010-mobile-1">
 </head>
 <body class="zito-glass zito-glass-admin">
   <main class="card">
-    <div class="mark"><img src="/landing-static/zito-logo.svg?v=20260905-unified-z-1" alt="لوگوی زیتو"></div>
+    <div class="mark"><img src="/landing-static/zito-logo.svg?v=20261008-palette-1" alt="لوگوی زیتو"></div>
     <h1>ورود مدیر زیتو</h1>
     <p>برای ورود به پنل مدیریت، نام کاربری و رمز عبور مدیر را وارد کن.</p>
     <form id="loginForm">

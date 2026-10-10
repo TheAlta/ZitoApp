@@ -1,5 +1,6 @@
 """OpenAI-compatible embedding client for Zito-owned course retrieval."""
 
+import asyncio
 import hashlib
 import math
 import re
@@ -89,20 +90,36 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
         "Authorization": f"Bearer {settings.effective_embedding_api_key}",
         "Content-Type": "application/json",
     }
-    try:
-        async with httpx.AsyncClient(
-            timeout=settings.arvan_embedding_timeout_seconds,
-            trust_env=False,
-        ) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
-    except httpx.HTTPStatusError as exc:
-        body = exc.response.text[:500] if exc.response is not None else ""
-        raise ArvanEmbeddingError(
-            f"Arvan embeddings returned HTTP {exc.response.status_code}: {body}"
-        ) from exc
-    except (httpx.RequestError, ValueError) as exc:
-        raise ArvanEmbeddingError(f"Could not call Arvan embeddings ({type(exc).__name__}): {exc}") from exc
+    last_error: Exception | None = None
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(
+                timeout=settings.arvan_embedding_timeout_seconds,
+                trust_env=False,
+            ) as client:
+                response = await client.post(url, headers=headers, json=payload)
+                response.raise_for_status()
+                data = response.json()
+            break
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code if exc.response is not None else 0
+            # 401 is included because the gateway sporadically rejects a valid key for one request.
+            if status_code not in {401, 429, 500, 502, 503, 504} or attempt == 2:
+                body = exc.response.text[:500] if exc.response is not None else ""
+                raise ArvanEmbeddingError(
+                    f"Arvan embeddings returned HTTP {status_code}: {body}"
+                ) from exc
+            last_error = exc
+        except httpx.RequestError as exc:
+            if attempt == 2:
+                raise ArvanEmbeddingError(
+                    f"Could not call Arvan embeddings ({type(exc).__name__}): {exc}"
+                ) from exc
+            last_error = exc
+        except ValueError as exc:
+            raise ArvanEmbeddingError(f"Invalid Arvan embeddings response: {exc}") from exc
+        await asyncio.sleep(0.4 * (attempt + 1))
+    else:
+        raise ArvanEmbeddingError("Arvan embeddings request failed after retries.") from last_error
 
     return _parse_embeddings(data, len(normalized), settings.arvan_embedding_dimensions)

@@ -14,6 +14,7 @@ from src.db import Base, SessionLocal, engine
 from src.main import app
 from src.models import Course, CourseModule, CourseVersion, UserModuleStageProgress
 from src.seed import seed_defaults
+from src.services.personalized_stage import PersonalizedStageContent
 from src.services.rag import retrieve_course_chunks, run_pending_index_jobs
 
 
@@ -173,6 +174,40 @@ class CourseFlowV3Tests(unittest.TestCase):
             ).all()[5]
         self.assertEqual(progress.generated_content_json["title"], "نمونه برای طراحی محصول")
         self.assertTrue(progress.generated_content_sources_json)
+
+    def test_fallback_personalized_example_is_not_cached(self) -> None:
+        fallback = PersonalizedStageContent(
+            content={"title": "نمونه عمومی", "scenario": "تمرین عمومی", "application_steps": ["یک گام"], "reflection_question": "چرا؟"},
+            citations=[],
+            grounded=False,
+            model=None,
+            prompt_version="test",
+        )
+        with TestClient(app) as client:
+            enrollment_id = login_and_enroll(client, "09124440009")
+            for stage_number in range(1, 6):
+                response = client.post(
+                    f"/api/learning/enrollments/{enrollment_id}/stages/{stage_number}/complete",
+                    json={"response": None},
+                )
+                self.assertEqual(response.status_code, 200, response.text)
+            with patch(
+                "src.api.routes.generate_personalized_work_example",
+                new=AsyncMock(return_value=fallback),
+            ) as generate:
+                first = client.post(
+                    f"/api/learning/enrollments/{enrollment_id}/stages/6/personalized-example"
+                )
+                second = client.post(
+                    f"/api/learning/enrollments/{enrollment_id}/stages/6/personalized-example"
+                )
+
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertFalse(first.json()["cached"])
+        self.assertFalse(first.json()["grounded"])
+        self.assertEqual(second.status_code, 200, second.text)
+        self.assertFalse(second.json()["cached"])
+        self.assertEqual(generate.await_count, 2)
 
 
 if __name__ == "__main__":

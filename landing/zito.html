@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ZITO | Z Generation Intelligent</title>
 
-  <link href="https://cdn.jsdelivr.net/gh/hemedani/yekan@v3.0.0/font-face.css" rel="stylesheet" type="text/css">
-  <link rel="preload" href="/landing-static/zito-ambient.mp3" as="audio" type="audio/mpeg">
-  <script src="/landing-static/ambient-audio.js"></script>
+  <link rel="preload" href="/landing-static/fonts/Yekan.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/landing-static/zito-ambient.mp3?v=20260928-euphoria-1" as="audio" type="audio/mpeg">
+  <script src="/landing-static/ambient-audio.js?v=20260928-euphoria-1"></script>
   <script defer src="/landing-static/zito-mascot.js"></script>
   <script defer src="/landing-static/zito-intro-mascot.js"></script>
 
@@ -25,7 +25,7 @@
       --purple: #7d40ff;
       --blue: #3069ff;
       --ink: #ffffff;
-      --font-yekan: 'Yekan', "YekanZito", "Yekan Bakh", "IRANYekan", "B Yekan", Tahoma, Arial, sans-serif;
+      --font-yekan: "YekanZito", Tahoma, Arial, sans-serif;
       --font-fa: var(--font-yekan);
       --font-en: var(--font-yekan);
     }
@@ -52,8 +52,7 @@
     html,
     body {
       height: 100vh;
-      width: 100vw;
-      overflow-x: hidden;
+      width: 100%;
     }
 
     body {
@@ -71,7 +70,7 @@
           var(--bg-bottom) 100%
         );
       min-height: 100vh;
-      width: 100vw;
+      width: 100%;
       position: relative;
       display: flex;
       flex-direction: column;
@@ -405,7 +404,7 @@
     .wordmark-zito {
       margin-top: 0;
       font-family: var(--font-en);
-      font-weight: 800;
+      font-weight: 700;
       font-size: clamp(32px, 4.1vw, 48px);
       line-height: .95;
       letter-spacing: clamp(4px, .52vw, 7px);
@@ -464,7 +463,7 @@
 
     .chat-name {
       font-family: var(--font-fa);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       color: #fff;
       margin-bottom: 4px;
@@ -607,7 +606,7 @@
     .phone-title {
       font-family: var(--font-fa);
       font-size: 21px;
-      font-weight: 800;
+      font-weight: 700;
       margin-bottom: 8px;
       text-align: center;
     }
@@ -722,7 +721,7 @@
       cursor: pointer;
       color: #fff;
       font-family: var(--font-fa);
-      font-weight: 800;
+      font-weight: 700;
       background: linear-gradient(to right, #a733f5 0%, #2059e6 100%);
       box-shadow: 0 12px 30px rgba(56, 99, 253, .36);
       transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
@@ -860,7 +859,7 @@
       }
 
       .chat-text {
-        font-size: 10px;
+        font-size: 12px;
         min-height: 40px;
       }
 
@@ -989,8 +988,8 @@
       inset: -22px -36px -25px;
       border-radius: 50%;
       background:
-        radial-gradient(ellipse at 18% 48%, rgba(247, 167, 205, .34), transparent 56%),
-        radial-gradient(ellipse at 82% 53%, rgba(103, 210, 225, .40), transparent 58%),
+        radial-gradient(ellipse at 18% 48%, rgba(229, 190, 171, .40), transparent 56%),
+        radial-gradient(ellipse at 82% 53%, rgba(140, 169, 199, .36), transparent 58%),
         radial-gradient(ellipse at 52% 90%, rgba(152, 114, 224, .23), transparent 62%);
       filter: blur(13px);
       opacity: .9;
@@ -999,12 +998,12 @@
 
     .wordmark-zito > span {
       display: inline-block;
-      background: linear-gradient(112deg, #ffffff 5%, #dce9ff 28%, #f7edff 50%, #8fe2ea 72%, #fefeff 96%);
+      background: linear-gradient(112deg, #735f86 5%, #9683a7 30%, #8ca9c7 52%, #735f86 76%, #9683a7 96%);
       background-size: 190% 100%;
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
-      -webkit-text-stroke: 1px rgba(255, 255, 255, .56);
+      -webkit-text-stroke: 0;
       filter: drop-shadow(0 2px 0 rgba(255, 255, 255, .72)) drop-shadow(0 8px 16px rgba(93, 84, 166, .22));
       text-shadow: none;
       animation: wordmarkSheen 7s ease-in-out infinite alternate;
@@ -1230,7 +1229,7 @@
       margin: 0;
       font-size: 44px;
       line-height: 1.22;
-      font-weight: 900;
+      font-weight: 700;
       letter-spacing: 0;
       background: linear-gradient(105deg, #8b5fc4 4%, #4e9bd2 54%, #a86cc0 100%);
       -webkit-background-clip: text;
@@ -1259,7 +1258,7 @@
       background: linear-gradient(90deg, #9868cf 0%, #4d98d0 100%);
       box-shadow: 0 14px 32px rgba(115, 102, 189, .26), inset 0 1px 0 rgba(255, 255, 255, .22);
       font-size: 16px;
-      font-weight: 800;
+      font-weight: 700;
       cursor: pointer;
       transition: transform .2s ease, box-shadow .2s ease;
     }
@@ -1318,7 +1317,7 @@
       }
     }
   </style>
-  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260920-scrollbar-1">
+  <link rel="stylesheet" href="/landing-static/zito-glass.css?v=20260920-scrollbar-1&glass=20261010-mobile-1">
 </head>
 
 <body class="zito-glass zito-glass-landing">
@@ -1340,7 +1339,7 @@
 
   <!-- لوگو -->
   <div class="brand">
-    <img class="logo-img" src="/landing-static/zito-logo.svg?v=20260905-unified-z-1" alt="لوگوی زیتو">
+    <img class="logo-img" src="/landing-static/zito-logo.svg?v=20261008-palette-1" alt="لوگوی زیتو">
 
     <div class="wordmark-zito" aria-label="ZITO"><span aria-hidden="true">ZITO</span></div>
   </div>

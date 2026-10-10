@@ -23,6 +23,7 @@ from src.services.rag import RetrievedChunk, format_retrieved_context, retrieve_
 
 FINAL_EXAM_GENERATION_PROMPT_VERSION = "final-exam-generation-v1"
 FINAL_EXAM_GRADING_PROMPT_VERSION = "final-exam-grading-v1"
+GRADING_ATTEMPTS = 2
 _QUESTION_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 
 
@@ -293,6 +294,7 @@ async def _generate_questions(
             json.dumps(payload, ensure_ascii=False),
             temperature=0.2,
             response_format={"type": "json_object"},
+            timeout_seconds=get_settings().arvan_content_generation_timeout_seconds,
         )
         questions = _normalized_questions(parse_json_object(raw_response))
     except (ArvanAIError, ValueError, TypeError, AttributeError):
@@ -505,20 +507,26 @@ async def grade_final_exam(
         },
         "answers": answers,
     }
-    try:
-        raw_response = await ask_ai(
-            load_prompt("final_exam_grading.md"),
-            json.dumps(request_payload, ensure_ascii=False),
-            temperature=0,
-            response_format={"type": "json_object"},
-        )
-        score, passed, feedback, question_feedback = _normalized_grade(
-            parse_json_object(raw_response),
-            questions,
-            exam.passing_score,
-        )
-    except (ArvanAIError, ValueError, TypeError) as exc:
-        raise FinalExamAIError("تصحیح هوشمند در حال حاضر در دسترس نیست؛ کمی بعد دوباره ثبت کن.") from exc
+    for grading_attempt in range(1, GRADING_ATTEMPTS + 1):
+        try:
+            raw_response = await ask_ai(
+                load_prompt("final_exam_grading.md"),
+                json.dumps(request_payload, ensure_ascii=False),
+                temperature=0,
+                response_format={"type": "json_object"},
+                # Grading every long-form answer regularly takes longer than the short chat timeout.
+                timeout_seconds=get_settings().arvan_content_generation_timeout_seconds,
+            )
+            score, passed, feedback, question_feedback = _normalized_grade(
+                parse_json_object(raw_response),
+                questions,
+                exam.passing_score,
+            )
+            break
+        except (ArvanAIError, ValueError, TypeError) as exc:
+            # One more try before asking the learner to resubmit; an unusable reply is usually transient.
+            if grading_attempt == GRADING_ATTEMPTS:
+                raise FinalExamAIError("تصحیح هوشمند در حال حاضر در دسترس نیست؛ کمی بعد دوباره ثبت کن.") from exc
 
     now = _now()
     attempt.answers_json = {"answers": answers}

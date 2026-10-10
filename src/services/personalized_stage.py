@@ -37,6 +37,9 @@ def _public_citation(number: int, chunk: RetrievedChunk) -> dict[str, Any]:
     }
 
 
+MODEL_ATTEMPTS = 2
+
+
 def _citations_from_numbers(source_numbers: Any, chunks: list[RetrievedChunk]) -> list[dict[str, Any]]:
     if not isinstance(source_numbers, list):
         raise ValueError("Personalized example has no source number list.")
@@ -132,15 +135,24 @@ async def generate_personalized_work_example(
             ),
             "retrieved_sources": format_retrieved_context(retrieval.chunks),
         }
-        raw_response = await ask_ai(
-            load_prompt("personalized_work_example.md"),
-            json.dumps(request_payload, ensure_ascii=False),
-            temperature=0.25,
-            response_format={"type": "json_object"},
-        )
-        parsed = parse_json_object(raw_response)
-        content = _parse_model_content(parsed)
-        citations = _citations_from_numbers(parsed.get("source_numbers"), retrieval.chunks)
+        for attempt in range(1, MODEL_ATTEMPTS + 1):
+            try:
+                raw_response = await ask_ai(
+                    load_prompt("personalized_work_example.md"),
+                    json.dumps(request_payload, ensure_ascii=False),
+                    temperature=0.25,
+                    response_format={"type": "json_object"},
+                    # A full worked example regularly takes longer than the short chat timeout.
+                    timeout_seconds=get_settings().arvan_content_generation_timeout_seconds,
+                )
+                parsed = parse_json_object(raw_response)
+                content = _parse_model_content(parsed)
+                citations = _citations_from_numbers(parsed.get("source_numbers"), retrieval.chunks)
+                break
+            except (ArvanAIError, ValueError, TypeError):
+                # One more try before the generic fallback; an unusable reply is usually transient.
+                if attempt == MODEL_ATTEMPTS:
+                    raise
         return PersonalizedStageContent(
             content=content,
             citations=citations,
@@ -151,8 +163,8 @@ async def generate_personalized_work_example(
     except (ArvanAIError, ValueError, TypeError):
         return PersonalizedStageContent(
             content=fallback,
-            citations=[_public_citation(index, chunk) for index, chunk in enumerate(retrieval.chunks, start=1)],
-            grounded=True,
+            citations=[],
+            grounded=False,
             model=None,
             prompt_version=PERSONALIZED_WORK_EXAMPLE_PROMPT_VERSION,
         )

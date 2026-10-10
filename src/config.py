@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     arvan_content_generation_timeout_seconds: int = Field(
         180, alias="ARVAN_CONTENT_GENERATION_TIMEOUT_SECONDS"
     )
+    arvan_image_generation_model: str = Field("Gemini-3.1-Flash-Image-Preview", alias="ARVAN_IMAGE_GENERATION_MODEL")
+    arvan_image_generation_timeout_seconds: int = Field(180, alias="ARVAN_IMAGE_GENERATION_TIMEOUT_SECONDS")
+    generated_media_dir: str = Field("data/generated_media", alias="GENERATED_MEDIA_DIR")
     arvan_timeout_seconds: int = Field(45, alias="ARVAN_TIMEOUT_SECONDS")
     arvan_mock_ai: bool = Field(False, alias="ARVAN_MOCK_AI")
 
@@ -34,7 +37,7 @@ class Settings(BaseSettings):
     arvan_embedding_api_key: str = Field("", alias="ARVAN_EMBEDDING_API_KEY")
     arvan_embedding_model: str = Field("Bge-m3", alias="ARVAN_EMBEDDING_MODEL")
     arvan_embedding_dimensions: int = Field(3072, alias="ARVAN_EMBEDDING_DIMENSIONS")
-    arvan_embedding_timeout_seconds: int = Field(30, alias="ARVAN_EMBEDDING_TIMEOUT_SECONDS")
+    arvan_embedding_timeout_seconds: int = Field(60, alias="ARVAN_EMBEDDING_TIMEOUT_SECONDS")
     rag_retrieval_top_k: int = Field(3, alias="RAG_RETRIEVAL_TOP_K")
     rag_context_char_limit: int = Field(4200, alias="RAG_CONTEXT_CHAR_LIMIT")
     rag_min_similarity: float = Field(0.20, alias="RAG_MIN_SIMILARITY")

@@ -446,6 +446,7 @@ def _should_retry_generation_error(exc: Exception) -> bool:
         return True
     message = str(exc).lower()
     return any(marker in message for marker in (
+        "http 401",
         "http 429",
         "http 5",
         "could not call",
@@ -1132,6 +1133,8 @@ def _visible_content_text(value: Any) -> list[str]:
         return parts
     if not isinstance(value, dict):
         return []
+    if value.get("kind") == "image":
+        return []
     parts: list[str] = []
     for key, item in value.items():
         if key in {"coaching", "ui_hint", "media_slots"}:
@@ -1282,7 +1285,8 @@ def publish_draft_version(db: Session, course: Course, version: CourseVersion) -
 
     config = ensure_course_rag_config(db, version.id)
     config.knowledge_base_ref = f"cms:course:{course.id}:version:{version.id}"
-    config.status = "ready"
+    config.status = "indexing"
+    config.last_error = None
     index_changes = sync_document_chunks(db, documents, enqueue_jobs=True)
 
     if version.requires_final_exam:

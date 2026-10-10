@@ -183,8 +183,8 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("showIntro", response.text)
         self.assertIn("startAmbientSound", response.text)
         self.assertIn("stopAmbientSound", response.text)
-        self.assertIn('rel="preload" href="/landing-static/zito-ambient.mp3"', response.text)
-        self.assertIn("/landing-static/zito-ambient.mp3", ambient_script.text)
+        self.assertIn('rel="preload" href="/landing-static/zito-ambient.mp3?v=20260928-euphoria-1"', response.text)
+        self.assertIn('/landing-static/zito-ambient.mp3?v=20260928-euphoria-1', ambient_script.text)
         self.assertIn("track.loop = true", ambient_script.text)
         self.assertIn("attemptAutoplay();", ambient_script.text)
         self.assertIn("zito:landing-sound-muted", ambient_script.text)
@@ -372,13 +372,19 @@ class UiContractTests(unittest.TestCase):
         self.assertIn('id="startCourse"', html)
         self.assertIn("/api/courses/slug/", html)
         self.assertIn("scroll-behavior: smooth", html)
-        self.assertIn('font-family: "YekanZito"', html)
+        self.assertIn('--font-yekan: "YekanZito"', html)
+        self.assertNotIn("@font-face", html)
+        glass_source = Path("landing/zito-glass.css").read_text(encoding="utf-8")
+        self.assertEqual(glass_source.count("@font-face"), 1)
+        self.assertIn('font-family: "YekanZito"', glass_source)
         self.assertIn("learning-map", html)
         self.assertIn('class="destination-panel"', html)
         self.assertIn('class="course-route learning-map"', html)
         self.assertIn('class="certificate-showcase"', html)
         self.assertIn('class="course-finish"', html)
         self.assertIn("routeModules", html)
+        self.assertIn('routeModules.length > 8 ? " route-stops--stacked" : ""', html)
+        self.assertIn(".route-stops--stacked .route-card", html)
         self.assertIn("stageDots", html)
         self.assertIn("function routeRoad", html)
         self.assertIn("function syncCourseRouteRoad", html)
@@ -431,7 +437,7 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("/api/certificates/", certificate)
         self.assertIn("window.print()", certificate)
         self.assertIn("گواهی پایان دوره زیتو", certificate)
-        self.assertIn('class="seal"><img src="/landing-static/zito-logo.svg?v=20260905-unified-z-1"', certificate)
+        self.assertIn('class="seal"><img src="/landing-static/zito-logo.svg?v=20261008-palette-1"', certificate)
         self.assertNotIn('<div class="seal">Z</div>', certificate)
 
     def test_admin_renders_canonical_profile_without_legacy_answers(self) -> None:
@@ -442,6 +448,8 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("color-scheme: light", admin_login_template)
         self.assertIn("Light cosmic theme", chat_template)
         self.assertIn("generation_instructions", admin_template)
+        self.assertIn('id="mediaView">تولید عکس و ویدیو', admin_template)
+        self.assertIn("/images`,{method:'POST'", admin_template)
         self.assertIn("توضیحات تکمیلی برای هوش مصنوعی", admin_template)
         self.assertIn('data-catalog-group="${group.key}"', admin_template)
         self.assertIn("label:'فعال'", admin_template)
@@ -466,6 +474,50 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("رفع مسدودیت", admin_template)
         self.assertNotIn("user.answers", admin_template)
         self.assertNotIn("/api/admin/answers/", admin_template)
+
+
+    def test_learning_responsive_text_contract_does_not_mask_overflow(self) -> None:
+        glass_css = Path("landing/zito-glass.css").read_text(encoding="utf-8")
+
+        self.assertIn("Responsive text guardrails", glass_css)
+        self.assertIn("overflow-wrap: anywhere", glass_css)
+        self.assertIn(".path-module-title", glass_css)
+        self.assertIn(".stage-opening-route strong", glass_css)
+        self.assertIn("@media (max-width: 760px)", glass_css)
+        self.assertIn("@media (max-width: 600px)", glass_css)
+        self.assertNotIn("overflow-x: hidden", glass_css)
+
+    def test_learning_assessments_use_editorial_question_groups(self) -> None:
+        glass_css = Path("landing/zito-glass.css").read_text(encoding="utf-8")
+
+        self.assertIn("Assessments read as one exercise, not a stack of nested cards", glass_css)
+        self.assertIn(".block-assessment > .quiz-item", glass_css)
+        self.assertIn("border-bottom: 1px solid rgba(115, 95, 134, .14)", glass_css)
+        self.assertIn(".block-assessment .choice-option:has(input:checked)", glass_css)
+        self.assertIn(".block-assessment .choice-option:has(input:focus-visible)", glass_css)
+
+    def test_shared_glass_focus_state_is_visible_for_keyboard_users(self) -> None:
+        glass_css = Path("landing/zito-glass.css").read_text(encoding="utf-8")
+
+        self.assertIn("Keyboard focus is one shared", glass_css)
+        self.assertIn(":focus-visible", glass_css)
+        self.assertIn("--z-focus: rgba(107, 91, 190, .78)", glass_css)
+        self.assertIn("outline: 2px solid var(--z-focus) !important", glass_css)
+
+    def test_landing_does_not_globally_hide_horizontal_overflow(self) -> None:
+        landing_html = Path("landing/zito.html").read_text(encoding="utf-8")
+
+        self.assertNotIn("overflow-x: hidden", landing_html)
+        self.assertIn("width: 100%;", landing_html)
+
+    def test_cms_uses_shared_glass_palette_tokens(self) -> None:
+        admin_html = Path("src/templates/admin.html").read_text(encoding="utf-8")
+
+        self.assertIn("--ink:var(--z-ink)", admin_html)
+        self.assertIn("--muted:var(--z-ink-secondary)", admin_html)
+        self.assertIn("--glass:var(--z-glass-base)", admin_html)
+        self.assertIn("background:var(--zito-canvas)", admin_html)
+        self.assertNotIn("rgba(253,177,212,.57)", admin_html)
 
 
 if __name__ == "__main__":

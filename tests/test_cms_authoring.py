@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
@@ -255,6 +256,24 @@ class CmsAuthoringTests(unittest.TestCase):
             )
             self.assertEqual(documents, 3)
             self.assertEqual(queued, 3)
+
+            failed_job = db.scalars(
+                select(CourseKbIndexJob).where(
+                    CourseKbIndexJob.course_version_id == draft["id"]
+                )
+            ).first()
+            failed_job.status = "failed"
+            failed_job.error_message = "temporary embedding timeout"
+            failed_job.finished_at = datetime.now(timezone.utc)
+            db.commit()
+
+        with self._admin_client() as client:
+            retried = client.post(
+                f"/api/admin/courses/{draft['course_id']}/versions/{draft['version_number']}/rag-retry-failed"
+            )
+            self.assertEqual(retried.status_code, 200, retried.text)
+            self.assertEqual(retried.json()["failed_job_count"], 0)
+            self.assertEqual(retried.json()["queued_job_count"], 3)
 
         with SessionLocal() as db:
             asyncio.run(run_pending_index_jobs(db, limit=50))

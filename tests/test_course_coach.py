@@ -154,28 +154,19 @@ class CourseCoachTests(unittest.TestCase):
         self.assertNotIn("09125550104", request_body)
         self.assertEqual(request_data["conversation_history"], [])
 
-    def test_coach_returns_cited_fallback_when_model_response_is_not_usable(self) -> None:
+    def _coach_reply_and_event(self, phone: str, model_response: str):
         with TestClient(app) as client:
-            enrollment_id = login_and_enroll(client, "09125550105")
+            enrollment_id = login_and_enroll(client, phone)
             client.post(
                 f"/api/learning/enrollments/{enrollment_id}/stages/1/complete",
                 json={"response": None},
             )
-            with patch(
-                "src.services.coach.ask_ai",
-                new=AsyncMock(return_value='{"answer":"پاسخ بدون منبع","source_numbers":[]}'),
-            ):
+            with patch("src.services.coach.ask_ai", new=AsyncMock(return_value=model_response)):
                 reply = client.post(
                     f"/api/learning/enrollments/{enrollment_id}/coach/messages",
                     json={"message": "این مفهوم چه کاربردی دارد؟", "stage_number": 1},
                 )
-
         self.assertEqual(reply.status_code, 200, reply.text)
-        body = reply.json()
-        self.assertTrue(body["grounded"])
-        self.assertTrue(body["citations"])
-        self.assertIn("منابع مرتبط", body["answer"])
-
         with SessionLocal() as db:
             thread = db.scalars(select(CoachThread).where(CoachThread.enrollment_id == enrollment_id)).one()
             assistant = db.scalars(
@@ -186,7 +177,23 @@ class CourseCoachTests(unittest.TestCase):
             event = db.scalars(
                 select(CoachRetrievalEvent).where(CoachRetrievalEvent.assistant_message_id == assistant.id)
             ).one()
+        return reply.json(), event
+
+    def test_coach_returns_cited_fallback_when_model_response_is_not_usable(self) -> None:
+        body, event = self._coach_reply_and_event("09125550105", '{"answer":"","source_numbers":[1]}')
+        self.assertTrue(body["grounded"])
+        self.assertTrue(body["citations"])
+        self.assertIn("منابع مرتبط", body["answer"])
         self.assertEqual(event.status, "fallback")
+
+    def test_coach_treats_an_uncited_answer_as_out_of_scope_not_as_an_outage(self) -> None:
+        body, event = self._coach_reply_and_event("09125550115", '{"answer":"پاسخ بدون منبع","source_numbers":[]}')
+        self.assertFalse(body["grounded"])
+        self.assertEqual(body["citations"], [])
+        self.assertIn("پاسخ قابل اتکایی", body["answer"])
+        self.assertNotIn("خطا", body["answer"])
+        self.assertNotIn("پاسخ بدون منبع", body["answer"])
+        self.assertEqual(event.status, "out_of_scope")
 
     def test_coach_uses_current_stage_when_kb_is_not_ready(self) -> None:
         no_sources = RetrievalResult(rag_config=None, method="not_configured", chunks=[])

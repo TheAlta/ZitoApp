@@ -4657,3 +4657,21 @@ body.zito-glass-admin .course-row small {
     inset: -12px -8px;
   }
 }
+
+/* Options without a drawn indicator (checklists, scenarios) show their own input as the control.
+   The lesson page hides every option input off-grid, which would drop the label into the 18px control column. */
+.zito-glass-app .phone-shell.mode-lesson :is(.choice-option, .check-option):not(:has(.choice-option-indicator)) input {
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  box-sizing: border-box;
+  inline-size: 18px;
+  block-size: 18px;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.zito-glass-app .phone-shell.mode-lesson :is(.choice-option, .check-option):not(:has(.choice-option-indicator)) input:checked {
+  border-color: transparent !important;
+  background: linear-gradient(135deg, #7c65c1, #53abb9) !important;
+}

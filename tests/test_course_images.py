@@ -57,6 +57,18 @@ class _Client:
         return self.response
 
 
+class CourseVideoBlockTests(unittest.TestCase):
+    def test_video_block_renders_uncropped_and_stays_out_of_the_knowledge_base(self):
+        from src.services.cms import _visible_content_text
+
+        video = {"kind": "video", "title": "ویدیوی معرفی", "src": "/landing-static/course-media/intro.mp4"}
+        self.assertEqual(_visible_content_text({"blocks": [{"kind": "paragraph", "body": "متن درس"}, video]}), ["paragraph", "متن درس"])
+        chat = Path("src/templates/chat.html").read_text(encoding="utf-8")
+        self.assertIn('if (kind === "video")', chat)
+        self.assertIn("controls playsinline", chat)
+        self.assertIn("aspect-ratio: 16 / 9; object-fit: contain", chat)
+
+
 class CourseImageTests(unittest.IsolatedAsyncioTestCase):
     def _settings(self):
         return SimpleNamespace(effective_content_generation_api_base_url="https://gateway.test/v1",

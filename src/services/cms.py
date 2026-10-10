@@ -1133,7 +1133,7 @@ def _visible_content_text(value: Any) -> list[str]:
         return parts
     if not isinstance(value, dict):
         return []
-    if value.get("kind") == "image":
+    if value.get("kind") in {"image", "video"}:
         return []
     parts: list[str] = []
     for key, item in value.items():

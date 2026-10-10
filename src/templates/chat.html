@@ -1099,6 +1099,9 @@
     .stage-intro::before { content: ""; position: absolute; top: 7px; right: 0; bottom: 7px; width: 3px; border-radius: 999px; background: linear-gradient(180deg, #9872ce, #58a8b0); }
     .stage-content { display: grid; gap: 0; }
     .block-image { margin: 20px 0; }
+    .block-video { margin: 20px 0; }
+    /* The frame takes the video's own 16:9 shape and never crops it; the width cap keeps it inside short screens. */
+    .block-video video { display: block; width: min(100%, 840px, 113svh); height: auto; aspect-ratio: 16 / 9; object-fit: contain; margin-inline: auto; border: 1px solid rgba(255,255,255,.78); border-radius: 18px; background: #ece5f2; box-shadow: 0 18px 44px rgba(88,72,130,.12); }
     .block-image img { display: block; width: auto; max-width: min(100%, 840px); height: auto; max-height: min(560px, 64svh); margin-inline: auto; border: 1px solid rgba(255,255,255,.78); border-radius: 18px; background: rgba(255,255,255,.32); box-shadow: 0 18px 44px rgba(88,72,130,.12); }
     .content-block {
       padding: 21px 2px;
@@ -2810,6 +2813,13 @@
         const src = /^\/api\/course-images\/\d+$/.test(block.src || "") ? block.src : "";
         if (!src) return "";
         return `<figure class="content-block block-image">${title}<img src="${escapeHtml(src)}" alt="${escapeHtml(block.alt || "تصویر آموزشی")}" loading="lazy"></figure>`;
+      }
+      if (kind === "video") {
+        const media = /^\/landing-static\/course-media\/[a-z0-9][a-z0-9._-]*\.(mp4|jpg|png|webp)$/i;
+        const src = media.test(block.src || "") && /\.mp4$/i.test(block.src) ? block.src : "";
+        if (!src) return "";
+        const poster = media.test(block.poster || "") && !/\.mp4$/i.test(block.poster) ? ` poster="${escapeHtml(block.poster)}"` : "";
+        return `<figure class="content-block block-video">${title}<video src="${escapeHtml(src)}"${poster} controls playsinline preload="metadata" controlslist="nodownload" aria-label="${escapeHtml(block.title || "ویدیوی آموزشی")}"></video></figure>`;
       }
       if (kind === "highlight" || kind === "paragraph") {
         return `<section class="content-block block-${kind}">${title}<p>${escapeHtml(block.body || "")}</p></section>`;

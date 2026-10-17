@@ -1,5 +1,6 @@
 ﻿import re
 
+import random
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -628,6 +629,27 @@ def _requires_final_exam(db: Session, enrollment: UserCourseEnrollment) -> bool:
     return bool(version.requires_final_exam)
 
 
+def _learner_stage_content(content: dict, seed: str) -> dict:
+    """Shuffle quiz options for the learner; generation stores the correct option first."""
+    blocks = content.get("blocks")
+    if not isinstance(blocks, list) or not any(isinstance(block, dict) and block.get("kind") == "quiz" for block in blocks):
+        return content
+    shuffled_blocks = []
+    for block in blocks:
+        if isinstance(block, dict) and block.get("kind") == "quiz" and isinstance(block.get("items"), list):
+            items = []
+            for index, item in enumerate(block["items"]):
+                if isinstance(item, dict) and isinstance(item.get("options"), list):
+                    options = list(item["options"])
+                    # Stable per learner and question, so a reload keeps the same order.
+                    random.Random(f"{seed}:{item.get('id') or index}").shuffle(options)
+                    item = {**item, "options": options}
+                items.append(item)
+            block = {**block, "items": items}
+        shuffled_blocks.append(block)
+    return {**content, "blocks": shuffled_blocks}
+
+
 def _assessment_out(
     stage: CourseModuleStageContent,
     progress: UserModuleStageProgress,
@@ -827,6 +849,7 @@ def _module_current_stage_out(
     if not course or not module or not version or version.course_id != course.id:
         raise HTTPException(status_code=409, detail="محتوای سرفصل این مسیر پیدا نشد.")
     content = stage.content_json if isinstance(stage.content_json, dict) else {}
+    learner_content = _learner_stage_content(content, f"{enrollment.id}:{stage.id}")
     _, final_exam_available, _ = _final_exam_state(version, enrollment)
     return LearningStageOut(
         enrollment_id=enrollment.id,
@@ -839,7 +862,7 @@ def _module_current_stage_out(
         progress_percentage=enrollment.progress_percentage,
         total_stage_count=len(stages),
         course_completed=enrollment.status == "completed",
-        content=content,
+        content=learner_content,
         coaching=_coaching_checkpoint(
             content,
             enrollment.status == "completed",
@@ -1709,7 +1732,7 @@ def get_current_learning_stage(
         progress_percentage=enrollment.progress_percentage,
         total_stage_count=LEARNING_STAGE_COUNT,
         course_completed=enrollment.status == "completed",
-        content=content,
+        content=_learner_stage_content(content, f"{enrollment.id}:{stage.id}"),
         coaching=_coaching_checkpoint(content, enrollment.status == "completed"),
     )
 

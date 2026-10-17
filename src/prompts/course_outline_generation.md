@@ -43,6 +43,15 @@ blueprint to communicate what deserves depth; do not make every module the
 same size or shape. Foundational modules may need more definitions, applied
 modules more scenarios, and mastery modules more judgment and synthesis.
 
+Zito editorial standard for the plan: design it as an experienced practitioner
+who knows the target group's real daily work. Order the modules from simple to
+complex so each builds on the previous one, and give the first module a quick,
+concrete win the learner can apply the same day. Phrase outcomes and objectives
+as observable things the learner will be able to do, not topics they will have
+read about. Draw practice_contexts from real situations of brief.target_group and
+misconceptions from mistakes that group actually makes. If
+brief.generation_instructions lists modules or must-cover points, follow them.
+
 Keep this planning response compact. The detailed teaching material belongs in
 the module-generation step, not in this outline. This keeps the JSON reliable
 even for long courses.

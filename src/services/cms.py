@@ -43,6 +43,7 @@ CMS_SUPPORTED_STAGE_COUNTS = {7, 8, 9}
 CMS_OUTLINE_JSON_ATTEMPTS = 3
 CMS_CONTENT_JSON_ATTEMPTS = 2
 CMS_MODULE_QUALITY_ATTEMPTS = 3
+CMS_ASSESSMENT_REFINEMENT_ATTEMPTS = 2
 CMS_OUTLINE_MAX_OUTPUT_BUDGET = 10000
 CMS_OUTLINE_FALLBACK_BATCH_SIZE = 4
 
@@ -787,6 +788,105 @@ def _validate_generated_module_quality(module: GeneratedModule) -> None:
         raise CmsError(f"جمع‌بندی سرفصل «{module.title}» کامل نیست.")
 
 
+QUIZ_ANSWER_LENGTH_RATIO = 1.5
+QUIZ_ANSWER_LENGTH_SLACK = 20
+
+
+def _quiz_length_ratio(item: Any) -> float:
+    """How much longer the correct (first) option is than the average wrong one."""
+    options = [str(option).strip() for option in item.get("options") or []] if isinstance(item, dict) else []
+    if len(options) < 2:
+        return 1.0
+    wrong = [len(option) for option in options[1:]]
+    average_wrong = max(sum(wrong) / len(wrong), 1)
+    if len(options[0]) - average_wrong <= QUIZ_ANSWER_LENGTH_SLACK:
+        return 1.0
+    return len(options[0]) / average_wrong
+
+
+def _module_assessment_stage(module: GeneratedModule) -> dict[str, Any] | None:
+    return next((stage for stage in module.stages if stage.get("type") == "module_assessment"), None)
+
+
+def _quiz_balance_issue(module: GeneratedModule) -> str | None:
+    """Name the first question whose correct option gives itself away by being much longer."""
+    assessment = _module_assessment_stage(module)
+    if not assessment:
+        return None
+    for item in _block_items(assessment["content_json"], "quiz"):
+        if _quiz_length_ratio(item) > QUIZ_ANSWER_LENGTH_RATIO:
+            return (
+                f"در آزمونک سرفصل «{module.title}»، گزینه درست سؤال «{str(item.get('question') or '')[:80]}» "
+                "خیلی بلندتر و کامل‌تر از گزینه‌های غلط است و جواب را لو می‌دهد."
+            )
+    return None
+
+
+def _refined_quiz_items(response: dict[str, Any], original: list[Any]) -> list[dict[str, Any]]:
+    """Accept a rewrite only if it keeps every question, its id and distinct options."""
+    items = response.get("items")
+    if not isinstance(items, list) or len(items) != len(original):
+        raise CmsError("بازنویسی گزینه‌های آزمونک تعداد سؤال‌ها را حفظ نکرد.")
+    refined: list[dict[str, Any]] = []
+    for before, after in zip(original, items):
+        if not isinstance(after, dict) or str(after.get("id") or "") != str(before.get("id") or ""):
+            raise CmsError("بازنویسی گزینه‌های آزمونک شناسه سؤال‌ها را تغییر داد.")
+        options = [str(option).strip() for option in after.get("options") or [] if str(option).strip()]
+        if len(options) < 3 or len(set(options)) != len(options):
+            raise CmsError("بازنویسی گزینه‌های آزمونک گزینه‌های کامل و متمایز نساخت.")
+        question = str(after.get("question") or "").strip()
+        refined.append({**before, "question": question if len(question) >= 20 else before.get("question"), "options": options})
+    return refined
+
+
+async def _refine_module_assessment(
+    module: GeneratedModule,
+    brief: dict[str, Any],
+    request_json: Callable[..., Any],
+) -> GeneratedModule:
+    """Rewrite giveaway quiz options in a focused pass; keep the original when the rewrite is no better."""
+    assessment = _module_assessment_stage(module)
+    if not assessment or not _quiz_balance_issue(module):
+        return module
+    original = [item for item in _block_items(assessment["content_json"], "quiz") if isinstance(item, dict)]
+    best_items, best_score = original, max(_quiz_length_ratio(item) for item in original)
+    for _ in range(CMS_ASSESSMENT_REFINEMENT_ATTEMPTS):
+        try:
+            response = await request_json(
+                load_prompt("course_assessment_refinement.md"),
+                json.dumps({
+                    "brief": brief,
+                    "module": {
+                        "title": module.title,
+                        "learning_objectives": module.learning_objectives,
+                        "teaching_excerpt": module.knowledge_base[:2500],
+                    },
+                    "items": original,
+                }, ensure_ascii=False),
+            )
+            items = _refined_quiz_items(response, original)
+        except (CmsError, ArvanAIError, ValueError, TypeError):
+            continue
+        score = max(_quiz_length_ratio(item) for item in items)
+        if score < best_score:
+            best_items, best_score = items, score
+        if score <= QUIZ_ANSWER_LENGTH_RATIO:
+            break
+    if best_items is original:
+        return module
+    content = deepcopy(assessment["content_json"])
+    by_id = {str(item.get("id")): item for item in best_items}
+    for block in content.get("blocks", []):
+        if isinstance(block, dict) and block.get("kind") == "quiz" and isinstance(block.get("items"), list):
+            block["items"] = [by_id.get(str(item.get("id")), item) if isinstance(item, dict) else item for item in block["items"]]
+    stages = [
+        {**stage, "content_json": content, "evaluation_config_json": _assessment_config_from_content(content)}
+        if stage is assessment else stage
+        for stage in module.stages
+    ]
+    return replace(module, stages=stages)
+
+
 def _validate_curriculum_question_variety(modules: list[GeneratedModule]) -> None:
     seen: set[str] = set()
     for module in modules:
@@ -1046,7 +1146,21 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
                     generated = replace(generated, knowledge_base=knowledge)
                 _validate_generated_module_quality(generated)
                 _validate_curriculum_question_variety([*modules, generated])
-                return generated
+                return await _refine_module_assessment(
+                    generated,
+                    ai_brief,
+                    lambda system_prompt, user_message: _request_generated_json(
+                        system_prompt,
+                        user_message,
+                        model=model,
+                        api_base_url=settings.effective_content_generation_api_base_url,
+                        api_key=settings.effective_content_generation_api_key,
+                        timeout_seconds=settings.arvan_content_generation_timeout_seconds,
+                        output_budget=4000,
+                        task_label=f"گزینه‌های آزمونک سرفصل {number}",
+                        attempts=CMS_CONTENT_JSON_ATTEMPTS,
+                    ),
+                )
             except (CmsError, ArvanAIError, ValueError, TypeError) as exc:
                 if attempt + 1 == CMS_MODULE_QUALITY_ATTEMPTS:
                     raise

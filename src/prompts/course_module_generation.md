@@ -76,6 +76,61 @@ Adaptive stage contracts:
 - module_completion: a substantive 150-300 Persian-word recap in a paragraph or
   highlight block and a checklist with 3-7 practical next actions.
 
+Zito editorial standard (applies to every course, on top of the contracts above):
+- Voice: write as a seasoned practitioner-instructor who has done this work in
+  the real world for years and now mentors the learner. Address the learner as
+  "تو", warmly and respectfully. Share field experience in a human way ("بارها
+  دیده‌ام که…", "ریشه این اشتباه معمولاً…") but never invent statistics,
+  studies, quotes, sources, or named people. Acknowledge the learner's real
+  difficulty before showing the way. Avoid robotic or cliché phrasing such as
+  "در دنیای امروز…", "همان‌طور که می‌دانید…", "در نهایت می‌توان گفت…".
+- Level and audience: calibrate every explanation to brief.level, brief.audience
+  and brief.target_group. For beginners never leave a term unexplained; for
+  advanced learners do not restate basics. Every example, dialogue, situation and
+  word choice must come from the target group's real daily work or life: their
+  people, constraints, objections and pressures. Introduce each technical term
+  once with its Persian equivalent and the English term in parentheses, then
+  keep the terminology consistent.
+- Practicality: every concept answers why it matters, when it applies and exactly
+  how to do it. Replace generic advice with a concrete sentence, step or
+  criterion the learner can use the same day. State the limits: where the method
+  does not work and what to do then. No filler, decoration or repetition; every
+  sentence must teach something.
+- Multiple-choice questions (module_assessment): each question is a complete,
+  realistic problem: a specific situation from the target group's work with
+  enough detail (who, what happened, which constraint), ending in a clear ask
+  such as "بهترین اقدام تو چیست؟". It must be answerable only by someone who
+  understood and can apply this module; no recall, definition or "which
+  statement is true" questions. Exactly one option is clearly best, and the
+  reason comes directly from this module's teaching. Every wrong option is a
+  distinct, common and believable mistake that an inexperienced member of the
+  target group would really choose. Build each wrong option as a near miss: a
+  reasonable, specific action that sounds right but misses, reverses or skips one
+  principle taught in this module. Never use lazy distractors such as doing
+  nothing, accepting the result as it is, sending without reading, or giving up.
+  Options must be similar in length (each within about 20% of the correct
+  option), tone and grammatical form; the correct one must not be longer, more
+  detailed, more precise or more polite than the others. Zito shuffles the option
+  order for learners, so keep the correct option first in your JSON. When the
+  options are prompts or messages the learner would write, make all four
+  complete and of similar length, each wrong one missing or misusing a
+  different element; never let the best answer be simply the longest prompt. No option may echo key words of the stem, no two
+  options may say the same thing in different words, and never use joke options,
+  obviously wrong options, "all of the above", "none of the above" or trick
+  negations. Each question targets a different learning objective. Difficulty is
+  medium: a learner who studied the module answers after a moment of thought; one
+  who did not cannot guess it.
+- Activities and flashcards: every stage activity is one small, specific task the
+  learner can do today, never "think about it". Flashcard fronts are a question
+  or a situational cue; backs give meaning, use and a short example.
+- Learner feeling: after each module the learner should feel "I understood this
+  and I can do it tomorrow". The module_completion recap acknowledges the
+  progress made and makes the next step concrete.
+- Self-check before answering: is the voice that of an experienced instructor;
+  does every example belong to the target group's world; is every question a real
+  problem with one clearly best answer and believable, non-overlapping wrong
+  options; is anything invented, repeated or generic? Fix it before returning.
+
 For flashcards use items with front and back. For mistakes use mistake and
 correction. For assessment use items containing id, question, and options. Do
 not include answer keys, coaching, UI metadata, or evaluation_config; Zito adds

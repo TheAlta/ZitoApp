@@ -20,7 +20,7 @@ from src.services.rag import retrieve_course_chunks
 SIZE_DIMENSIONS = {"square": "1024x1024", "landscape": "1536x1024", "portrait": "1024x1536"}
 SIZE_HINTS = {"square": "Aspect ratio: 1:1 (square).", "landscape": "Aspect ratio: 3:2 (landscape).",
               "portrait": "Aspect ratio: 2:3 (portrait)."}
-# Every generated image follows the Zito brand palette (landing/zito-glass.css tokens).
+# Every generated image follows the Zito brand palette (frontend/src/styles/zito-ui.css tokens).
 ZITO_STYLE = (
     "Visual style (mandatory, overrides any other style request): Zito brand theme. Calm, minimal, premium "
     "educational illustration with soft rounded shapes, frosted-glass (glassmorphism) cards with thin white rims, "

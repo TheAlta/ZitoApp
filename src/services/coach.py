@@ -41,6 +41,7 @@ class CoachReply:
     citations: list[dict[str, Any]]
     retrieval_method: str
     suggested_action: str | None
+    status: str = "ok"
 
 
 def _first_name(display_name: str) -> str:
@@ -429,6 +430,7 @@ async def answer_course_question(
             "grounded": grounded,
             "citations": public_citations,
             "suggested_action": suggested_action,
+            "status": status,
         },
         model=model,
         prompt_version=COACH_PROMPT_VERSION,
@@ -456,4 +458,5 @@ async def answer_course_question(
         citations=public_citations,
         retrieval_method=retrieval_method,
         suggested_action=suggested_action,
+        status=status,
     )

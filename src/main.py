@@ -1,14 +1,13 @@
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.api.routes import router
 from src.config import get_settings
-from src.db import Base, SessionLocal, engine, get_db
+from src.db import Base, SessionLocal, engine
 from src.models import CourseVersion
-from src.security import get_admin_from_request
 from src.seed import seed_defaults
 
 settings = get_settings()
@@ -40,16 +39,17 @@ def startup() -> None:
             db.commit()
 
 
-def _html(name: str) -> HTMLResponse:
-    return HTMLResponse((ROOT / "templates" / name).read_text(encoding="utf-8"))
+SPA_INDEX = LANDING_ROOT / "app" / "index.html"
+
+
+def _spa() -> HTMLResponse:
+    """Every page is the single-page app; its router reads the URL. Assets are hashed, the shell is not cached."""
+    return HTMLResponse(SPA_INDEX.read_text(encoding="utf-8"), headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/", response_class=HTMLResponse)
 def root() -> HTMLResponse:
-    landing = LANDING_ROOT / "zito.html"
-    if landing.exists():
-        return HTMLResponse(landing.read_text(encoding="utf-8"))
-    return _html("chat.html")
+    return _spa()
 
 
 @app.get("/chat", response_class=HTMLResponse)
@@ -58,28 +58,19 @@ def legacy_chat_ui(request: Request):
     return RedirectResponse(f"/app/{query}", status_code=303)
 
 
-@app.get("/app/", response_class=HTMLResponse)
-def app_ui() -> HTMLResponse:
-    return _html("chat.html")
+@app.get("/app", response_class=HTMLResponse)
+@app.get("/app/{page_path:path}", response_class=HTMLResponse)
+def app_ui(page_path: str = "") -> HTMLResponse:
+    return _spa()
 
 
-@app.get("/app/courses/{course_slug}", response_class=HTMLResponse)
-def course_overview_ui(course_slug: str) -> HTMLResponse:
-    return _html("course_overview.html")
-
-
+@app.get("/certificate", response_class=HTMLResponse)
 @app.get("/certificate/{certificate_number}", response_class=HTMLResponse)
-def certificate_ui(certificate_number: str) -> HTMLResponse:
-    return _html("certificate.html")
-
-
-@app.get("/admin/login", response_class=HTMLResponse)
-def admin_login_ui() -> HTMLResponse:
-    return _html("admin_login.html")
+def certificate_ui(certificate_number: str = "") -> HTMLResponse:
+    return _spa()
 
 
 @app.get("/admin", response_class=HTMLResponse)
-def admin_ui(request: Request, db=Depends(get_db)):
-    if not get_admin_from_request(request, db):
-        return RedirectResponse("/admin/login", status_code=303)
-    return _html("admin.html")
+@app.get("/admin/{page_path:path}", response_class=HTMLResponse)
+def admin_ui(page_path: str = "") -> HTMLResponse:
+    return _spa()

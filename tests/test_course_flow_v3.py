@@ -80,8 +80,9 @@ class CourseFlowV3Tests(unittest.TestCase):
         self.assertEqual(len(body["modules"]), 5)
         self.assertEqual(body["modules"][0]["stage_count"], 8)
         self.assertEqual(page.status_code, 200)
-        self.assertIn('id="startCourse"', page.text)
-        self.assertIn("/api/courses/slug/", page.text)
+        # The overview page is the single-page app; it loads /api/courses/slug/... itself.
+        self.assertIn('<div id="root"></div>', page.text)
+        self.assertIn("/landing-static/app/assets/", page.text)
 
     def test_marketing_course_has_its_own_overview_and_becomes_current_when_selected(self) -> None:
         with TestClient(app) as client:

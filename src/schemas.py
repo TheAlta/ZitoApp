@@ -61,6 +61,7 @@ class UserMeOut(BaseModel):
     id: int
     phone: str
     display_name: str
+    created_at: datetime | None = None
 
 
 class CourseOut(BaseModel):
@@ -83,11 +84,15 @@ class CourseOverviewModuleOut(BaseModel):
     description: str | None = None
     learning_objectives: list[str] = Field(default_factory=list)
     stage_count: int
+    tag: str | None = None
 
 
 class CourseOverviewOut(CourseOut):
     summary: str
     description: str
+    level: str | None = None
+    target_group: str | None = None
+    estimated_learning_hours: int | None = None
     estimated_learning_minutes: int | None = None
     estimated_duration_label: str | None = None
     learning_outcomes: list[str] = Field(default_factory=list)
@@ -290,6 +295,9 @@ class CoachMessageOut(BaseModel):
     created_at: datetime
     stage_number: int | None = None
     citations: list[CoachCitationOut] = Field(default_factory=list)
+    grounded: bool | None = None
+    suggested_action: str | None = None
+    answer_status: str | None = None
 
 
 class CoachHistoryOut(BaseModel):
@@ -304,6 +312,8 @@ class CoachReplyOut(BaseModel):
     citations: list[CoachCitationOut] = Field(default_factory=list)
     retrieval_method: str
     suggested_action: str | None = None
+    answer_status: str = "ok"
+    created_at: datetime | None = None
 
 
 class UserOut(BaseModel):
@@ -322,6 +332,7 @@ class UserOut(BaseModel):
     preferred_career_path: str | None = None
     referral_source: str | None = None
     profile_completed: bool = False
+    course_titles: list[str] = Field(default_factory=list)
 
 
 class AdminLoginIn(BaseModel):
@@ -416,6 +427,9 @@ class CmsCourseVersionOut(BaseModel):
     generation_prompt_version: str | None = None
     generation_error: str | None = None
     generated_at: datetime | None = None
+    generation_progress: dict[str, Any] | None = None
+    published_at: datetime | None = None
+    created_at: datetime | None = None
     module_stage_count: int | None = None
     requires_final_exam: bool
     modules: list[CmsModuleOut] = Field(default_factory=list)
@@ -455,3 +469,39 @@ class CmsRagStatusOut(BaseModel):
     retry_job_count: int
     failed_job_count: int
     last_error: str | None = None
+
+
+class LearnerEnrollmentOut(BaseModel):
+    id: int
+    course_id: int
+    course_title: str
+    course_slug: str
+    course_version_number: int
+    status: str
+    is_current: bool
+    completed_stage_count: int
+    total_stage_count: int
+    module_count: int
+    progress_percentage: int
+    certificate_number: str | None = None
+    enrolled_at: datetime | None = None
+    completed_at: datetime | None = None
+
+
+class LearnerActivityOut(BaseModel):
+    at: datetime
+    kind: str
+    text: str
+
+
+class LearnerOverviewOut(BaseModel):
+    enrollments: list[LearnerEnrollmentOut]
+    certificates: list[CertificateOut]
+    activity: list[LearnerActivityOut]
+
+
+class AdminStatsOut(BaseModel):
+    enrollment_count: int
+    average_progress: float
+    certificate_count: int
+

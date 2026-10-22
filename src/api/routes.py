@@ -11,8 +11,10 @@ from sqlalchemy.orm import Session, selectinload
 
 from src.db import SessionLocal, get_db
 from src.models import (
+    Admin,
     Certificate,
     CoachMessage,
+    CoachThread,
     Course,
     CourseGeneratedImage,
     CourseKbDocument,
@@ -32,6 +34,7 @@ from src.models import (
     UserStageProgress,
 )
 from src.schemas import (
+    AdminStatsOut,
     AdminLoginIn,
     AdminLoginOut,
     CertificateOut,
@@ -62,6 +65,9 @@ from src.schemas import (
     FinalExamResultOut,
     FinalExamStateOut,
     FinalExamSubmitIn,
+    LearnerActivityOut,
+    LearnerEnrollmentOut,
+    LearnerOverviewOut,
     LearningPathOut,
     LearningModuleOut,
     LearningStageOut,
@@ -323,6 +329,7 @@ def _course_overview_out(db: Session, course: Course) -> CourseOverviewOut | Non
         return None
 
     overview = version.overview_json if isinstance(version.overview_json, dict) else {}
+    brief = version.authoring_brief_json if isinstance(version.authoring_brief_json, dict) else {}
     modules: list[CourseOverviewModuleOut] = []
     if _uses_module_structure(db, version.id):
         stages = _approved_module_stages(db, version.id)
@@ -341,6 +348,7 @@ def _course_overview_out(db: Session, course: Course) -> CourseOverviewOut | Non
                     description=module.description,
                     learning_objectives=list(module.learning_objectives_json or []),
                     stage_count=len(items),
+                    tag=str((module.tags_json or [None])[0] or "") or None,
                 )
             )
 
@@ -356,6 +364,9 @@ def _course_overview_out(db: Session, course: Course) -> CourseOverviewOut | Non
         module_stage_count=course_out.module_stage_count,
         requires_final_exam=course_out.requires_final_exam,
         summary=str(overview.get("summary") or "معرفی این دوره در حال تکمیل است."),
+        level=str(brief.get("level") or "").strip() or None,
+        target_group=str(brief.get("target_group") or brief.get("audience") or "").strip() or None,
+        estimated_learning_hours=brief.get("estimated_learning_hours") if isinstance(brief.get("estimated_learning_hours"), int) else None,
         description=str(overview.get("description") or "محتوای این دوره به‌صورت مرحله‌ای ارائه می‌شود."),
         estimated_learning_minutes=(
             overview.get("estimated_learning_minutes")
@@ -1188,6 +1199,9 @@ def _coach_message_out(
         created_at=message.created_at,
         stage_number=stage_numbers.get(message.module_stage_content_id),
         citations=citations,
+        grounded=metadata.get("grounded") if message.role == "assistant" else None,
+        suggested_action=metadata.get("suggested_action") if message.role == "assistant" else None,
+        answer_status=metadata.get("status") if message.role == "assistant" else None,
     )
 
 
@@ -1227,9 +1241,9 @@ def admin_logout(response: Response) -> dict:
     return {"ok": True}
 
 
-@router.get("/api/admin/me", dependencies=[Depends(require_admin)])
-def admin_me() -> dict:
-    return {"ok": True}
+@router.get("/api/admin/me")
+def admin_me(admin: Admin = Depends(require_admin)) -> dict:
+    return {"ok": True, "username": admin.username}
 
 
 @router.post("/api/auth/otp/request", response_model=OtpRequestOut)
@@ -1305,7 +1319,7 @@ def user_logout(
 
 @router.get("/api/me", response_model=UserMeOut)
 def get_me(user: User = Depends(require_user)) -> UserMeOut:
-    return UserMeOut(id=user.id, phone=user.phone or "", display_name=user.display_name)
+    return UserMeOut(id=user.id, phone=user.phone or "", display_name=user.display_name, created_at=user.created_at)
 
 
 @router.get("/api/me/profile", response_model=ProfileOut)
@@ -1453,6 +1467,117 @@ def enroll_course(
         status=enrollment.status,
         current_stage_number=enrollment.current_stage_number,
         progress_percentage=enrollment.progress_percentage,
+    )
+
+
+_ENROLLMENT_STATUS = {"active": "learning", "awaiting_final_exam": "awaiting_final", "completed": "completed"}
+
+
+def _aware(value: datetime | None) -> datetime | None:
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+@router.get("/api/learning/overview", response_model=LearnerOverviewOut)
+def get_learner_overview(
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+) -> LearnerOverviewOut:
+    """Dashboard data: every course the learner joined, their certificates and recent activity."""
+    enrollments = db.scalars(
+        select(UserCourseEnrollment)
+        .where(
+            UserCourseEnrollment.user_id == user.id,
+            UserCourseEnrollment.status.in_(tuple(_ENROLLMENT_STATUS)),
+        )
+        .order_by(UserCourseEnrollment.updated_at.desc(), UserCourseEnrollment.id.desc())
+    ).all()
+    certificates = db.scalars(
+        select(Certificate)
+        .where(Certificate.user_id == user.id, Certificate.status == "issued")
+        .order_by(Certificate.issued_at.desc())
+    ).all()
+    certificate_by_version = {cert.course_version_id: cert for cert in certificates}
+    activity: list[tuple[datetime, str, str]] = []
+    rows: list[LearnerEnrollmentOut] = []
+    for index, enrollment in enumerate(enrollments):
+        course = db.get(Course, enrollment.course_id)
+        version = db.get(CourseVersion, enrollment.course_version_id)
+        if not course or not version:
+            continue
+        progress = db.execute(
+            select(UserModuleStageProgress, CourseModuleStageContent, CourseModule)
+            .join(CourseModuleStageContent, UserModuleStageProgress.module_stage_content_id == CourseModuleStageContent.id)
+            .join(CourseModule, CourseModuleStageContent.course_module_id == CourseModule.id)
+            .where(UserModuleStageProgress.enrollment_id == enrollment.id)
+        ).all()
+        if progress:
+            total = len(progress)
+            completed = sum(row.status == "completed" for row, _, _ in progress)
+            module_count = len({module.id for _, _, module in progress})
+            for row, stage, module in progress:
+                code = stage.template.code if stage.template else ""
+                if code == "module_assessment" and row.evaluated_at and row.score is not None:
+                    passed = row.status == "completed"
+                    activity.append((row.evaluated_at, "quiz", f"آزمونک سرفصل {module.module_number}: {row.score} از ۱۰۰{'، قبول' if passed else ' (تلاش دوباره)'}"))
+                elif row.status == "completed" and row.completed_at:
+                    activity.append((row.completed_at, "stage", f"مرحله‌ی «{stage.title}» سرفصل {module.module_number} ثبت شد"))
+        else:
+            legacy = db.scalars(select(UserStageProgress).where(UserStageProgress.enrollment_id == enrollment.id)).all()
+            total = len(legacy)
+            completed = sum(row.status == "completed" for row in legacy)
+            module_count = 1 if legacy else 0
+        cert = certificate_by_version.get(version.id)
+        status = _ENROLLMENT_STATUS.get(enrollment.status, "learning")
+        if cert:
+            status = "completed"
+        if enrollment.enrolled_at:
+            activity.append((enrollment.enrolled_at, "start", f"دوره‌ی «{course.title}» را شروع کردی"))
+        rows.append(
+            LearnerEnrollmentOut(
+                id=enrollment.id,
+                course_id=course.id,
+                course_title=course.title,
+                course_slug=course.slug,
+                course_version_number=version.version_number,
+                status=status,
+                is_current=index == 0,
+                completed_stage_count=completed,
+                total_stage_count=total,
+                module_count=module_count,
+                progress_percentage=enrollment.progress_percentage,
+                certificate_number=cert.certificate_number if cert else None,
+                enrolled_at=enrollment.enrolled_at,
+                completed_at=enrollment.completed_at,
+            )
+        )
+    enrollment_ids = [enrollment.id for enrollment in enrollments]
+    if enrollment_ids:
+        attempts = db.scalars(
+            select(ExamAttempt).where(ExamAttempt.enrollment_id.in_(enrollment_ids), ExamAttempt.submitted_at.is_not(None))
+        ).all()
+        for attempt in attempts:
+            if attempt.score is not None:
+                activity.append((attempt.submitted_at, "exam", f"آزمون نهایی: {attempt.score} از ۱۰۰"))
+        questions = db.execute(
+            select(CoachMessage.created_at, CoachMessage.content)
+            .join(CoachThread, CoachMessage.thread_id == CoachThread.id)
+            .where(CoachThread.enrollment_id.in_(enrollment_ids), CoachMessage.role == "user")
+            .order_by(CoachMessage.created_at.desc())
+            .limit(10)
+        ).all()
+        for created_at, content in questions:
+            snippet = " ".join(content.split())
+            activity.append((created_at, "coach", f"از زیتو پرسیدی: «{snippet[:40]}{'…' if len(snippet) > 40 else ''}»"))
+    for cert in certificates:
+        activity.append((cert.issued_at, "cert", f"گواهی «{cert.course_title or ''}» صادر شد"))
+    activity = [(when, kind, text) for when, kind, text in activity if when is not None]
+    activity.sort(key=lambda item: _aware(item[0]), reverse=True)
+    return LearnerOverviewOut(
+        enrollments=rows,
+        certificates=[_certificate_out(cert) for cert in certificates],
+        activity=[LearnerActivityOut(at=when, kind=kind, text=text) for when, kind, text in activity[:30]],
     )
 
 
@@ -1685,6 +1810,8 @@ async def ask_course_coach(
         citations=[CoachCitationOut(**citation) for citation in reply.citations],
         retrieval_method=reply.retrieval_method,
         suggested_action=reply.suggested_action,
+        answer_status=reply.status,
+        created_at=reply.assistant_message.created_at,
     )
 
 
@@ -1880,7 +2007,13 @@ def get_user(user_id: int, db: Session = Depends(get_db)) -> UserOut:
     )
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
-    return _user_out(user)
+    titles = db.scalars(
+        select(Course.title)
+        .join(UserCourseEnrollment, UserCourseEnrollment.course_id == Course.id)
+        .where(UserCourseEnrollment.user_id == user.id)
+        .order_by(UserCourseEnrollment.updated_at.desc())
+    ).all()
+    return _user_out(user).model_copy(update={"course_titles": list(dict.fromkeys(titles))})
 
 
 @router.delete("/api/admin/users/{user_id}", dependencies=[Depends(require_admin)])
@@ -1970,6 +2103,9 @@ def _cms_version_out(db: Session, course: Course, version: CourseVersion) -> Cms
         generation_prompt_version=version.generation_prompt_version,
         generation_error=version.generation_error,
         generated_at=version.generated_at,
+        generation_progress=_generation_progress_out(version),
+        published_at=version.published_at,
+        created_at=version.created_at,
         module_stage_count=version.module_stage_count,
         requires_final_exam=version.requires_final_exam,
         modules=[
@@ -2070,6 +2206,18 @@ def list_admin_courses(db: Session = Depends(get_db)) -> list[CmsCourseVersionOu
         .order_by(Course.updated_at.desc(), CourseVersion.version_number.desc())
     ).all()
     return [_cms_version_out(db, course, version) for course, version in rows]
+
+
+@router.get("/api/admin/stats", response_model=AdminStatsOut, dependencies=[Depends(require_admin)])
+def get_admin_stats(db: Session = Depends(get_db)) -> AdminStatsOut:
+    """Dashboard totals: enrollments, their average progress and issued certificates."""
+    progress = db.scalars(select(UserCourseEnrollment.progress_percentage)).all()
+    certificates = db.scalars(select(Certificate.id).where(Certificate.status == "issued")).all()
+    return AdminStatsOut(
+        enrollment_count=len(progress),
+        average_progress=round(sum(progress) / len(progress), 1) if progress else 0.0,
+        certificate_count=len(certificates),
+    )
 
 
 def _course_image_src(asset: CourseGeneratedImage) -> str:
@@ -2590,6 +2738,18 @@ async def generate_admin_course(
     return response
 
 
+# Live log of running generations (per process). Shown in the studio; lost on restart, which also
+# marks the generation failed, so nothing depends on it.
+_GENERATION_PROGRESS: dict[int, dict] = {}
+
+
+def _generation_progress_out(version: CourseVersion) -> dict | None:
+    item = _GENERATION_PROGRESS.get(version.id)
+    if not item or version.generation_status not in ("generating", "generated", "failed"):
+        return None
+    return {"done": item["done"], "total": item["total"], "started_at": item["started_at"], "log": item["log"][-40:]}
+
+
 async def _run_admin_course_generation(
     course_id: int,
     version_id: int,
@@ -2597,17 +2757,27 @@ async def _run_admin_course_generation(
 ) -> None:
     """Run slow AI authoring outside the HTTP request that starts it."""
 
+    state = {"done": 0, "total": int(brief.get("module_count") or 0) + 1, "started_at": datetime.now(timezone.utc).isoformat(), "log": []}
+    _GENERATION_PROGRESS[version_id] = state
+
+    def progress(text: str, done: int, total: int) -> None:
+        state.update(done=done, total=total)
+        state["log"].append({"at": datetime.now(timezone.utc).isoformat(), "text": text})
+
+    progress("درخواست تولید در صف پس‌زمینه قرار گرفت", 0, state["total"])
     with SessionLocal() as db:
         course = db.get(Course, course_id)
         version = db.get(CourseVersion, version_id)
         if not course or not version or version.generation_status != "generating":
             return
         try:
-            curriculum = await generate_curriculum(brief)
+            curriculum = await generate_curriculum(brief, progress=progress)
             replace_draft_curriculum(db, version, curriculum)
             db.commit()
+            progress("پیش‌نویس کامل شد و آماده‌ی بازبینی است", state["total"], state["total"])
         except Exception as exc:
             db.rollback()
+            progress(f"تولید ناموفق: {str(exc)[:200]}", state["done"], state["total"])
             version = db.get(CourseVersion, version_id)
             if version:
                 version.generation_status = "failed"

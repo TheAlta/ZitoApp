@@ -26,10 +26,10 @@ The profile fields cover work/study field, education level, learning goals/inter
 
 ## Architecture
 
-- **Application:** FastAPI, Python, SQLAlchemy 2, Pydantic Settings, server-rendered HTML templates with JavaScript/CSS. The frontend is not Angular.
+- **Application:** FastAPI, Python, SQLAlchemy 2, Pydantic Settings. The frontend is a React single-page app (Vite) in `frontend/`.
 - **Entrypoint:** `src.main:app`; API routes live in `src/api/routes.py`.
 - **Database:** PostgreSQL in production; SQLite for lightweight local tests. Alembic migrations are in `migrations/versions/`. PostgreSQL RAG uses pgvector `halfvec` and HNSW.
-- **Templates/assets:** `src/templates/` contains app, course overview, admin, login, and certificate pages. `landing/` contains public landing assets/styles.
+- **Frontend:** `frontend/` is the source (React + Vite, design ported from `docs/design/zito-demo-reference.html`). `npm run build` in `frontend/` writes the bundle to `landing/app/`, which is committed; the server only serves it, so deploys need no Node. FastAPI serves `landing/app/index.html` for every page route (`/`, `/app/*`, `/admin/*`, `/certificate/*`). `landing/course-media/` holds lesson videos and `landing/zito-ambient.mp3` the landing music.
 - **Background indexing:** `src.cli.rag_indexer` is supervised by the `zito-rag-indexer` systemd service. Publishing persists jobs; learner requests do not embed entire course documents.
 - **Authentication:** learner phone OTP with an opaque HttpOnly cookie; protected admin session. User soft-delete/block and restore are distinct operations.
 

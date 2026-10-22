@@ -1018,12 +1018,30 @@ def _stages_from_outline(module: dict[str, Any], brief: dict[str, Any], number: 
     )
 
 
-async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
-    """Generate an outline then each module with the CMS model contract."""
+async def generate_curriculum(
+    brief: dict[str, Any],
+    progress: Callable[[str, int, int], None] | None = None,
+) -> GeneratedCurriculum:
+    """Generate an outline then each module with the CMS model contract.
+
+    `progress(text, done_steps, total_steps)` is told about each finished step (outline, modules)."""
+
+    def report(text: str, done: int, total: int) -> None:
+        if progress:
+            try:
+                progress(text, done, total)
+            except Exception:  # progress is informational; never let it break generation
+                pass
+
     stage_count = CMS_MODULE_STAGE_COUNT
     brief = {**brief, "module_stage_count": stage_count}
     if get_settings().arvan_mock_ai:
-        return _mock_curriculum(brief)
+        curriculum = _mock_curriculum(brief)
+        total = len(curriculum.modules) + 1
+        report(f"طرح کلی: معرفی دوره و {len(curriculum.modules)} سرفصل", 1, total)
+        for number, module in enumerate(curriculum.modules, start=1):
+            report(f"سرفصل {number}: «{module.title}» هشت مرحله و متن پایگاه دانش", number + 1, total)
+        return curriculum
 
     settings = get_settings()
     model = settings.effective_content_generation_model
@@ -1067,6 +1085,8 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
         outline = {"overview": overview, "modules": raw_modules}
 
     modules: list[GeneratedModule] = []
+    total_steps = len(raw_modules) + 1
+    report(f"طرح کلی: معرفی دوره و {len(raw_modules)} سرفصل", 1, total_steps)
 
     async def generate_module(number: int, module_outline: Any) -> GeneratedModule:
         if not isinstance(module_outline, dict):
@@ -1165,12 +1185,14 @@ async def generate_curriculum(brief: dict[str, Any]) -> GeneratedCurriculum:
                 if attempt + 1 == CMS_MODULE_QUALITY_ATTEMPTS:
                     raise
                 repair_feedback = str(exc)
+                report(f"سرفصل {number}: کنترل کیفیت رد کرد؛ تولید دوباره", len(modules) + 1, total_steps)
 
         raise CmsError("تولید محتوای کامل سرفصل پس از تلاش مجدد ناموفق بود.")
 
     # Long Persian JSON responses are more reliable when the gateway authors one module at a time.
     for number, module_outline in enumerate(raw_modules, start=1):
         modules.append(await generate_module(number, module_outline))
+        report(f"سرفصل {number}: «{modules[-1].title}» هشت مرحله و متن پایگاه دانش", number + 1, total_steps)
     _validate_curriculum_question_variety(modules)
     return GeneratedCurriculum(overview=overview, modules=modules)
 

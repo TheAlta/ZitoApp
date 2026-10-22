@@ -63,10 +63,12 @@ class CourseVideoBlockTests(unittest.TestCase):
 
         video = {"kind": "video", "title": "ویدیوی معرفی", "src": "/landing-static/course-media/intro.mp4"}
         self.assertEqual(_visible_content_text({"blocks": [{"kind": "paragraph", "body": "متن درس"}, video]}), ["paragraph", "متن درس"])
-        chat = Path("src/templates/chat.html").read_text(encoding="utf-8")
-        self.assertIn('if (kind === "video")', chat)
-        self.assertIn("controls playsinline", chat)
-        self.assertIn("aspect-ratio: 16 / 9; object-fit: contain", chat)
+        lesson = Path("frontend/src/pages/Lesson.jsx").read_text(encoding="utf-8")
+        self.assertIn('case "video":', lesson)
+        # Only committed course media plays, uncropped, with native controls once started.
+        self.assertIn(r"\/landing-static\/course-media\/", lesson)
+        self.assertIn('objectFit: "contain"', lesson)
+        self.assertIn("controls={started}", lesson)
 
 
 class CourseImageTests(unittest.IsolatedAsyncioTestCase):

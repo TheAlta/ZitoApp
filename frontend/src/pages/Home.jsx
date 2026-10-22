@@ -19,6 +19,7 @@ import { STAGE_TITLES, pathInfo, selectCourse, useCurrentPath, useOverview } fro
 import { useStore } from "../lib/store.jsx";
 import { Drop, HeroArt, HeroScene, Landscape } from "../ui/art.jsx";
 import { Empty, Panel, Ring, Skel, Stat, statusBadge } from "../ui/kit.jsx";
+import { MascotStill } from "../ui/mascot.jsx";
 
 const ACTIVITY_ICONS = {
   stage: ["lav", <CircleCheck key="s" />],
@@ -199,7 +200,7 @@ export function Home() {
         <Panel>
           <div className="assistant">
             <span className="assistant-hero">
-              <Drop size="3.4rem" face glow={false} />
+              <MascotStill pose="coach" height="5.8rem" float={false} />
             </span>
             <div>
               <h3>کوچ تو، زیتو</h3>

@@ -1,0 +1,61 @@
+/* Zito's original mascot inside the new UI (see ui/mascot.jsx). */
+.mascot {
+  position: relative;
+  display: inline-block;
+  aspect-ratio: 285 / 390;
+  flex: none;
+  outline: none;
+  filter: drop-shadow(0 1.1rem 1.3rem rgb(93 69 143 / 0.2));
+}
+.mascot-intro { aspect-ratio: 2272 / 4118; }
+.mascot-course { aspect-ratio: 340 / 420; }
+.mascot-wave { cursor: pointer; }
+.mascot-wave:focus-visible { outline: 2px solid var(--accent, #7c5cce); outline-offset: 6px; border-radius: 1.2rem; }
+.mascot-still,
+.mascot-stage,
+.mascot-stage canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+.mascot-still { transition: opacity 0.18s ease; }
+.mascot-stage { z-index: 1; opacity: 0; transition: opacity 0.18s ease; }
+.mascot[data-ready] .mascot-stage { opacity: 1; }
+.mascot[data-ready] .mascot-still { opacity: 0; }
+
+.mascot-img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  flex: none;
+  filter: drop-shadow(0 0.8rem 1rem rgb(93 69 143 / 0.2));
+}
+.mascot-float { animation: 4.8s ease-in-out infinite floaty; }
+
+/* Round face avatar: crop the full-body art to the head. */
+.mascot-av { position: relative; overflow: hidden; }
+.mascot-av img {
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  width: 96%;
+  max-width: none;
+  translate: -50% 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-float { animation: none; }
+}
+
+/* Placements that replace the demo's glass drop. */
+.land-mascot { position: relative; z-index: 1; margin-top: 4.5rem; }
+.about-mascot { display: grid; place-items: center; margin-block-end: 0.8rem; }
+.assistant-hero { overflow: hidden; align-items: end; }
+.assistant-hero .mascot-img { margin-bottom: -1.3rem; }
+@media (width <= 900px) {
+  .land-mascot { height: 12rem !important; }
+}

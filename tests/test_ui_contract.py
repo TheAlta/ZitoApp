@@ -74,6 +74,7 @@ class UiContractTests(unittest.TestCase):
         for name in (
             "landing", "certificate", "admin-login", "onboarding", "home", "courses", "course", "lesson",
             "coach", "final", "certs", "profile", "admin", "admin-new", "admin-studio", "admin-images", "admin-users",
+            "admin-preview",
         ):
             self.assertIn(f'["{name}",', routes)
             self.assertRegex(pages, rf'(^|\s)"?{re.escape(name)}"?: \{{ render')
@@ -121,6 +122,51 @@ class UiContractTests(unittest.TestCase):
         users = source("pages/admin/Users.jsx")
         for fragment in ("/block", "/unblock", "/restore", "include_deleted=true", "course_titles"):
             self.assertIn(fragment, users)
+
+    def test_original_mascot_and_its_motions_are_served(self) -> None:
+        mascot = source("ui/mascot.jsx")
+        with TestClient(app) as client:
+            paths = re.findall(r"`\$\{STATIC\}(/[^`?]+)", mascot)
+            self.assertGreaterEqual(len(paths), 9)
+            for path in paths:
+                self.assertEqual(client.get(f"/landing-static{path}").status_code, 200, path)
+        for motion in ("zito-lottie/zito-lottie.json", "zito-intro-lottie/zito-intro-lottie.json", "course-mascot-lottie/zito-course-mascot.json"):
+            self.assertIn(motion, mascot)
+        # The glass drop is no longer drawn as a character anywhere; the coach wears the original glasses.
+        for page in Path(FRONTEND / "pages").rglob("*.jsx"):
+            self.assertNotRegex(page.read_text(encoding="utf-8"), r"<Drop[^>]*\bface\b", page.name)
+        self.assertIn("<MascotAvatar size={e} busy={t} coach />", source("ui/art.jsx"))
+        self.assertIn('<Mascot motion="wave"', source("pages/Landing.jsx"))
+        self.assertIn('<Mascot motion="intro"', source("pages/Landing.jsx"))
+
+    def test_course_overview_keeps_the_previous_journey(self) -> None:
+        overview = source("pages/CourseOverview.jsx")
+        for heading in (
+            "معرفی مسیر یادگیری زیتو",
+            "آخر این مسیر قرار است کجا برسی؟",
+            "نقشه و مسیر دوره",
+            "این دوره چه چیزی را برایت متفاوت می‌کند؟",
+            "گواهی پایان دوره زیتو",
+            "مسیر آماده است",
+        ):
+            self.assertIn(heading, overview)
+        self.assertIn('<Mascot motion="course"', overview)
+        self.assertIn("animateMotion", overview)
+        self.assertIn("useOverview(!preview)", overview)
+        self.assertIn("/admin/preview/", source("pages/admin/Studio.jsx"))
+
+    def test_checklist_and_scenario_choices_are_saved_with_the_stage(self) -> None:
+        lesson = source("pages/Lesson.jsx")
+        self.assertIn("{ selected_items: selected }", lesson)
+        self.assertIn("pick(items.filter((_, k) => next[k]))", lesson)
+        self.assertIn("pick([option])", lesson)
+        self.assertNotIn("ذخیره نمی‌شود", lesson)
+
+    def test_ended_sessions_return_to_sign_in(self) -> None:
+        self.assertIn('"zito:unauthorized"', source("lib/api.js"))
+        self.assertIn('addEventListener("zito:unauthorized"', source("lib/store.jsx"))
+        exam = source("pages/FinalExam.jsx")
+        self.assertIn('exam.status === "not_required"', exam)
 
     def test_session_cache_is_cleared_between_accounts(self) -> None:
         store = source("lib/store.jsx")

@@ -6,8 +6,8 @@ import { setCached, useCached } from "../lib/cache.js";
 import { fa } from "../lib/format.js";
 import { K, pathInfo, refreshLearning, useCurrentPath } from "../lib/learner.js";
 import { useStore } from "../lib/store.jsx";
-import { Drop } from "../ui/art.jsx";
 import { AIBar, Callout, Empty, Field, Panel, Ring, Skel } from "../ui/kit.jsx";
+import { MascotStill } from "../ui/mascot.jsx";
 
 const draftKey = (attemptId) => `zito:final-draft:${attemptId}`;
 const readDraft = (attemptId) => {
@@ -131,7 +131,7 @@ export function FinalExam() {
         {head}
         <Panel>
           <div className="empty">
-            <Drop size="5.5rem" face />
+            <MascotStill pose="wave" height="7rem" />
             <h2>این آزمون را با موفقیت گذرانده‌ای</h2>
             <p>{certificate ? "گواهی‌ات صادر شده و هر کسی می‌تواند بدون ورود استعلامش کند." : "این دوره برای تو تکمیل شده است."}</p>
             {certificate && (
@@ -144,13 +144,32 @@ export function FinalExam() {
       </div>
     );
 
+  if (exam.status === "not_required" && !attempt)
+    return (
+      <div className="stack">
+        {head}
+        <Panel>
+          <Empty
+            icon={<Award />}
+            title="این نسخه از دوره آزمون نهایی ندارد"
+            text="مسیر با تمام کردن همه‌ی سرفصل‌ها کامل می‌شود."
+            action={
+              <button className="btn btn-primary" onClick={() => go({ name: "certs" })}>
+                گواهی‌های من
+              </button>
+            }
+          />
+        </Panel>
+      </div>
+    );
+
   if (phase === "idle" || (!attempt && phase !== "generating"))
     return (
       <div className="stack">
         {head}
         <Panel>
           <div className="empty">
-            <Drop size="5.5rem" face />
+            <MascotStill pose="laptop" height="7rem" />
             <h2>آماده‌ای؟</h2>
             <p>زیتو از روی کل محتوای دوره سه سؤال تازه می‌سازد. ساخت سؤال‌ها معمولاً حدود ۴۵ ثانیه طول می‌کشد.</p>
             <div className="row" style={{ justifyContent: "center" }}>
@@ -260,7 +279,7 @@ export function FinalExam() {
               {fa(written)} از {fa(questions.length)} پاسخ نوشته شده
             </span>
           </div>
-          <button className="btn btn-primary btn-lg" disabled={phase === "grading" || questions.some((q) => !(answers[q.id] ?? "").trim())} onClick={submit}>
+          <button className="btn btn-primary btn-lg" disabled={phase === "grading" || questions.some((q) => (answers[q.id] ?? "").trim().length < 2)} onClick={submit}>
             {phase === "grading" ? "در حال تصحیح…" : "ثبت و تصحیح آزمون"} <ArrowLeft />
           </button>
         </div>

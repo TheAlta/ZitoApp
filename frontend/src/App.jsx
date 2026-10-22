@@ -23,6 +23,7 @@ const TITLES = {
   "admin-new": "دوره‌ی جدید",
   "admin-images": "عکس و ویدیو",
   "admin-users": "کاربران",
+  "admin-preview": "پیش‌نمایش معرفی دوره",
   certificate: "گواهی",
 };
 

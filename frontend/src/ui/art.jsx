@@ -1,4 +1,5 @@
 // Hand-drawn SVG art of the Zito look: sky, glass drop mascot, sprig, landscapes.
+import { MascotAvatar } from "./mascot.jsx";
 import { useId } from "react";
 
 export function Sky({ dim: e = false }) {
@@ -187,19 +188,9 @@ export function Drop({ size: e = 120, face: t = false, className: n, glow: r = t
   );
 }
 
+// The coach is Zito's original mascot with glasses, as in the previous UI.
 export function CoachAvatar({ size: e = `2.6rem`, busy: t = false }) {
-  return (
-    <span
-      className="coach-av"
-      style={{
-        width: e,
-        height: e,
-      }}
-      data-busy={t || undefined}
-    >
-      <Drop size="96%" face glow={false} />
-    </span>
-  );
+  return <MascotAvatar size={e} busy={t} coach />;
 }
 
 export function Logo({ compact: e = false }) {

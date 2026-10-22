@@ -1,13 +1,14 @@
 // Learning path: the current stage of the current course, its content blocks, quiz and personal example.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Award, Check, ChevronDown, Compass, Lightbulb, Lock, MessageCircle, Play, RefreshCw, RotateCw, Sparkles, Trophy } from "lucide-react";
 import { post } from "../lib/api.js";
 import { setCached, useCached } from "../lib/cache.js";
 import { fa, pct, shuffle } from "../lib/format.js";
 import { K, pathInfo, refreshLearning, useCurrentPath } from "../lib/learner.js";
 import { useStore } from "../lib/store.jsx";
-import { CoachAvatar, Drop, Landscape, Logo } from "../ui/art.jsx";
+import { CoachAvatar, Landscape, Logo } from "../ui/art.jsx";
 import { AIBar, Bar, Callout, Empty, Panel, Skel, Sources } from "../ui/kit.jsx";
+import { MascotStill } from "../ui/mascot.jsx";
 
 // ---- block normalisation: the CMS writes {body, items}, older content may use other keys ----
 
@@ -314,28 +315,42 @@ function Flashcards({ title, items }) {
   );
 }
 
+// Checklist ticks and scenario choices of the open stage; sent as `selected_items` when it is completed,
+// which the server keeps on the learner's stage progress (as the previous UI did).
+const Picks = createContext(null);
+
+function usePick() {
+  const picks = useContext(Picks);
+  const key = useId();
+  return (values) => picks?.set(key, values);
+}
+
 function Checklist({ title, items }) {
   const [checked, setChecked] = useState({});
+  const pick = usePick();
+  const toggle = (i) => {
+    const next = { ...checked, [i]: !checked[i] };
+    setChecked(next);
+    pick(items.filter((_, k) => next[k]));
+  };
   return (
     <section className="blk">
       {title && <h3>{title}</h3>}
       <div className="mat mat-raised" style={{ padding: ".3rem" }}>
         {items.map((item, i) => (
-          <button key={i} role="checkbox" aria-checked={!!checked[i]} className="check-row" onClick={() => setChecked({ ...checked, [i]: !checked[i] })}>
+          <button key={i} role="checkbox" aria-checked={!!checked[i]} className="check-row" onClick={() => toggle(i)}>
             <span className="check-box">{checked[i] && <Check />}</span>
             <span>{item}</span>
           </button>
         ))}
       </div>
-      <p className="muted" style={{ fontSize: "var(--t-micro)", marginTop: ".4rem" }}>
-        تیک‌ها فقط برای همین صفحه است و ذخیره نمی‌شود.
-      </p>
     </section>
   );
 }
 
 function Scenario({ title, text, options, uid }) {
   const [picked, setPicked] = useState(null);
+  const pick = usePick();
   const shuffled = useMemo(() => shuffle(options, uid, text), [options, uid, text]);
   return (
     <section className="blk blk-hl">
@@ -345,7 +360,7 @@ function Scenario({ title, text, options, uid }) {
       <p>{text}</p>
       <div className="opts" role="radiogroup" style={{ marginTop: ".6rem" }}>
         {shuffled.map((option) => (
-          <button key={option} role="radio" aria-checked={picked === option} className="opt" onClick={() => setPicked(option)}>
+          <button key={option} role="radio" aria-checked={picked === option} className="opt" onClick={() => (setPicked(option), pick([option]))}>
             {option}
           </button>
         ))}
@@ -501,6 +516,7 @@ export function Lesson() {
   const stageKey = info?.status === "learning" ? K.stage(path.data.enrollment_id) : null;
   const stage = useCached(stageKey);
   const { complete, busy } = useCompleteStage(path.data || {});
+  const picks = useRef({ stage: null, values: new Map() });
 
   if (path.loading && !path.data) return <Skel lines={8} />;
   if (!path.data)
@@ -529,6 +545,11 @@ export function Lesson() {
   const blocks = list(content.blocks);
   const activity = typeof content.activity === "string" ? { prompt: content.activity } : content.activity;
   const coachHint = current?.coaching?.enabled && current.coaching.prompt;
+  if (picks.current.stage !== current?.stage_number) picks.current = { stage: current?.stage_number, values: new Map() };
+  const finish = () => {
+    const selected = [...picks.current.values.values()].flat();
+    complete(current.stage_number, selected.length ? { selected_items: selected } : null);
+  };
 
   return (
     <div className="lesson">
@@ -585,13 +606,15 @@ export function Lesson() {
               </Panel>
             )}
             <Panel>
-              <div className="blocks">
-                {kind === "personalized_work_example" && <PersonalExample path={p} stage={current} />}
-                {blocks.map((b, i) => (
-                  <Block key={`${current.stage_number}-${i}`} b={b} uid={me?.id} />
-                ))}
-                {isQuiz && <Quiz path={p} stage={current} blocks={blocks} complete={complete} busy={busy} />}
-              </div>
+              <Picks.Provider value={picks.current.values}>
+                <div className="blocks">
+                  {kind === "personalized_work_example" && <PersonalExample path={p} stage={current} />}
+                  {blocks.map((b, i) => (
+                    <Block key={`${current.stage_number}-${i}`} b={b} uid={me?.id} />
+                  ))}
+                  {isQuiz && <Quiz path={p} stage={current} blocks={blocks} complete={complete} busy={busy} />}
+                </div>
+              </Picks.Provider>
             </Panel>
             {activity?.prompt && (
               <Panel>
@@ -614,7 +637,7 @@ export function Lesson() {
                   </span>
                   <Bar value={info.percent} label="پیشرفت کل مسیر" />
                 </div>
-                <button className="btn btn-primary btn-lg" disabled={busy} onClick={() => complete(current.stage_number, null)}>
+                <button className="btn btn-primary btn-lg" disabled={busy} onClick={finish}>
                   {busy ? "در حال ثبت…" : "تکمیل مرحله و ادامه"} <ArrowLeft />
                 </button>
               </div>
@@ -666,7 +689,7 @@ function CourseDone({ path, info }) {
   return (
     <Panel>
       <div className="empty">
-        <Drop size="6rem" face />
+        <MascotStill pose={info.status === "completed" ? "wave" : "laptop"} height="7.5rem" />
         <h2>{info.status === "completed" ? "این دوره را تمام کرده‌ای" : "همه‌ی سرفصل‌ها تمام شد"}</h2>
         <p>
           {info.status === "completed"

@@ -727,7 +727,7 @@ function StudioEditor({ courseId, versionNumber, initialTab }) {
             <dd>{v.requires_final_exam ? overview.final_exam_label || "آزمون نهایی" : "ندارد؛ دوره بعد از آخرین مرحله مستقیم تکمیل می‌شود"}</dd>
           </dl>
           {published && (
-            <a className="btn btn-soft btn-sm" style={{ marginTop: "1rem" }} href={`/app/courses/${encodeURIComponent(v.course_slug)}`} target="_blank" rel="noreferrer">
+            <a className="btn btn-soft btn-sm" style={{ marginTop: "1rem" }} href={`/admin/preview/${encodeURIComponent(v.course_slug)}`} target="_blank" rel="noreferrer">
               <ExternalLink /> دیدن صفحه‌ی معرفی
             </a>
           )}

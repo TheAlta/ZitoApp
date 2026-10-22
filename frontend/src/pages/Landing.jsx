@@ -16,8 +16,9 @@ import {
 import { fa, normDigits } from "../lib/format.js";
 import { toggleAmbient, useAmbient } from "../lib/ambient.js";
 import { useStore } from "../lib/store.jsx";
-import { Drop, Logo, Sprig } from "../ui/art.jsx";
+import { Logo, Sprig } from "../ui/art.jsx";
 import { Callout, Dialog, Field, Form } from "../ui/kit.jsx";
+import { Mascot, MascotAvatar } from "../ui/mascot.jsx";
 
 const INTRO = "سلام، من زیتو هستم. هر روز یک قدم کوچک با هم برمی‌داریم تا مهارت تازه‌ات را در کار واقعی به کار ببری. آماده‌ای شروع کنیم؟";
 
@@ -94,7 +95,7 @@ export function Landing() {
             {typed}
             {!done && <span className="caret" />}
           </div>
-          <Drop size="15rem" face className="land-drop" />
+          <Mascot motion="wave" height="17rem" className="land-mascot" />
         </div>
       </section>
       <section className="land-feats" aria-label="ویژگی‌ها">
@@ -113,7 +114,10 @@ export function Landing() {
       </section>
       <Sprig className="land-sprig" flowers={12} />
       {aboutOpen && (
-        <Dialog title="زیتو چیه؟" onClose={() => setAboutOpen(false)} icon={<Drop size="2.4rem" face glow={false} />}>
+        <Dialog title="زیتو چیه؟" onClose={() => setAboutOpen(false)} icon={<MascotAvatar size="2.4rem" />}>
+          <div className="about-mascot">
+            <Mascot motion="intro" height="13rem" />
+          </div>
           <p className="soft" style={{ lineHeight: 2.1 }}>
             زیتو یک همراه یادگیری است. دوره‌ها را تیم محتوا با کمک هوش مصنوعی می‌سازد و بازبینی می‌کند. تو
             سرفصل‌به‌سرفصل جلو می‌روی؛ هر سرفصل هشت مرحله دارد: نقشه، خلاصه‌ی درس، فلش‌کارت، نکات طلایی، اشتباهات رایج،

@@ -17,6 +17,7 @@ const table = [
   ["admin-studio", "/admin/studio/:courseId?/:version?"],
   ["admin-images", "/admin/images"],
   ["admin-users", "/admin/users/:userId?"],
+  ["admin-preview", "/admin/preview/:slug"],
 ];
 
 const compiled = table.map(([name, pattern]) => {

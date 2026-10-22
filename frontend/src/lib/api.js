@@ -39,6 +39,10 @@ export async function api(path, { method = "GET", body, signal } = {}) {
   }
   if (!response.ok) {
     const detail = data?.detail ?? data;
+    // A session that ended mid-use (expired, signed out elsewhere, or blocked by an admin): the store sends
+    // the person back to sign-in. Sign-in calls themselves report their own 401s.
+    if (response.status === 401 && !/^\/api\/(auth\/|admin\/login)/.test(path))
+      dispatchEvent(new CustomEvent("zito:unauthorized", { detail: { admin: path.startsWith("/api/admin/") } }));
     throw new ApiError(response.status, messageOf(detail, response.status), detail);
   }
   return data;

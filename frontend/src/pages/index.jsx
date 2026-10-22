@@ -2,7 +2,8 @@
 import { Shell } from "../shell/Shell.jsx";
 import { Certs, Profile } from "./Account.jsx";
 import { Coach } from "./Coach.jsx";
-import { CourseOverview, Courses } from "./Courses.jsx";
+import { CourseOverview } from "./CourseOverview.jsx";
+import { Courses } from "./Courses.jsx";
 import { FinalExam } from "./FinalExam.jsx";
 import { Home } from "./Home.jsx";
 import { Landing } from "./Landing.jsx";
@@ -33,4 +34,5 @@ export const PAGES = {
   "admin-studio": { render: (r) => <Studio courseId={r.courseId} version={r.version} tab={location.hash.slice(1) || r.tab} /> },
   "admin-images": { render: () => <Images /> },
   "admin-users": { render: (r) => <Users userId={r.userId} /> },
+  "admin-preview": { render: (r) => <CourseOverview slug={r.slug} preview /> },
 };

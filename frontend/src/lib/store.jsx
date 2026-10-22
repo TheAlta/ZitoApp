@@ -76,6 +76,22 @@ function useSessionState() {
     refreshSession();
   }, [refreshSession]);
 
+  const role = useRef(session.role);
+  role.current = session.role;
+  useEffect(() => {
+    const onUnauthorized = (event) => {
+      const admin = event.detail?.admin;
+      if (role.current !== (admin ? "admin" : "learner")) return;
+      role.current = "guest"; // several requests may fail together; react once
+      clearCache();
+      setSession({ role: "guest" });
+      toast("نشست ورودت معتبر نیست یا حساب غیرفعال شده است؛ دوباره وارد شو.", "warn");
+      go({ name: admin ? "admin-login" : "landing" }, { replace: true });
+    };
+    addEventListener("zito:unauthorized", onUnauthorized);
+    return () => removeEventListener("zito:unauthorized", onUnauthorized);
+  }, [go, toast]);
+
   const setProfile = useCallback((profile) => setSession((s) => ({ ...s, profile })), []);
 
   const requestOtp = useCallback(

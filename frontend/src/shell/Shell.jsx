@@ -27,7 +27,7 @@ export function useNavItems() {
   return session.role === "admin"
     ? [
         { label: "داشبورد", icon: <LayoutDashboard />, route: { name: "admin" }, match: ["admin"] },
-        { label: "استودیوی دوره", icon: <CirclePlay />, route: { name: "admin-studio" }, match: ["admin-studio", "admin-new"] },
+        { label: "استودیوی دوره", icon: <CirclePlay />, route: { name: "admin-studio" }, match: ["admin-studio", "admin-new", "admin-preview"] },
         { label: "عکس و ویدیو", icon: <Image />, route: { name: "admin-images" }, match: ["admin-images"] },
         { label: "کاربران", icon: <Users />, route: { name: "admin-users" }, match: ["admin-users"] },
         { label: "پیش‌نمایش لندینگ", icon: <Eye />, route: { name: "landing" }, match: [] },

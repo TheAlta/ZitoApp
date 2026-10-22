@@ -4,9 +4,10 @@ import { useCached } from "../../lib/cache.js";
 import { ago, fa, hueOf, pct } from "../../lib/format.js";
 import { useAdminCourses, useAdminLog, useAdminUsers } from "../../lib/admin.js";
 import { useStore } from "../../lib/store.jsx";
-import { Drop, HeroArt, HeroScene, Landscape } from "../../ui/art.jsx";
+import { HeroArt, HeroScene, Landscape } from "../../ui/art.jsx";
 import { Callout, Panel, Ring, Skel, Stat } from "../../ui/kit.jsx";
 import { versionBadge } from "./Studio.jsx";
+import { MascotStill } from "../../ui/mascot.jsx";
 
 const LOG_ICONS = {
   publish: ["mint", <Rocket key="p" />],
@@ -125,7 +126,7 @@ export function AdminHome() {
         <Panel>
           <div className="assistant">
             <span className="assistant-hero">
-              <Drop size="3.4rem" face glow={false} />
+              <MascotStill pose="laptop" height="5.4rem" float={false} />
             </span>
             <div>
               <h3>دستیار تولید</h3>

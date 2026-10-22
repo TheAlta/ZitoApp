@@ -1,0 +1,186 @@
+/* Course overview page (pages/CourseOverview.jsx): the previous page's sections in the new materials. */
+.ov { gap: 1.6rem; }
+.ov-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  color: var(--accent-ink);
+  letter-spacing: 0.01em;
+}
+.ov-kicker::before {
+  content: "";
+  width: 1.4rem;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #e59a86, var(--accent));
+}
+.ov-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem 2rem;
+  margin-block-end: 0.9rem;
+}
+.ov-head h2 { font-size: var(--t-h1); margin-top: 0.15rem; text-wrap: balance; }
+.ov-head p { max-width: 26rem; color: var(--ink-2); font-size: var(--t-small); }
+
+/* Hero */
+.ov .ov-hero { grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 19rem; padding: 2rem 2.2rem; }
+.ov-hero-copy { display: grid; gap: 0.65rem; justify-items: start; position: relative; }
+.ov-facts { justify-self: stretch; display: grid; grid-template-columns: repeat(3, minmax(0, 11.5rem)); gap: 0.55rem; margin-top: 0.3rem; }
+.ov-facts > div { display: grid; gap: 0.15rem; padding: 0.6rem 0.8rem; }
+.ov-facts small { font-size: var(--t-micro); color: var(--ink-3); }
+.ov-facts b { display: flex; align-items: center; gap: 0.35rem; font-size: var(--t-small); font-weight: 600; }
+.ov-facts svg { width: 0.9rem; height: 0.9rem; color: var(--accent); flex: none; }
+.ov-hero-art { position: relative; display: grid; place-items: center; width: 17rem; height: 17rem; }
+.ov-orbit {
+  position: absolute;
+  inset: 0.6rem;
+  border-radius: 50%;
+  border: 1px solid #ffffffb3;
+  background: radial-gradient(circle at 45% 40%, #ffffffd9, #f0e2fa80 55%, #dcc8f600 72%);
+  box-shadow: inset 0 0 0 1.6rem #ffffff1f;
+}
+.ov-dot { position: absolute; width: 0.55rem; height: 0.55rem; border-radius: 50%; box-shadow: 0 0 0 3px #ffffffb3; animation: 5.6s ease-in-out infinite floaty; }
+.ov-dot-1 { top: 1.6rem; inset-inline-start: 2.2rem; background: var(--tint-rose-ink); }
+.ov-dot-2 { bottom: 3.2rem; inset-inline-start: 0.6rem; background: var(--accent); animation-delay: -2s; }
+.ov-dot-3 { top: 4.2rem; inset-inline-end: 0.4rem; background: var(--tint-mint-ink); animation-delay: -3.6s; }
+.ov-hero-art .mascot { position: relative; z-index: 1; }
+
+/* Destination */
+.ov-dest { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 1.2rem; padding: 1.3rem; }
+.ov-ba { display: grid; gap: 0.5rem; align-content: start; padding: 1.1rem 1.2rem; height: 100%; }
+.ov-ba-kicker { font-size: var(--t-micro); font-weight: 600; }
+.ov-ba-before .ov-ba-kicker { color: var(--tint-rose-ink); }
+.ov-ba-after { background: linear-gradient(170deg, #f6f0fe, #fdf1ea); }
+.ov-ba-after .ov-ba-kicker { color: var(--ok); }
+.ov-ba h3 { font-size: var(--t-h2); line-height: 1.7; }
+.ov-ba ul { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; font-size: var(--t-small); color: var(--ink-2); }
+.ov-ba li { display: flex; gap: 0.45rem; align-items: baseline; }
+.ov-ba-before li::before { content: ""; flex: none; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--tint-rose); box-shadow: 0 0 0 2px #fdeef1; translate: 0 -0.05rem; }
+.ov-ba-after li svg { flex: none; width: 0.85rem; height: 0.85rem; color: var(--ok); translate: 0 0.15rem; }
+.ov-dest-mid { display: grid; justify-items: center; gap: 0.5rem; padding-inline: 0.4rem; }
+.ov-dest-mid .badge { white-space: nowrap; }
+
+/* Route map */
+.route { display: grid; gap: 0.6rem; padding: 1.1rem 1.2rem 1rem; overflow: hidden; }
+.route-legend, .route-finish { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; font-size: var(--t-micro); color: var(--ink-3); }
+.route-legend span, .route-finish { display: inline-flex; align-items: center; gap: 0.35rem; }
+.route-legend svg, .route-finish svg { width: 0.85rem; height: 0.85rem; color: var(--accent); }
+.route-finish { justify-content: flex-start; color: var(--accent-ink); font-weight: 600; }
+.route-track { position: relative; }
+.route-road { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.route-road-shadow { fill: none; stroke: #8a6dd11f; stroke-width: 16; stroke-linecap: round; }
+.route-road-surface { fill: none; stroke: #ffffffd9; stroke-width: 9; stroke-linecap: round; }
+.route-road-lane { fill: none; stroke: #b6a0eecc; stroke-width: 1.6; stroke-dasharray: 3 7; stroke-linecap: round; animation: 1.6s linear infinite route-lane; }
+.route-traveler { filter: drop-shadow(0 0 4px #9479d880); }
+@keyframes route-lane { to { stroke-dashoffset: -20; } }
+.route-stops { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 1.4rem 0.75rem; margin: 0; padding: 0; list-style: none; }
+.route-stop { display: grid; justify-items: center; align-content: start; gap: 0.8rem; min-width: 0; }
+.route-stop:nth-child(even) { padding-top: 1.6rem; }
+.route-node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 50%;
+  font-size: var(--t-small);
+  font-weight: 700;
+  color: var(--on-accent);
+  background: var(--accent-grad);
+  box-shadow: 0 0 0 4px #ffffffe6, var(--accent-glow);
+}
+.route-card { display: grid; gap: 0.35rem; width: 100%; padding: 0.75rem 0.8rem; }
+.route-card small { display: flex; justify-content: space-between; align-items: center; gap: 0.3rem; font-size: var(--t-micro); color: var(--ink-3); }
+.route-card h3 { font-size: var(--t-small); line-height: 1.7; }
+.route-card p { font-size: var(--t-micro); color: var(--ink-2); }
+.route-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.route-tags span { font-size: var(--t-micro); line-height: 1.6; padding: 0.15rem 0.55rem; border-radius: var(--r-pill); background: var(--accent-soft); color: var(--accent-ink); }
+.route-dots { display: flex; gap: 0.2rem; margin-top: 0.15rem; }
+.route-dots i { flex: 1; height: 0.22rem; border-radius: 2px; background: linear-gradient(90deg, #d8caf6, #f6d3c3); }
+
+/* Impact */
+.ov-impact { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; }
+.ov-impact > article { display: grid; gap: 0.4rem; align-content: start; padding: 1.1rem 1.2rem; min-height: 9.5rem; overflow: hidden; }
+.ov-impact h3 { font-size: var(--t-h2); }
+.ov-impact p { font-size: var(--t-small); color: var(--ink-2); }
+.ov-num { justify-self: start; font-size: var(--t-micro); font-weight: 700; color: var(--accent-ink); background: var(--accent-soft); border-radius: var(--r-pill); padding: 0.1rem 0.6rem; }
+.ov-impact .has-mascot p { max-width: 62%; }
+.ov-impact-mascot { position: absolute; inset-inline-end: 0.8rem; bottom: -0.5rem; opacity: 0.95; }
+
+/* Certificate */
+.ov-cert { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: center; gap: 2rem; padding: 1.6rem; }
+.ov-cert-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.45rem;
+  min-height: 13rem;
+  padding: 1.6rem;
+  text-align: center;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  background: linear-gradient(160deg, #fffdfc, #f6eefb 55%, #fbe9df);
+  box-shadow: var(--shadow-raised), inset 0 0 0 0.45rem #ffffffb3, inset 0 0 0 calc(0.45rem + 1px) #d6c8f0;
+}
+.ov-cert-card span { font-size: var(--t-micro); color: var(--ink-3); }
+.ov-cert-card strong { font-size: var(--t-h1); line-height: 1.5; }
+.ov-cert-card small { font-size: var(--t-micro); color: var(--ink-2); }
+.ov-cert-sprig { position: absolute; width: 2.4rem; height: 7rem; inset-block-end: -0.8rem; inset-inline-start: 1.2rem; opacity: 0.8; }
+.ov-cert-copy { display: grid; gap: 0.6rem; justify-items: start; }
+.ov-cert-copy h2 { font-size: var(--t-h1); line-height: 1.6; text-wrap: balance; }
+.ov-cert-copy p { color: var(--ink-2); font-size: var(--t-small); }
+.ov-points { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; font-size: var(--t-small); color: var(--ink-2); }
+.ov-points li { display: flex; gap: 0.5rem; align-items: baseline; }
+.ov-points svg { flex: none; width: 0.9rem; height: 0.9rem; color: var(--ok); translate: 0 0.15rem; }
+
+/* Finish */
+.ov-finish { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2rem; padding: 1.6rem 2rem; }
+.ov-finish-art { position: relative; display: grid; place-items: end center; width: 11rem; height: 12.5rem; }
+.ov-portal {
+  position: absolute;
+  inset: 0 0.8rem 0.6rem;
+  border-radius: 6rem 6rem 1rem 1rem;
+  background: linear-gradient(180deg, #efe6fc, #fbe9df);
+  box-shadow: inset 0 0 0 0.5rem #ffffffb3, inset 0 0 0 calc(0.5rem + 1px) #d6c8f0;
+}
+.ov-finish-art .mascot-img { position: relative; z-index: 1; }
+.ov-finish-copy { display: grid; gap: 0.6rem; justify-items: start; }
+.ov-finish-copy h2 { font-size: var(--t-h1); line-height: 1.6; text-wrap: balance; }
+.ov-finish-copy p { color: var(--ink-2); font-size: var(--t-small); max-width: 32rem; }
+.ov-next { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 1rem; }
+.ov-next small { font-size: var(--t-micro); color: var(--ink-3); }
+.ov-next b { font-size: var(--t-small); font-weight: 600; }
+
+@media (width <= 1200px) {
+  .ov-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (width <= 900px) {
+  .ov .ov-hero { grid-template-columns: minmax(0, 1fr); }
+  .ov-hero-art { width: 12rem; height: 12rem; justify-self: center; order: -1; }
+  .ov-hero-art .mascot { height: 10.5rem !important; }
+  .ov-dest { grid-template-columns: minmax(0, 1fr); }
+  .ov-dest-mid { order: -1; }
+  .ov-impact { grid-template-columns: minmax(0, 1fr); }
+  .ov-cert { grid-template-columns: minmax(0, 1fr); }
+}
+@media (width <= 560px) {
+  .ov .ov-hero { padding: 1.3rem; }
+  .ov-facts { grid-template-columns: minmax(0, 1fr); }
+  .route-stops { grid-template-columns: minmax(0, 1fr); gap: 0.9rem; }
+  .route-stop { grid-template-columns: auto minmax(0, 1fr); justify-items: stretch; align-items: start; }
+  .route-stop:nth-child(even) { padding-top: 0; }
+  .route-node { margin-top: 0.6rem; }
+  .ov-finish { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; padding: 1.3rem; }
+  .ov-finish-copy { justify-items: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .route-road-lane, .ov-dot { animation: none; }
+  .route-traveler { display: none; }
+}

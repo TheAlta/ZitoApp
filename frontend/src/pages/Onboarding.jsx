@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Send } from "lucide-react";
 import { patch } from "../lib/api.js";
 import { fa } from "../lib/format.js";
+import { clearIntent, readIntent } from "../lib/intent.js";
 import { useOverview } from "../lib/learner.js";
 import { PROFILE_KEYS, answered, useStore } from "../lib/store.jsx";
 import { CoachAvatar } from "../ui/art.jsx";
@@ -25,6 +26,14 @@ export const PROFILE_QUESTIONS = {
   referral_source: { q: "از کجا با زیتو آشنا شدی؟", suggest: ["اینستاگرام", "معرفی دوستان", "جست‌وجو در اینترنت", "محل کار"] },
 };
 
+// The last message and its button follow where the learner was heading: [message, button label].
+const FINISH = {
+  course: ["حالا برویم سراغ دوره‌ای که انتخاب کردی.", "رفتن به دوره"],
+  courses: ["حالا یک دوره انتخاب کن تا اولین قدم را برداریم.", "انتخاب دوره"],
+  home: ["حالا از داشبوردت شروع می‌کنیم.", "رفتن به داشبورد"],
+};
+const FINISH_OTHER = ["حالا برگردیم سر کاری که داشتی.", "ادامه"];
+
 const shown = (profile, key) =>
   key === "daily_learning_time_text" && !profile[key] && profile.daily_learning_minutes != null
     ? `${fa(profile.daily_learning_minutes)} دقیقه`
@@ -42,6 +51,8 @@ export function Onboarding() {
   const key = done ? null : PROFILE_KEYS[index];
   const question = key ? PROFILE_QUESTIONS[key] : null;
   const firstName = me?.display_name?.split(" ")[0] ?? "";
+  const target = readIntent() ?? { name: overview.data?.enrollments?.length ? "home" : "courses" };
+  const [finishText, finishLabel] = FINISH[target.name] ?? FINISH_OTHER;
 
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -102,13 +113,9 @@ export function Onboarding() {
             <div className="msg msg-coach">
               <CoachAvatar size="2.2rem" />
               <div className="bubble mat mat-raised">
-                عالی شد {firstName}! پروفایلت کامل است. حالا یک دوره انتخاب کن تا اولین قدم را برداریم.
-                <button
-                  className="btn btn-primary"
-                  style={{ justifySelf: "start" }}
-                  onClick={() => go({ name: overview.data?.enrollments?.length ? "home" : "courses" })}
-                >
-                  انتخاب دوره <ArrowLeft />
+                عالی شد {firstName}! پروفایلت کامل است. {finishText}
+                <button className="btn btn-primary" style={{ justifySelf: "start" }} onClick={() => (clearIntent(), go(target))}>
+                  {finishLabel} <ArrowLeft />
                 </button>
               </div>
             </div>

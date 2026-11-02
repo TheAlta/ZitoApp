@@ -29,7 +29,7 @@ export function useEnroll() {
   };
 }
 
-function CourseCard({ course, enrollment, onPreview, onLeave }) {
+export function CourseCard({ course, enrollment, onPreview = () => {}, onLeave, onOpen }) {
   const { go } = useStore();
   const detail = useCached(K.course(course.slug));
   const info = detail.data;
@@ -39,7 +39,7 @@ function CourseCard({ course, enrollment, onPreview, onLeave }) {
   return (
     <button
       className="course-card mat mat-panel"
-      onClick={() => go({ name: "course", slug: course.slug })}
+      onClick={() => (onOpen ? onOpen(course) : go({ name: "course", slug: course.slug }))}
       onMouseEnter={(e) => info && onPreview(info, e.currentTarget, 340)}
       onMouseLeave={onLeave}
       onTouchStart={(e) => info && onPreview(info, e.currentTarget, 520)}

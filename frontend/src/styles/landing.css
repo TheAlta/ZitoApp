@@ -1,0 +1,190 @@
+/* Landing page (pages/Landing.jsx): a centered page whose sections slide up over a pinned hero. */
+
+/* Flex, not the design's grid: a sticky bar only travels inside its own grid row. */
+.landing {
+  --land-gutter: clamp(1rem, 4vw, 3rem); /* the side padding .landing has in zito-ui.css */
+  --land-bar: 4.6rem; /* the sticky top bar and the space around it */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-block-end: 0;
+}
+.land-section { width: 100%; min-width: 0; max-width: 72rem; margin-inline: auto; scroll-margin-top: 5.6rem; }
+.landing .ov-head { flex-direction: column; align-items: center; text-align: center; }
+.landing .ov-head h2 { font-size: var(--t-display); }
+.landing .ov-head p { max-width: 32rem; }
+.landing .ov-points { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 1.2rem; }
+
+/* Top bar and section tabs: same glass as the lesson's sticky .stage-foot */
+.land-top.mat, .land-spy {
+  background: linear-gradient(175deg, #fffdfcf0, #fcf6fae6);
+  backdrop-filter: blur(22px) saturate(130%);
+}
+.land-top.mat {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 20;
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--r-xl);
+}
+.land-nav { display: flex; align-items: center; gap: 0.25rem; }
+.land-actions { display: flex; align-items: center; gap: 0.5rem; margin-inline-start: auto; }
+
+/* Hero */
+.land-hero {
+  position: relative;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-content: center;
+  gap: 1.1rem;
+  min-height: calc(100svh - 9rem);
+  text-align: center;
+}
+.land-hero h1 { text-wrap: balance; }
+.land-hero p.lead { max-width: 38rem; margin-block: 0; }
+.land-hero .land-sprig { position: absolute; inset-block-end: -2rem; inset-inline-end: -1.2rem; }
+.land-hero-copy { position: relative; z-index: 2; display: grid; justify-items: center; gap: 0.75rem; max-width: 46rem; } /* above the mascot's glow */
+.land-hero-core { position: relative; width: min(100%, 40rem); }
+.land-hero-cta { justify-content: center; }
+.land-hero .land-ask { position: relative; z-index: 1; width: 100%; min-height: 4.6rem; margin: 0; padding-inline-start: 2.8rem; font-size: var(--t-body); color: var(--ink-2); }
+
+/* The mascot stands beside the question box, one hand over its edge. */
+.land-stage { position: absolute; inset-block-end: -5.5rem; inset-inline-start: -12.5rem; width: 16rem; min-height: 0; }
+.land-stage .land-orb { width: 20rem; height: 20rem; }
+.land-stage-depth { position: relative; z-index: 2; display: grid; justify-items: center; }
+.land-stage .land-mascot { margin-top: 0; }
+.land-stage .speech { width: 15rem; inset-block: auto calc(100% - 0.4rem); inset-inline-end: 0; }
+
+/* Topic tabs; in the hero the open one fills a bar, then the slide turns */
+.land-tabs button { position: relative; }
+.land-tab-bar {
+  position: absolute;
+  inset-inline: 0.6rem;
+  inset-block-end: 0.15rem;
+  height: 2px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transform-origin: right;
+  animation: land-tab-fill 6s linear forwards;
+}
+.land-tabs:hover .land-tab-bar, .land-tabs[data-paused] .land-tab-bar { animation-play-state: paused; }
+@keyframes land-tab-fill { from { transform: scaleX(0); } }
+
+/* The sheet that rises over the hero; its colour turns with the page through the sky tokens */
+.land-sheet {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  margin-inline: calc(var(--land-gutter) * -1);
+  padding: 2.5rem var(--land-gutter) 3rem;
+  border-start-start-radius: var(--r-2xl);
+  border-start-end-radius: var(--r-2xl);
+  background: linear-gradient(180deg, var(--sky-0), var(--sky-1) 30%, var(--sky-2) 65%, var(--sky-3));
+  box-shadow: var(--shadow-frame);
+}
+
+/* Sample chat */
+.land-samples { display: flex; flex-direction: column; align-items: center; gap: 1.1rem; }
+.land-sample { display: grid; justify-items: center; gap: 1.4rem; width: 100%; max-width: 46rem; }
+.land-sample .ov-cert-copy { justify-items: center; text-align: center; }
+.land-sample .ov-cert-copy h3 { font-size: var(--t-h2); line-height: 1.7; text-wrap: balance; }
+.land-chat.coach { width: 100%; height: auto; min-height: 0; }
+.land-chat .msgs { min-height: 24rem; overflow: visible; }
+.land-ask { justify-content: space-between; align-items: center; width: calc(100% - 2rem); font-size: var(--t-small); color: var(--ink-3); text-align: start; }
+.land-ask span:first-child { padding-block: 0.45rem; }
+
+/* Info sections */
+.land-infos { display: flex; flex-direction: column; align-items: center; gap: 1.6rem; }
+.land-spy { position: sticky; top: var(--land-bar); z-index: 5; }
+.land-info, .land-about { display: grid; justify-items: center; gap: 1.2rem; width: 100%; max-width: 56rem; padding: 2rem; text-align: center; }
+.land-info { scroll-margin-top: 8.6rem; }
+.land-about { margin-inline: auto; scroll-margin-top: 5.6rem; }
+.land-info .ov-cert-copy, .land-about .ov-finish-copy { justify-items: center; }
+.land-info h2, .land-about h2 { font-size: var(--t-display); }
+.land-about-art { display: grid; place-items: center; }
+.land-info-art { width: 100%; min-width: 0; text-align: start; }
+.land-proof { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 0.85rem; }
+.land-example { display: grid; justify-items: center; gap: 0.6rem; max-width: 36rem; margin-inline: auto; padding: 1.1rem 1.2rem; text-align: center; }
+.land-example .choice-row { justify-content: center; }
+.land-example p { font-size: var(--t-small); color: var(--ink-2); line-height: 1.95; }
+.land-path { display: grid; justify-items: center; gap: 0.85rem; }
+.land-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; width: 100%; margin: 0; padding: 0; list-style: none; }
+.land-steps li { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.7rem; font-size: var(--t-micro); }
+.land-path .ov-cert-card { width: min(100%, 24rem); min-height: 9rem; padding: 1.1rem; }
+.land-path .ov-cert-card strong { font-size: var(--t-h2); }
+
+/* Course gallery: as wide as the page, with no scrollbar of its own */
+.land-courses { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.2rem; min-width: 0; scroll-margin-top: 5.6rem; }
+.land-courses-head { display: grid; justify-items: center; gap: 0.9rem; }
+.land-gallery { margin-inline: calc(var(--land-gutter) * -1); padding-block: 0.5rem 1.1rem; overflow-x: auto; scrollbar-width: none; }
+.land-gallery::-webkit-scrollbar { display: none; }
+.land-reel { display: flex; width: max-content; margin-inline: auto; }
+.land-reel-set { display: flex; gap: 0.9rem; padding-inline: 0.45rem; }
+.land-reel .course-card { flex: 0 0 min(19rem, 78vw); align-content: start; }
+
+/* Closing */
+.land-finish.ov-finish { grid-template-columns: minmax(0, 1fr); justify-items: center; padding: 2.4rem 2rem; text-align: center; }
+.land-finish .ov-finish-copy { justify-items: center; }
+.land-finish .ov-finish-copy h2 { font-size: clamp(2rem, 3.6vw, 3.1rem); font-weight: 600; line-height: 1.35; letter-spacing: -0.015em; } /* the hero title's bundle */
+.land-lookup { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem 0.85rem; width: 100%; margin-top: 0.5rem; font-size: var(--t-small); color: var(--ink-2); }
+.land-lookup .search-box { flex: 1 1 15rem; min-width: 0; max-width: 24rem; }
+
+/* Scroll depth: --covered and --rise come from useScrollDepth, and without them everything stands in place. */
+@media (width > 900px) and (prefers-reduced-motion: no-preference) {
+  .land-hero {
+    position: sticky;
+    top: min(var(--land-bar), calc(100svh - var(--land-hero-h, 0px) - 1rem)); /* a tall hero scrolls to its end before it pins */
+    z-index: 0;
+  }
+  .land-hero-gone { visibility: hidden; }
+  .land-hero-copy { transform: translateY(calc(var(--covered, 0) * -4rem)); opacity: calc(1 - var(--covered, 0) * 1.4); }
+  .land-hero-core, .land-hero .land-tabs, .land-hero-cta { transform: translateY(calc(var(--covered, 0) * -2rem)); opacity: calc(1 - var(--covered, 0) * 1.6); }
+  .land-stage-depth {
+    transform: translate3d(0, calc(var(--covered, 0) * 5rem), 0) scale(calc(1 + var(--covered, 0) * 0.1));
+    filter: blur(calc(var(--covered, 0) * 6px));
+  }
+  [data-depth] {
+    transform: perspective(70rem) rotateX(calc((1 - var(--rise, 1)) * 8deg)) translateY(calc((1 - var(--rise, 1)) * 2.5rem)) scale(calc(0.96 + var(--rise, 1) * 0.04));
+    transform-origin: 50% 100%;
+    opacity: calc(0.4 + var(--rise, 1) * 0.6);
+  }
+}
+
+@media (width <= 1200px) {
+  .land-top .btn.land-wide { display: none; }
+  /* The hero's parts join one column, with the mascot under them. */
+  .land-hero-core { display: contents; }
+  .land-hero .land-ask { order: 1; max-width: 40rem; padding-inline-start: 0.9rem; }
+  .land-hero .land-tabs { order: 2; }
+  .land-hero-cta { order: 3; }
+  .land-stage { position: relative; order: 4; inset: auto; display: grid; place-items: center; width: 100%; }
+  .land-stage .speech { position: relative; inset: auto; width: auto; max-width: 24rem; margin-block-end: 0.5rem; }
+}
+@media (width <= 900px) {
+  .landing { gap: 1.2rem; }
+  .land-nav { display: none; }
+  .land-hero { min-height: 0; }
+  .land-hero .land-sprig { display: none; }
+  .land-stage .land-orb { width: 16rem; height: 16rem; }
+  .land-sheet { gap: 2rem; padding-block-start: 1.8rem; }
+  .land-proof { grid-template-columns: minmax(0, 1fr); }
+  .land-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (width <= 560px) {
+  .land-top.mat { padding-inline: 0.6rem; }
+  .land-top .logo-text small, .land-top .icon-btn.land-wide { display: none; }
+  .land-actions { gap: 0.25rem; }
+  .land-actions .btn { --h: 2rem; padding-inline: 0.7rem; font-size: var(--t-micro); }
+  .land-tabs { flex-wrap: wrap; justify-content: center; }
+  .land-chat .msgs { min-height: 32rem; padding-inline: 0.8rem; }
+  .land-info, .land-about { padding: 1.3rem; }
+  .land-finish.ov-finish { padding: 1.6rem 1.3rem; }
+  .land-steps { grid-template-columns: minmax(0, 1fr); }
+  .land-lookup .search-box { flex-basis: 100%; max-width: none; }
+}

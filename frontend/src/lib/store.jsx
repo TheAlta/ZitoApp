@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { ApiError, get, post } from "./api.js";
 import { clearCache } from "./cache.js";
 import { fa, normPhone } from "./format.js";
+import { clearIntent, readIntent } from "./intent.js";
 import { fromPath, toPath } from "./routes.js";
 
 export const PROFILE_KEYS = [
@@ -144,7 +145,10 @@ function useSessionState() {
       setOtp(null);
       clearCache();
       const { profile } = await loadLearner();
-      go({ name: profileComplete(profile) ? "home" : "onboarding" });
+      if (profileComplete(profile)) {
+        go(readIntent() ?? { name: "home" });
+        clearIntent();
+      } else go({ name: "onboarding" }); // the destination stays for the end of the profile
       return { ok: true };
     },
     [otp, loadLearner, go],
@@ -154,6 +158,7 @@ function useSessionState() {
     const admin = session.role === "admin";
     await post(admin ? "/api/admin/logout" : "/api/auth/logout").catch(() => {});
     clearCache();
+    clearIntent();
     setSession({ role: "guest" });
     go({ name: admin ? "admin-login" : "landing" });
   }, [session.role, go]);

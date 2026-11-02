@@ -1,5 +1,6 @@
 // Router: picks the page for the current URL, guards roles, wraps signed-in pages in the shell.
 import { useEffect } from "react";
+import { readIntent, rememberIntent } from "./lib/intent.js";
 import { profileComplete, useStore } from "./lib/store.jsx";
 import { Sky } from "./ui/art.jsx";
 import { Skel, Toasts } from "./ui/kit.jsx";
@@ -42,7 +43,10 @@ export function App() {
   const redirect = loading ? null : guard(route, session.role, profileComplete(profile));
 
   useEffect(() => {
-    if (redirect) go(redirect, { replace: true });
+    if (!redirect) return;
+    // A learner page that sign-in or the profile interrupted is where the visitor continues afterwards.
+    if (["landing", "onboarding"].includes(redirect.name) && !readIntent()) rememberIntent(route.name === "onboarding" ? { name: "home" } : route);
+    go(redirect, { replace: true });
   }, [redirect?.name]);
   useEffect(() => {
     document.title = `${TITLES[route.name] ?? "زیتو"} | زیتو`;

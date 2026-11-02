@@ -1,5 +1,6 @@
 """Contract for the single-page frontend: how it is served, built and wired to the API."""
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -107,6 +108,52 @@ class UiContractTests(unittest.TestCase):
         self.assertIn("display_name: displayName || null", store)
         # Landing ambient music survives the redesign and remembers mute per tab.
         self.assertIn("zito:landing-sound-muted", source("lib/ambient.js"))
+
+    def test_every_landing_entry_keeps_its_destination_through_sign_in_and_profile(self) -> None:
+        landing = source("pages/Landing.jsx")
+        store = source("lib/store.jsx")
+        app_shell = source("App.jsx")
+        onboarding = source("pages/Onboarding.jsx")
+        # The three ways in: dashboard, one course's intro, the course list.
+        self.assertIn('enter({ name: "home" })', landing)
+        self.assertIn('enter({ name: "course", slug: course.slug })', landing)
+        self.assertIn('enter({ name: "courses" })', landing)
+        self.assertIn("rememberIntent(route)", landing)
+        # Cancelling sign-in drops the destination; a successful sign-in leaves it to the store.
+        self.assertIn("clearIntent();\n    setAuthOpen(false);", landing)
+        self.assertNotIn("if (result.ok) onClose()", landing)
+        # A complete profile goes straight there; an incomplete one finishes first and keeps it.
+        self.assertIn('go(readIntent() ?? { name: "home" })', store)
+        self.assertIn('else go({ name: "onboarding" })', store)
+        self.assertIn("readIntent()", onboarding)
+        self.assertIn("clearIntent(), go(target)", onboarding)
+        # Pages reached by a direct link come back after sign-in, and signing out forgets them.
+        self.assertIn("rememberIntent(route.name", app_shell)
+        logout = store[store.index("const logout"):store.index("const adminLogin")]
+        self.assertIn("clearIntent()", logout)
+        # The profile stays required on every path, and the server enforces it too.
+        self.assertIn('route.name !== "onboarding"', app_shell)
+        self.assertIn('return go({ name: "onboarding" })', source("pages/Courses.jsx"))
+
+    def test_landing_samples_stay_off_the_ai_and_follow_published_courses(self) -> None:
+        landing = source("pages/Landing.jsx")
+        self.assertNotIn("/api/learning", landing)
+        self.assertNotRegex(landing, r"\bpost\(")
+        self.assertIn("published.some((c) => s.match.test(", landing)
+
+    def test_landing_motion_stays_optional_and_adds_no_dependency(self) -> None:
+        landing = source("pages/Landing.jsx")
+        styles = source("styles/landing.css")
+        # Reduced motion ends every animation at once, so the slides must not depend on one finishing.
+        self.assertIn("useState(() => !calm())", landing)
+        self.assertIn("setLoops(!calm() &&", landing)
+        self.assertIn("(width > 900px) and (prefers-reduced-motion: no-preference)", styles)
+        # The looping copy of the course row is never reached by keyboard or screen reader.
+        self.assertIn('aria-hidden="true" inert', landing)
+        # With no published topic the sample section is gone rather than showing another course's sample.
+        self.assertIn("{sample && <Samples", landing)
+        package = json.loads(Path("frontend/package.json").read_text(encoding="utf-8"))
+        self.assertEqual(sorted(package["dependencies"]), ["lucide-react", "react", "react-dom"])
 
     def test_cms_screens_cover_the_authoring_lifecycle(self) -> None:
         studio = source("pages/admin/Studio.jsx")

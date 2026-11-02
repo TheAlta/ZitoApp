@@ -27,7 +27,7 @@ const IMPACT = [
   ["همراهی زیتو در راه", "هرجا گیر کردی، زیتو کنار همان سرفصل برای فکر کردن و جلو رفتن همراهت است."],
 ];
 
-function SectionHead({ kicker, title, intro, id }) {
+export function SectionHead({ kicker, title, intro, id }) {
   return (
     <div className="ov-head">
       <div>

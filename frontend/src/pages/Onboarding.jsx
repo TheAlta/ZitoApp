@@ -1,5 +1,5 @@
 // Seven-question profile chat; every answer is saved immediately.
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Send } from "lucide-react";
 import { patch } from "../lib/api.js";
 import { fa } from "../lib/format.js";
@@ -7,23 +7,32 @@ import { clearIntent, readIntent } from "../lib/intent.js";
 import { useOverview } from "../lib/learner.js";
 import { PROFILE_KEYS, answered, useStore } from "../lib/store.jsx";
 import { CoachAvatar } from "../ui/art.jsx";
-import { Bar, Form } from "../ui/kit.jsx";
+import { Bar, Form, Panel } from "../ui/kit.jsx";
 
 export const PROFILE_QUESTIONS = {
-  work_or_study_field: { q: "حوزه‌ی کاری یا رشته‌ی تحصیلی‌ات چیست؟", suggest: ["کارشناس فروش", "پشتیبانی مشتری", "حسابداری", "دانشجو"] },
-  education_level: { q: "سطح تحصیلاتت؟", suggest: ["دیپلم", "کاردانی", "کارشناسی", "کارشناسی ارشد و بالاتر"] },
-  learning_goal_interests: { q: "از یادگیری در زیتو چه هدفی داری؟ به چه چیزهایی علاقه داری؟" },
-  ai_familiarity_level: { q: "چقدر با هوش مصنوعی آشنایی داری؟", suggest: ["آشنایی ندارم", "کمی کار کرده‌ام", "زیاد استفاده می‌کنم"] },
+  work_or_study_field: {
+    q: "حوزه‌ی کاری یا رشته‌ی تحصیلی‌ات چیست؟",
+    label: "کار یا رشته",
+    suggest: ["کارشناس فروش", "پشتیبانی مشتری", "حسابداری", "دانشجو"],
+  },
+  education_level: { q: "سطح تحصیلاتت؟", label: "تحصیلات", suggest: ["دیپلم", "کاردانی", "کارشناسی", "کارشناسی ارشد و بالاتر"] },
+  learning_goal_interests: { q: "از یادگیری در زیتو چه هدفی داری؟ به چه چیزهایی علاقه داری؟", label: "هدف و علاقه" },
+  ai_familiarity_level: {
+    q: "چقدر با هوش مصنوعی آشنایی داری؟",
+    label: "آشنایی با هوش مصنوعی",
+    suggest: ["آشنایی ندارم", "کمی کار کرده‌ام", "زیاد استفاده می‌کنم"],
+  },
   daily_learning_time_text: {
     q: "روزی چقدر وقت برای یادگیری داری؟",
+    label: "وقت روزانه",
     choices: [
       ["کمتر از یک ساعت", 30],
       ["یک ساعت", 60],
       ["بیشتر", 90],
     ],
   },
-  preferred_career_path: { q: "دوست داری در آینده در چه مسیر شغلی‌ای باشی؟", suggest: ["سرپرست تیم", "کارشناس ارشد", "کسب‌وکار شخصی"] },
-  referral_source: { q: "از کجا با زیتو آشنا شدی؟", suggest: ["اینستاگرام", "معرفی دوستان", "جست‌وجو در اینترنت", "محل کار"] },
+  preferred_career_path: { q: "دوست داری در آینده در چه مسیر شغلی‌ای باشی؟", label: "مسیر شغلی", suggest: ["سرپرست تیم", "کارشناس ارشد", "کسب‌وکار شخصی"] },
+  referral_source: { q: "از کجا با زیتو آشنا شدی؟", label: "آشنایی با زیتو", suggest: ["اینستاگرام", "معرفی دوستان", "جست‌وجو در اینترنت", "محل کار"] },
 };
 
 // The last message and its button follow where the learner was heading: [message, button label].
@@ -78,91 +87,108 @@ export function Onboarding() {
   };
 
   return (
-    <div className="onb">
-      <div className="onb-head">
-        <CoachAvatar size="3.4rem" />
-        <div style={{ flex: 1 }}>
-          <h1>سلام {firstName}، من زیتو هستم</h1>
-          <p className="soft" style={{ fontSize: "var(--t-small)" }}>
-            هفت سؤال کوتاه می‌پرسم تا مثال‌ها و جواب‌هایم مخصوص کار خودت باشد. هر جواب همان لحظه ذخیره می‌شود.
-          </p>
+    <div className="onb-page">
+      <div className="onb">
+        <div className="onb-head">
+          <CoachAvatar size="3.4rem" />
+          <div style={{ flex: 1 }}>
+            <h1>سلام {firstName}، من زیتو هستم</h1>
+            <p className="soft" style={{ fontSize: "var(--t-small)" }}>
+              هفت سؤال کوتاه می‌پرسم تا مثال‌ها و جواب‌هایم مخصوص کار خودت باشد. هر جواب همان لحظه ذخیره می‌شود.
+            </p>
+          </div>
         </div>
-      </div>
-      <div className="row" style={{ fontSize: "var(--t-micro)" }}>
-        <span className="muted">{fa(done ? 7 : index)} از ۷ سؤال</span>
-        <div style={{ flex: 1 }}>
-          <Bar value={((done ? 7 : index) / 7) * 100} label="پیشرفت پروفایل" />
+        <div className="row" style={{ fontSize: "var(--t-micro)" }}>
+          <span className="muted">{fa(done ? 7 : index)} از ۷ سؤال</span>
+          <div style={{ flex: 1 }}>
+            <Bar value={((done ? 7 : index) / 7) * 100} label="پیشرفت پروفایل" />
+          </div>
         </div>
-      </div>
-      <div className="mat mat-panel" style={{ padding: "1.1rem" }}>
-        <div className="msgs" style={{ padding: 0 }} aria-live="polite">
-          {PROFILE_KEYS.slice(0, done ? 7 : index + 1).map((k) => (
-            <div key={k} style={{ display: "grid", gap: "0.7rem" }}>
+        <div className="mat mat-panel" style={{ padding: "1.1rem" }}>
+          <div className="msgs" style={{ padding: 0 }} aria-live="polite">
+            {PROFILE_KEYS.slice(0, done ? 7 : index + 1).map((k) => (
+              <div key={k} style={{ display: "grid", gap: "0.7rem" }}>
+                <div className="msg msg-coach">
+                  <CoachAvatar size="2.2rem" />
+                  <div className="bubble mat mat-raised">{PROFILE_QUESTIONS[k].q}</div>
+                </div>
+                {answered(profile, k) && (
+                  <div className="msg msg-user">
+                    <div className="bubble">{shown(profile, k)}</div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {done && (
               <div className="msg msg-coach">
                 <CoachAvatar size="2.2rem" />
-                <div className="bubble mat mat-raised">{PROFILE_QUESTIONS[k].q}</div>
-              </div>
-              {answered(profile, k) && (
-                <div className="msg msg-user">
-                  <div className="bubble">{shown(profile, k)}</div>
+                <div className="bubble mat mat-raised">
+                  عالی شد {firstName}! پروفایلت کامل است. {finishText}
+                  <button className="btn btn-primary" style={{ justifySelf: "start" }} onClick={() => (clearIntent(), go(target))}>
+                    {finishLabel} <ArrowLeft />
+                  </button>
                 </div>
-              )}
-            </div>
-          ))}
-          {done && (
-            <div className="msg msg-coach">
-              <CoachAvatar size="2.2rem" />
-              <div className="bubble mat mat-raised">
-                عالی شد {firstName}! پروفایلت کامل است. {finishText}
-                <button className="btn btn-primary" style={{ justifySelf: "start" }} onClick={() => (clearIntent(), go(target))}>
-                  {finishLabel} <ArrowLeft />
-                </button>
               </div>
-            </div>
-          )}
-          <div ref={end} />
+            )}
+            <div ref={end} />
+          </div>
         </div>
+        {question && (
+          <div className="stack">
+            {question.choices ? (
+              <div className="choice-row" role="radiogroup" aria-label={question.q}>
+                {question.choices.map(([label, minutes]) => (
+                  <button key={label} className="btn btn-soft" role="radio" aria-checked={false} disabled={busy} onClick={() => answer(label, minutes)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
+                {question.suggest && (
+                  <div className="choice-row">
+                    {question.suggest.map((label) => (
+                      <button key={label} className="chip" disabled={busy} onClick={() => answer(label)}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <Form className="composer mat mat-panel" style={{ margin: 0 }} onSubmit={() => answer(draft)}>
+                  <textarea
+                    rows={1}
+                    value={draft}
+                    maxLength={500}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="جوابت را بنویس…"
+                    aria-label={question.q}
+                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), answer(draft))}
+                    autoFocus
+                  />
+                  <button className="send" type="submit" disabled={!draft.trim() || busy} aria-label="ثبت جواب">
+                    <Send />
+                  </button>
+                </Form>
+              </>
+            )}
+          </div>
+        )}
       </div>
-      {question && (
-        <div className="stack">
-          {question.choices ? (
-            <div className="choice-row" role="radiogroup" aria-label={question.q}>
-              {question.choices.map(([label, minutes]) => (
-                <button key={label} className="btn btn-soft" role="radio" aria-checked={false} disabled={busy} onClick={() => answer(label, minutes)}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <>
-              {question.suggest && (
-                <div className="choice-row">
-                  {question.suggest.map((label) => (
-                    <button key={label} className="chip" disabled={busy} onClick={() => answer(label)}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <Form className="composer mat mat-panel" style={{ margin: 0 }} onSubmit={() => answer(draft)}>
-                <textarea
-                  rows={1}
-                  value={draft}
-                  maxLength={500}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="جوابت را بنویس…"
-                  aria-label={question.q}
-                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), answer(draft))}
-                  autoFocus
-                />
-                <button className="send" type="submit" disabled={!draft.trim() || busy} aria-label="ثبت جواب">
-                  <Send />
-                </button>
-              </Form>
-            </>
-          )}
-        </div>
-      )}
+      <aside className="onb-side">
+        <Panel title="پروفایلی که می‌سازی">
+          <dl className="kv">
+            {PROFILE_KEYS.map((k) => (
+              <Fragment key={k}>
+                <dt aria-current={k === key ? "step" : undefined}>{PROFILE_QUESTIONS[k].label}</dt>
+                {answered(profile, k) ? <dd>{shown(profile, k)}</dd> : <dd className="pending">—</dd>}
+              </Fragment>
+            ))}
+          </dl>
+        </Panel>
+        <Panel title="چرا این سؤال‌ها؟">
+          <p>کوچ و مثال شخصی هر درس از همین جواب‌ها استفاده می‌کنند. شماره‌ی موبایلت و این‌که از کجا با زیتو آشنا شدی به هوش مصنوعی فرستاده نمی‌شود.</p>
+        </Panel>
+      </aside>
     </div>
   );
 }

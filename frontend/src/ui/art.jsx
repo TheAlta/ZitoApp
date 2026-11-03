@@ -299,6 +299,94 @@ export function HeroScene() {
   );
 }
 
+// Pseudo-random but fixed, so the stars stay put between renders.
+const STARS = Array.from({ length: 42 }, (_, i) => {
+  const r = (n) => {
+    const v = Math.sin(i * 12.9898 + n * 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  return [Math.round(r(1) * 1600), Math.round(20 + r(2) * 300), (0.6 + r(3) * 1.6).toFixed(2), (0.25 + r(4) * 0.6).toFixed(2)];
+});
+
+// One layer of the dusk scene; every layer shares the frame, so stacked they line up as one picture.
+function DuskLayer({ className, children }) {
+  return (
+    <svg className={className} viewBox="0 0 1600 700" preserveAspectRatio="xMidYMax slice">
+      {children}
+    </svg>
+  );
+}
+
+// The landing banner: dusk over layered ridges, a winding path up to a lit peak.
+// Each ridge is its own drawing, so the page can slide it on scroll without the blurred sky being drawn again.
+export function DuskScene({ className }) {
+  return (
+    <div className={className} aria-hidden="true">
+      <DuskLayer className="dusk-sky">
+        <defs>
+          <linearGradient id="ds-sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#2c2549" />
+            <stop offset="0.38" stopColor="#4a3a86" />
+            <stop offset="0.66" stopColor="#7a5fc2" />
+            <stop offset="0.84" stopColor="#c597d4" />
+            <stop offset="1" stopColor="#f1c7cf" />
+          </linearGradient>
+          <radialGradient id="ds-sun" cx="0.24" cy="0.66" r="0.34">
+            <stop offset="0" stopColor="#fff1e6" stopOpacity="0.95" />
+            <stop offset="0.35" stopColor="#fbdcc9" stopOpacity="0.55" />
+            <stop offset="1" stopColor="#fbdcc9" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="ds-far" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#8a6fc9" />
+            <stop offset="1" stopColor="#6a55a8" />
+          </linearGradient>
+          <linearGradient id="ds-mid" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#5b4799" />
+            <stop offset="1" stopColor="#43357c" />
+          </linearGradient>
+          <filter id="ds-blur" x="-20%" y="-60%" width="140%" height="220%">
+            <feGaussianBlur stdDeviation="14" />
+          </filter>
+        </defs>
+        <rect width="1600" height="700" fill="url(#ds-sky)" />
+        <g className="dusk-stars">
+          {STARS.map(([x, y, r, o], i) => (
+            <circle key={i} cx={x} cy={y} r={r} fill="#fffaff" opacity={o} />
+          ))}
+        </g>
+        <rect width="1600" height="700" fill="url(#ds-sun)" />
+        <g className="dusk-clouds" filter="url(#ds-blur)" opacity="0.5">
+          <ellipse cx="260" cy="300" rx="220" ry="26" fill="#f6dbe8" />
+          <ellipse cx="900" cy="250" rx="300" ry="22" fill="#d9c4f0" />
+          <ellipse cx="1350" cy="340" rx="240" ry="24" fill="#e9cfe9" />
+        </g>
+      </DuskLayer>
+      <DuskLayer className="dusk-far">
+        <path
+          d="M0 520 L120 470 L230 495 L380 352 L470 420 L560 396 L700 470 L820 438 L960 488 L1100 450 L1250 498 L1400 458 L1600 500 L1600 700 L0 700 Z"
+          fill="url(#ds-far)"
+          opacity="0.75"
+        />
+      </DuskLayer>
+      <DuskLayer className="dusk-mid">
+        <path
+          d="M0 584 C80 562 150 524 230 532 C300 540 336 470 410 432 C470 402 522 470 600 502 C700 542 820 522 920 546 C1060 580 1200 540 1340 560 C1450 575 1530 560 1600 570 L1600 700 L0 700 Z"
+          fill="url(#ds-mid)"
+        />
+        <path d="M780 700 C716 664 640 652 604 622 C566 590 626 562 566 536 C516 516 476 500 444 470" fill="none" stroke="#f8dce6" strokeWidth="3" strokeDasharray="2 11" strokeLinecap="round" opacity="0.75" />
+        <circle cx="414" cy="436" r="22" fill="#fff1e6" opacity="0.35" filter="url(#ds-blur)" />
+        <circle cx="414" cy="436" r="5" fill="#fff1e6" />
+      </DuskLayer>
+      <DuskLayer className="dusk-near">
+        <path
+          d="M0 640 C120 612 240 600 360 616 C480 632 560 602 680 610 C820 622 960 652 1120 642 C1280 632 1440 652 1600 640 L1600 700 L0 700 Z"
+          fill="#2f2560"
+        />
+      </DuskLayer>
+    </div>
+  );
+}
+
 export function HeroArt() {
   return (
     <svg

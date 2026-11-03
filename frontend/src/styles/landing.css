@@ -1,65 +1,84 @@
-/* Landing page (pages/Landing.jsx): a centered page whose sections slide up over a pinned hero. */
+/* Landing page (pages/Landing.jsx): full-width bands one after another, each with its content in one centred column. */
 
-/* Flex, not the design's grid: a sticky bar only travels inside its own grid row. */
+/* Read by the block that carries it and nothing inside, so a change restyles that block alone rather than everything in it. */
+@property --rise { syntax: "<number>"; inherits: false; initial-value: 1; }
+
 .landing {
-  --land-gutter: clamp(1rem, 4vw, 3rem); /* the side padding .landing has in zito-ui.css */
-  --land-bar: 4.6rem; /* the sticky top bar and the space around it */
+  --land-gutter: clamp(1rem, 5vw, 4rem);
+  --land-bar: 4.4rem; /* the floating top bar and the space above it */
+  --land-max: 84rem; /* the content column; the bands' colour still runs edge to edge */
+  --land-line: #1d16361a;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding-block-end: 0;
+  gap: 0;
+  padding: 0;
 }
-.land-section { width: 100%; min-width: 0; max-width: 72rem; margin-inline: auto; scroll-margin-top: 5.6rem; }
-.landing .ov-head { flex-direction: column; align-items: center; text-align: center; }
-.landing .ov-head h2 { font-size: var(--t-display); }
-.landing .ov-head p { max-width: 32rem; }
-.landing .ov-points { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem 1.2rem; }
+.land-wrap { width: 100%; min-width: 0; max-width: calc(var(--land-max) + var(--land-gutter) * 2); margin-inline: auto; padding-inline: var(--land-gutter); }
+.land-band { padding-block: clamp(3.5rem, 7vw, 6rem); scroll-margin-top: var(--land-bar); background: var(--sky-0); }
+.land-samples, .land-about { background: var(--sky-2); }
 
-/* Top bar and section tabs: same glass as the lesson's sticky .stage-foot */
-.land-top.mat, .land-spy {
-  background: linear-gradient(175deg, #fffdfcf0, #fcf6fae6);
-  backdrop-filter: blur(22px) saturate(130%);
-}
+/* Section heads: a pill over a large heading, centred unless the row puts an action beside it */
+.landing .ov-head { flex-direction: column; align-items: center; gap: 0.8rem; margin: 0; text-align: center; }
+.landing .ov-head > div { display: grid; justify-items: center; gap: 0.7rem; }
+.landing .ov-kicker { padding: 0.25rem 0.85rem; border-radius: var(--r-pill); background: var(--accent-soft); font-size: var(--t-small); }
+.landing .ov-kicker::before { width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--accent); }
+.landing .ov-head h2, .land-copy h2 { max-width: 44rem; font-size: clamp(1.6rem, 2.6vw, 2.45rem); font-weight: 700; line-height: 1.5; letter-spacing: -0.01em; color: var(--ink); }
+.landing .ov-head p { max-width: 40rem; font-size: 0.98rem; line-height: 1.95; color: var(--ink-2); }
+
+/* Copy beside a demo; the bands alternate which side the demo takes */
+.land-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: center; gap: clamp(2rem, 5vw, 5rem); }
+.land-copy { display: grid; justify-items: start; align-content: center; gap: 1.1rem; max-width: 36rem; }
+.land-copy h3 { font-size: clamp(1.25rem, 1.8vw, 1.65rem); font-weight: 700; line-height: 1.6; text-wrap: balance; color: var(--ink); }
+.land-copy p { font-size: 0.98rem; line-height: 2; color: var(--ink-2); }
+.land-checks { display: grid; gap: 0.85rem; margin: 0.3rem 0 0; padding: 0; list-style: none; }
+.land-checks li { display: flex; align-items: center; gap: 0.8rem; font-size: var(--t-body); font-weight: 500; line-height: 1.8; color: var(--ink); }
+.land-checks svg { flex: none; box-sizing: content-box; width: 0.95rem; height: 0.95rem; padding: 0.45rem; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); }
+
+/* Top bar: floats over the banner and stays while the page scrolls */
 .land-top.mat {
-  position: sticky;
+  position: fixed;
   top: 0.75rem;
-  z-index: 20;
-  width: 100%;
-  max-width: 72rem;
+  inset-inline: var(--land-gutter);
+  z-index: 30;
+  max-width: var(--land-max);
   margin-inline: auto;
   padding: 0.5rem 0.9rem;
   border-radius: var(--r-xl);
+  background: linear-gradient(175deg, #fffdfcf2, #fcf8fbeb);
+  backdrop-filter: blur(22px) saturate(130%);
+  box-shadow: 0 0.8rem 2rem -1.2rem #1d163666, 0 0 0 1px #ffffffb3 inset;
 }
 .land-nav { display: flex; align-items: center; gap: 0.25rem; }
 .land-actions { display: flex; align-items: center; gap: 0.5rem; margin-inline-start: auto; }
 
-/* Hero */
-.land-hero {
+/* First screen: the banner takes what the strip leaves, about three quarters */
+.land-hero { position: relative; display: flex; flex-direction: column; align-items: stretch; flex: none; gap: 0; width: 100%; max-width: none; min-height: 100svh; margin: 0; }
+.land-banner {
   position: relative;
-  flex: none;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
-  align-content: center;
-  gap: 1.1rem;
-  min-height: calc(100svh - 9rem);
-  text-align: center;
+  isolation: isolate;
+  flex: 1;
+  display: grid;
+  align-items: center;
+  min-height: 24rem;
+  padding-block: calc(var(--land-bar) + 1.2rem) clamp(1.6rem, 5vh, 3.6rem);
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--ink), var(--accent-ink)); /* under the art */
 }
-.land-hero h1 { text-wrap: balance; }
-.land-hero p.lead { max-width: 38rem; margin-block: 0; }
-.land-hero .land-sprig { position: absolute; inset-block-end: -2rem; inset-inline-end: -1.2rem; }
-.land-hero-copy { position: relative; z-index: 2; display: grid; justify-items: center; gap: 0.75rem; max-width: 46rem; } /* above the mascot's glow */
-.land-hero-core { position: relative; width: min(100%, 40rem); }
-.land-hero-cta { justify-content: center; }
-.land-hero .land-ask { position: relative; z-index: 1; width: 100%; min-height: 4.6rem; margin: 0; padding-inline-start: 2.8rem; font-size: var(--t-body); color: var(--ink-2); }
+.land-dusk, .land-dusk > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.land-dusk { z-index: -2; }
+/* Keeps the copy readable over the lighter part of the sky */
+.land-banner::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to left, #1d1636d9, #1d163680 45%, #1d163600 72%); }
+.land-banner-sprig { position: absolute; inset-block-end: -1.4rem; inset-inline-end: 2rem; z-index: -1; width: 4rem; height: 11rem; opacity: 0.9; pointer-events: none; }
+.land-hero-copy { position: relative; display: grid; justify-items: start; gap: 1rem; width: min(100%, 42rem); text-align: start; }
+.land-hero h1 { max-width: none; font-weight: 700; color: var(--on-accent); text-wrap: balance; }
+.land-hero h1 em { background-image: linear-gradient(90deg, #ffb6c8, #ffc9a3 55%, #cdb8ff); }
+.land-hero p.lead { max-width: 36rem; margin-block: 0; font-size: 1.02rem; line-height: 2; color: var(--on-accent); opacity: 0.9; }
+.land-hero .land-ask { width: 100%; min-height: 4rem; margin: 0; font-size: var(--t-body); color: var(--ink-2); box-shadow: 0 1.4rem 3rem -1.6rem #000c, 0 0 0 1px #ffffffcc inset; }
+.land-banner .seg { background: #ffffff1f; box-shadow: inset 0 0 0 1px #ffffff3d; }
+.land-banner .seg button { color: var(--on-accent); }
+.land-banner .seg button[aria-selected="true"] { color: var(--accent-ink); }
 
-/* The mascot stands beside the question box, one hand over its edge. */
-.land-stage { position: absolute; inset-block-end: -5.5rem; inset-inline-start: -12.5rem; width: 16rem; min-height: 0; }
-.land-stage .land-orb { width: 20rem; height: 20rem; }
-.land-stage-depth { position: relative; z-index: 2; display: grid; justify-items: center; }
-.land-stage .land-mascot { margin-top: 0; }
-.land-stage .speech { width: 15rem; inset-block: auto calc(100% - 0.4rem); inset-inline-end: 0; }
-
-/* Topic tabs; in the hero the open one fills a bar, then the slide turns */
+/* Topic tabs; in the banner the open one fills a bar, then the slide turns */
 .land-tabs button { position: relative; }
 .land-tab-bar {
   position: absolute;
@@ -74,81 +93,134 @@
 .land-tabs:hover .land-tab-bar, .land-tabs[data-paused] .land-tab-bar { animation-play-state: paused; }
 @keyframes land-tab-fill { from { transform: scaleX(0); } }
 
-/* The sheet that rises over the hero; its colour turns with the page through the sky tokens */
-.land-sheet {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3rem;
-  margin-inline: calc(var(--land-gutter) * -1);
-  padding: 2.5rem var(--land-gutter) 3rem;
-  border-start-start-radius: var(--r-2xl);
-  border-start-end-radius: var(--r-2xl);
-  background: linear-gradient(180deg, var(--sky-0), var(--sky-1) 30%, var(--sky-2) 65%, var(--sky-3));
-  box-shadow: var(--shadow-frame);
+/* The strip: category tiles, and Zito in the bottom-left corner */
+.land-strip { padding-block: 1rem 0; background: var(--sky-2); }
+.land-strip-in { display: grid; grid-template-columns: minmax(0, 1fr) minmax(17rem, 26rem); align-items: center; gap: 2rem; }
+.land-cats { display: flex; align-items: center; gap: 0.3rem; min-width: 0; padding-block-end: 1rem; overflow-x: auto; scrollbar-width: none; }
+.land-cats::-webkit-scrollbar { display: none; }
+.land-cat {
+  flex: 1 0 5.4rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 0.4rem;
+  border-radius: var(--r-lg);
+  font-size: var(--t-small);
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  transition: background 0.2s;
 }
+.land-cat .tile { transition: transform 0.25s var(--ease); }
+.land-cat:hover { background: #ffffffb3; }
+.land-cat:hover .tile { transform: translateY(-3px); }
+.land-cats-all { flex: none; white-space: nowrap; }
+.land-meet { display: flex; align-items: flex-end; align-self: end; gap: 0.5rem; }
+.land-meet-copy { flex: 1; display: grid; justify-items: start; gap: 0.55rem; min-width: 0; padding-block-end: 1rem; }
+.land-bubble { width: 100%; padding: 0.7rem 0.95rem; border-radius: var(--r-lg) var(--r-lg) var(--r-lg) 0.3rem; background: #fff; box-shadow: 0 0.8rem 1.6rem -1.2rem #5631c966; }
+.land-bubble p { min-height: 5.6em; font-size: var(--t-small); line-height: 1.9; color: var(--ink); }
+.land-meet .land-mascot { flex: none; margin-block-end: 1.3rem; }
+
+/* What rises over the first screen */
+.land-sheet { position: relative; z-index: 1; display: flex; flex-direction: column; background: var(--sky-0); box-shadow: 0 -1.4rem 3rem -2rem #1d163673; }
+
+/* Courses, with what every course has under them */
+.land-row-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-block-end: 2rem; }
+.landing .land-row-head .ov-head { align-items: flex-start; text-align: start; }
+.landing .land-row-head .ov-head > div { justify-items: start; }
+.land-row-head .link-btn { font-size: var(--t-small); font-weight: 600; color: var(--accent-ink); white-space: nowrap; }
+.land-perks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 2.5rem 0 0; padding: 1.6rem 0 0; list-style: none; border-top: 1px solid var(--land-line); }
+.land-perks li + li { border-inline-start: 1px solid var(--land-line); }
+.land-perks button { display: flex; align-items: center; gap: 0.9rem; width: 100%; padding: 0.4rem 1.6rem; text-align: start; }
+.land-perks li:first-child button { padding-inline-start: 0; }
+.land-perks b { display: block; font-size: 0.95rem; font-weight: 700; color: var(--ink); transition: color 0.2s; }
+.land-perks small { font-size: var(--t-small); color: var(--ink-2); }
+.land-perks button:hover b { color: var(--accent-ink); }
 
 /* Sample chat */
-.land-samples { display: flex; flex-direction: column; align-items: center; gap: 1.1rem; }
-.land-sample { display: grid; justify-items: center; gap: 1.4rem; width: 100%; max-width: 46rem; }
-.land-sample .ov-cert-copy { justify-items: center; text-align: center; }
-.land-sample .ov-cert-copy h3 { font-size: var(--t-h2); line-height: 1.7; text-wrap: balance; }
-.land-chat.coach { width: 100%; height: auto; min-height: 0; }
-.land-chat .msgs { min-height: 24rem; overflow: visible; }
+.land-samples .land-wrap { display: grid; justify-items: center; gap: 1.4rem; }
+.land-samples .land-split { width: 100%; margin-top: 1.4rem; }
+.land-chat.coach { width: 100%; height: auto; min-height: 0; box-shadow: 0 2rem 4rem -2.6rem #3b257d66, 0 0 0 1px #ffffffcc inset; }
+.land-chat .msgs { min-height: 22rem; overflow: visible; }
 .land-ask { justify-content: space-between; align-items: center; width: calc(100% - 2rem); font-size: var(--t-small); color: var(--ink-3); text-align: start; }
 .land-ask span:first-child { padding-block: 0.45rem; }
 
-/* Info sections */
-.land-infos { display: flex; flex-direction: column; align-items: center; gap: 1.6rem; }
-.land-spy { position: sticky; top: var(--land-bar); z-index: 5; }
-.land-info, .land-about { display: grid; justify-items: center; gap: 1.2rem; width: 100%; max-width: 56rem; padding: 2rem; text-align: center; }
-.land-info { scroll-margin-top: 8.6rem; }
-.land-about { margin-inline: auto; scroll-margin-top: 5.6rem; }
-.land-info .ov-cert-copy, .land-about .ov-finish-copy { justify-items: center; }
-.land-info h2, .land-about h2 { font-size: var(--t-display); }
-.land-about-art { display: grid; place-items: center; }
-.land-info-art { width: 100%; min-width: 0; text-align: start; }
-.land-proof { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 0.85rem; }
-.land-example { display: grid; justify-items: center; gap: 0.6rem; max-width: 36rem; margin-inline: auto; padding: 1.1rem 1.2rem; text-align: center; }
-.land-example .choice-row { justify-content: center; }
-.land-example p { font-size: var(--t-small); color: var(--ink-2); line-height: 1.95; }
-.land-path { display: grid; justify-items: center; gap: 0.85rem; }
+/* Features: underlined tabs over the copy and its demo */
+.land-ftabs { display: flex; justify-content: space-between; margin-top: 2.6rem; border-bottom: 1px solid var(--land-line); overflow-x: auto; scrollbar-width: none; }
+.land-ftabs::-webkit-scrollbar { display: none; }
+.land-ftabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: -1px;
+  padding: 1rem 1.8rem;
+  border-bottom: 2px solid transparent;
+  font-size: 1.02rem;
+  font-weight: 500;
+  color: var(--ink-3);
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.land-ftabs button svg { width: 1.2rem; height: 1.2rem; }
+.land-ftabs button:hover { color: var(--ink-2); }
+.land-ftabs button[aria-selected="true"] { font-weight: 700; color: var(--ink); border-bottom-color: var(--accent-ink); }
+.land-fpanel { margin-top: 3rem; }
+.land-demo { display: grid; align-content: center; min-width: 0; min-height: 24rem; padding: clamp(1.3rem, 3vw, 2.8rem); border-radius: var(--r-2xl); background: var(--sky-3); }
+.land-proof { display: grid; gap: 0.85rem; }
+.land-example { display: grid; justify-items: start; gap: 0.9rem; }
+.land-example .bubble { display: grid; gap: 0.4rem; width: 100%; padding: 1rem 1.1rem; border-radius: var(--r-lg); }
+.land-example h3 { font-size: var(--t-h2); font-weight: 700; }
+.land-example p { font-size: var(--t-small); line-height: 1.95; color: var(--ink-2); }
+.land-path { display: grid; justify-items: center; gap: 1.1rem; }
 .land-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; width: 100%; margin: 0; padding: 0; list-style: none; }
-.land-steps li { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.7rem; font-size: var(--t-micro); }
+.land-steps li { display: flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.6rem; border-radius: var(--r-md); background: #ffffffc7; font-size: var(--t-micro); color: var(--ink); }
 .land-path .ov-cert-card { width: min(100%, 24rem); min-height: 9rem; padding: 1.1rem; }
 .land-path .ov-cert-card strong { font-size: var(--t-h2); }
 
-/* Course gallery: as wide as the page, with no scrollbar of its own */
-.land-courses { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.2rem; min-width: 0; scroll-margin-top: 5.6rem; }
-.land-courses-head { display: grid; justify-items: center; gap: 0.9rem; }
-.land-gallery { margin-inline: calc(var(--land-gutter) * -1); padding-block: 0.5rem 1.1rem; overflow-x: auto; scrollbar-width: none; }
-.land-gallery::-webkit-scrollbar { display: none; }
-.land-reel { display: flex; width: max-content; margin-inline: auto; }
-.land-reel-set { display: flex; gap: 0.9rem; padding-inline: 0.45rem; }
-.land-reel .course-card { flex: 0 0 min(19rem, 78vw); align-content: start; }
+/* About: the mascot beside the copy */
+.land-about .land-split { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr); }
+.land-about-art { display: grid; place-items: center; }
 
-/* Closing */
-.land-finish.ov-finish { grid-template-columns: minmax(0, 1fr); justify-items: center; padding: 2.4rem 2rem; text-align: center; }
-.land-finish .ov-finish-copy { justify-items: center; }
-.land-finish .ov-finish-copy h2 { font-size: clamp(2rem, 3.6vw, 3.1rem); font-weight: 600; line-height: 1.35; letter-spacing: -0.015em; } /* the hero title's bundle */
-.land-lookup { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem 0.85rem; width: 100%; margin-top: 0.5rem; font-size: var(--t-small); color: var(--ink-2); }
+/* Closing: the banner's colours again, everything centred */
+.land-finish { background: linear-gradient(160deg, var(--ink), var(--accent-ink)); color: var(--on-accent); }
+.land-finish-in { display: grid; justify-items: center; gap: 1rem; text-align: center; }
+.land-finish .ov-finish-art { height: 11rem; }
+.land-finish .ov-portal { background: linear-gradient(180deg, #ffffff2e, #ffffff0a); box-shadow: inset 0 0 0 0.5rem #ffffff14, inset 0 0 0 calc(0.5rem + 1px) #ffffff33; }
+.land-finish .ov-kicker { background: #ffffff1f; color: var(--on-accent); }
+.land-finish .ov-kicker::before { background: #cdb8ff; }
+.land-finish h2 { font-size: clamp(2rem, 3.6vw, 3.1rem); font-weight: 700; line-height: 1.35; letter-spacing: -0.015em; color: var(--on-accent); } /* the hero title's bundle */
+.land-finish p { max-width: 34rem; font-size: 0.98rem; line-height: 2; color: var(--on-accent); opacity: 0.86; }
+.land-finish .btn-primary { margin-top: 0.4rem; background: #fff; color: var(--accent-ink); box-shadow: 0 1rem 2rem -1.2rem #000a; }
+.land-finish .btn-primary:not(:disabled):hover { background: var(--accent-soft); box-shadow: 0 1rem 2rem -1.2rem #000c; }
+.land-lookup { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem 0.85rem; width: 100%; margin-top: 0.8rem; font-size: var(--t-small); }
 .land-lookup .search-box { flex: 1 1 15rem; min-width: 0; max-width: 24rem; }
+.land-finish .land-lookup > span { color: var(--on-accent); opacity: 0.86; }
+
+/* Footer */
+.land-foot { padding-block: 1.6rem; background: #140f27; }
+.land-foot-in { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+.land-foot .logo-text b { color: var(--on-accent); }
+.land-foot .logo-text small { color: #ffffff99; }
+.land-foot nav { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; }
+.land-foot .link-btn { font-size: var(--t-small); color: #ffffffb3; }
+.land-foot .link-btn:hover { color: #fff; }
 
 /* Scroll depth: --covered and --rise come from useScrollDepth, and without them everything stands in place. */
 @media (width > 900px) and (prefers-reduced-motion: no-preference) {
   .land-hero {
     position: sticky;
-    top: min(var(--land-bar), calc(100svh - var(--land-hero-h, 0px) - 1rem)); /* a tall hero scrolls to its end before it pins */
+    top: min(0px, calc(100svh - var(--land-hero-h, 0px))); /* a tall hero scrolls to its end before it pins */
     z-index: 0;
   }
   .land-hero-gone { visibility: hidden; }
+  /* Everything that moves here keeps its own layer, so a scroll frame slides pictures instead of redrawing the banner. */
+  .land-hero-copy, .land-strip-in, .land-dusk .dusk-far, .land-dusk .dusk-mid, .land-dusk .dusk-near { will-change: transform, opacity; }
   .land-hero-copy { transform: translateY(calc(var(--covered, 0) * -4rem)); opacity: calc(1 - var(--covered, 0) * 1.4); }
-  .land-hero-core, .land-hero .land-tabs, .land-hero-cta { transform: translateY(calc(var(--covered, 0) * -2rem)); opacity: calc(1 - var(--covered, 0) * 1.6); }
-  .land-stage-depth {
-    transform: translate3d(0, calc(var(--covered, 0) * 5rem), 0) scale(calc(1 + var(--covered, 0) * 0.1));
-    filter: blur(calc(var(--covered, 0) * 6px));
-  }
+  .land-strip-in { transform: translateY(calc(var(--covered, 0) * -2rem)); opacity: calc(1 - var(--covered, 0) * 1.6); }
+  /* The ridges sink at different speeds, nearest fastest; a percentage of the banner's height scales with the art. */
+  .land-dusk .dusk-far { transform: translateY(calc(var(--covered, 0) * 6.5%)); }
+  .land-dusk .dusk-mid { transform: translateY(calc(var(--covered, 0) * 13%)); }
+  .land-dusk .dusk-near { transform: translateY(calc(var(--covered, 0) * 20%)); }
   [data-depth] {
     transform: perspective(70rem) rotateX(calc((1 - var(--rise, 1)) * 8deg)) translateY(calc((1 - var(--rise, 1)) * 2.5rem)) scale(calc(0.96 + var(--rise, 1) * 0.04));
     transform-origin: 50% 100%;
@@ -156,35 +228,70 @@
   }
 }
 
+/* Where the browser can tie an animation to the scroll itself, the same motion runs off the main thread and keeps pace with
+   the scroll exactly; useScrollDepth then stops writing --covered and --rise. The keyframes repeat the formulas above. */
+@supports (animation-timeline: scroll()) {
+  @media (width > 900px) and (prefers-reduced-motion: no-preference) {
+    .land-hero-copy, .land-strip-in, .land-dusk .dusk-far, .land-dusk .dusk-mid, .land-dusk .dusk-near {
+      animation: linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0px var(--land-hero-h, 100vh);
+    }
+    .land-hero-copy { animation-name: land-copy-out; }
+    .land-strip-in { animation-name: land-strip-out; }
+    .land-dusk .dusk-far { animation-name: land-sink-far; }
+    .land-dusk .dusk-mid { animation-name: land-sink-mid; }
+    .land-dusk .dusk-near { animation-name: land-sink-near; }
+    [data-depth] {
+      animation: land-rise linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 45vh; /* from the block's top at the fold to 45% of the screen above it */
+    }
+  }
+}
+@keyframes land-copy-out { from { transform: translateY(0); opacity: 1; } 71.4% { opacity: 0; } to { transform: translateY(-4rem); opacity: 0; } }
+@keyframes land-strip-out { from { transform: translateY(0); opacity: 1; } 62.5% { opacity: 0; } to { transform: translateY(-2rem); opacity: 0; } }
+@keyframes land-sink-far { from { transform: translateY(0); } to { transform: translateY(6.5%); } }
+@keyframes land-sink-mid { from { transform: translateY(0); } to { transform: translateY(13%); } }
+@keyframes land-sink-near { from { transform: translateY(0); } to { transform: translateY(20%); } }
+@keyframes land-rise {
+  from { transform: perspective(70rem) rotateX(8deg) translateY(2.5rem) scale(0.96); opacity: 0.4; }
+  to { transform: perspective(70rem) rotateX(0deg) translateY(0) scale(1); opacity: 1; }
+}
+
 @media (width <= 1200px) {
   .land-top .btn.land-wide { display: none; }
-  /* The hero's parts join one column, with the mascot under them. */
-  .land-hero-core { display: contents; }
-  .land-hero .land-ask { order: 1; max-width: 40rem; padding-inline-start: 0.9rem; }
-  .land-hero .land-tabs { order: 2; }
-  .land-hero-cta { order: 3; }
-  .land-stage { position: relative; order: 4; inset: auto; display: grid; place-items: center; width: 100%; }
-  .land-stage .speech { position: relative; inset: auto; width: auto; max-width: 24rem; margin-block-end: 0.5rem; }
+  .land-perks button { padding-inline: 1rem; }
 }
 @media (width <= 900px) {
-  .landing { gap: 1.2rem; }
   .land-nav { display: none; }
   .land-hero { min-height: 0; }
-  .land-hero .land-sprig { display: none; }
-  .land-stage .land-orb { width: 16rem; height: 16rem; }
-  .land-sheet { gap: 2rem; padding-block-start: 1.8rem; }
-  .land-proof { grid-template-columns: minmax(0, 1fr); }
-  .land-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .land-banner { min-height: 0; }
+  .land-banner::before { background: #1d163680; }
+  .land-banner-sprig { display: none; }
+  .land-hero-copy { width: 100%; }
+  .land-strip-in { grid-template-columns: minmax(0, 1fr); gap: 0.4rem; }
+  .land-cat { flex: 0 0 6.2rem; }
+  .land-split, .land-about .land-split { grid-template-columns: minmax(0, 1fr); }
+  .land-copy { max-width: none; }
+  .land-about-art { order: 1; }
+  .land-perks { grid-template-columns: minmax(0, 1fr); padding-top: 0.6rem; }
+  .land-perks li + li { border-inline-start: 0; border-top: 1px solid var(--land-line); }
+  .land-perks button, .land-perks li:first-child button { padding: 0.9rem 0; }
+  .land-ftabs { justify-content: flex-start; }
+  .land-ftabs button { padding-inline: 1.1rem; }
+  .land-fpanel { margin-top: 2rem; }
+  .land-demo { min-height: 0; }
 }
 @media (width <= 560px) {
-  .land-top.mat { padding-inline: 0.6rem; }
+  .land-top.mat { inset-inline: 0.6rem; padding-inline: 0.6rem; }
   .land-top .logo-text small, .land-top .icon-btn.land-wide { display: none; }
   .land-actions { gap: 0.25rem; }
   .land-actions .btn { --h: 2rem; padding-inline: 0.7rem; font-size: var(--t-micro); }
-  .land-tabs { flex-wrap: wrap; justify-content: center; }
+  .land-tabs { flex-wrap: wrap; }
+  .land-row-head { flex-direction: column; align-items: flex-start; }
   .land-chat .msgs { min-height: 32rem; padding-inline: 0.8rem; }
-  .land-info, .land-about { padding: 1.3rem; }
-  .land-finish.ov-finish { padding: 1.6rem 1.3rem; }
-  .land-steps { grid-template-columns: minmax(0, 1fr); }
+  .land-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .land-lookup .search-box { flex-basis: 100%; max-width: none; }
+  .land-foot-in { flex-direction: column; align-items: flex-start; }
 }

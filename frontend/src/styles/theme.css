@@ -1,0 +1,30 @@
+/* Sharper palette over the vendored zito-ui.css tokens: the same hues, more saturation and contrast, cleaner backgrounds. */
+:root {
+  --sky-0: #fdfaf7;
+  --sky-1: #f9f4f2;
+  --sky-2: #f2ebfb;
+  --sky-3: #e9e0f8;
+  --mist: #faf5fa;
+  --ink: #1d1636;
+  --ink-2: #4a4266;
+  --ink-3: #746c90;
+  --ink-4: #a49cbb;
+  --accent: #7c55e3;
+  --accent-ink: #5631c9;
+  --accent-soft: #e7defd;
+  --accent-wash: #a98ef26b;
+  --accent-grad: linear-gradient(180deg, #8d68ef 0%, #6c44dd 55%, #5631c9 100%);
+  --accent-glow: 0 0.55rem 1.2rem -0.45rem #5f38d48c;
+  --tint-lav: #dccffb;
+  --tint-lav-ink: #6440d0;
+  --tint-rose: #fbd0da;
+  --tint-rose-ink: #c03a5d;
+  --tint-peach: #fdd8be;
+  --tint-peach-ink: #c4591c;
+  --tint-mint: #c8efe1;
+  --tint-mint-ink: #1d8466;
+  --ok: #217a5a;
+  --warn: #9a6210;
+  --err: #b8402c;
+  --info: #4458bd;
+}

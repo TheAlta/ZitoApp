@@ -4,18 +4,26 @@ import {
   ArrowLeft,
   BadgeCheck,
   BookOpenCheck,
+  BrainCircuit,
+  BriefcaseBusiness,
+  Calculator,
   Check,
   Footprints,
+  Handshake,
+  HeartPulse,
   Info,
+  Lightbulb,
   MessageCircleHeart,
   Pencil,
   RefreshCw,
   Route,
+  Scale,
   Search,
   Send,
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Sprout,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -24,7 +32,7 @@ import { toggleAmbient, useAmbient } from "../lib/ambient.js";
 import { clearIntent, readIntent, rememberIntent } from "../lib/intent.js";
 import { STAGE_TITLES, useCourses } from "../lib/learner.js";
 import { profileComplete, useStore } from "../lib/store.jsx";
-import { CoachAvatar, Logo, Sprig } from "../ui/art.jsx";
+import { CoachAvatar, DuskScene, Logo, Sprig } from "../ui/art.jsx";
 import { AIBar, Callout, Dialog, Field, Form, Skel, Sources } from "../ui/kit.jsx";
 import { Mascot, MascotStill } from "../ui/mascot.jsx";
 import { CourseCard } from "./Courses.jsx";
@@ -96,48 +104,135 @@ const EXAMPLES = [
   ["دانشجو", "اگر کلاس صبح تمام شد، پنج دقیقه بدون نگاه به جزوه نکته‌های مهم را می‌نویسم."],
 ];
 
-// The three intro sections in page order; the sticky tabs follow them as the page scrolls.
-const INTRO_TABS = [
-  ["land-coach", "کوچ با منبع"],
-  ["land-example", "مثال در شغل تو"],
-  ["land-path", "مسیر تا گواهی"],
+// Shown only, until courses have real categories (sprint 2.3); each one opens the course list.
+const CATEGORIES = [
+  ["قانون", <Scale key="i" />, "lav"],
+  ["سلامت", <HeartPulse key="i" />, "rose"],
+  ["هوش مصنوعی", <BrainCircuit key="i" />, "mint"],
+  ["مدیریت", <BriefcaseBusiness key="i" />, "peach"],
+  ["فروش", <Handshake key="i" />, "rose"],
+  ["کارآفرینی", <Lightbulb key="i" />, "mint"],
+  ["حسابداری", <Calculator key="i" />, "lav"],
+  ["توسعه‌ی فردی", <Sprout key="i" />, "peach"],
 ];
+
+// What every course has: the tabs of the feature section, and the row under the courses that opens them.
+const FEATURES = [
+  {
+    id: "coach",
+    icon: <MessageCircleHeart />,
+    tint: "lav",
+    tab: "کوچ با منبع",
+    title: "کوچ با منبع",
+    text: "جواب‌ها از محتوای همان دوره، با منبع",
+    heading: "جواب‌ها از محتوای همان دوره می‌آید، نه از حدس",
+    lead: "زیتو کنار هر مرحله به سؤال‌هایت جواب می‌دهد و نشان می‌دهد جواب از کدام بخش دوره آمده است.",
+    points: [
+      [<MessageCircleHeart key="1" />, "جواب‌ها فقط از محتوای تأییدشده‌ی همان دوره و با منبع."],
+      [<Footprints key="2" />, "بعد از هر جواب، یک قدم بعدی روشن پیشنهاد می‌شود."],
+      [<ShieldCheck key="3" />, "سؤال نامرتبط جواب ساختگی نمی‌گیرد."],
+    ],
+  },
+  {
+    id: "example",
+    icon: <BookOpenCheck />,
+    tint: "mint",
+    tab: "مثال در شغل تو",
+    title: "مثال در شغل تو",
+    text: "هر درس با مثالی از کار خودت",
+    heading: "هر درس یک مثال از دنیای کاری خودت دارد",
+    lead: "زیتو از همان اول چند سؤال کوتاه درباره‌ی کار و هدفت می‌پرسد و مثال هر سرفصل را برای تو می‌سازد.",
+    points: [
+      [<BookOpenCheck key="1" />, "مثال‌ها از روی محتوای درس و پروفایل خودت ساخته می‌شوند."],
+      [<Sparkles key="2" />, "درس همان است؛ مثالش به زبان کار تو می‌آید."],
+    ],
+  },
+  {
+    id: "path",
+    icon: <BadgeCheck />,
+    tint: "peach",
+    tab: "مسیر تا گواهی",
+    title: "گواهی قابل استعلام",
+    text: "شماره‌دار و با لینک عمومی",
+    heading: "مسیر هشت‌مرحله‌ای، تا گواهی قابل استعلام",
+    lead: "هر سرفصل از نقشه تا آزمونک هشت مرحله دارد؛ همیشه می‌دانی کجای مسیری و قدم بعدی چیست.",
+    points: [
+      [<Route key="1" />, "پیشرفتت مرحله‌به‌مرحله ذخیره می‌شود."],
+      [<ShieldCheck key="2" />, "گواهی شماره‌دار است و هر کارفرمایی بدون ورود می‌تواند بررسی‌اش کند."],
+    ],
+  },
+];
+
+const ROW_SIZE = 4; // courses on the landing's row; the rest are behind "see all"
 
 const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const jump = (id) => document.getElementById(id)?.scrollIntoView({ behavior: calm() ? "auto" : "smooth" });
 
 // Scroll-driven depth is for wide screens; phones and reduced motion keep a plain page.
-const deep = () => matchMedia("(min-width: 901px) and (prefers-reduced-motion: no-preference)").matches;
+const DEEP = "(min-width: 901px) and (prefers-reduced-motion: no-preference)";
+// Where this holds, landing.css runs the motion from the scroll itself and this hook only measures the hero.
+const DRIVEN = typeof CSS !== "undefined" && CSS.supports("animation-timeline: scroll()");
 
 // Feeds the stylesheet the scroll position: how far the sheet has covered the hero, and how far each block has risen.
+// Positions are measured only when a size changes, so a scroll frame writes and never makes the browser lay out again.
 function useScrollDepth(hero, sheet) {
   useEffect(() => {
+    const deep = matchMedia(DEEP);
+    const written = new Map();
     let frame = 0;
+    let height = 1;
+    let sheetTop = 0;
+    let blocks = [];
+    const write = (node, name, value) => {
+      if (written.get(node)?.[name] === value) return;
+      written.set(node, { ...written.get(node), [name]: value });
+      node.style.setProperty(name, value);
+    };
+    const measure = () => {
+      height = hero.current.offsetHeight || 1;
+      write(hero.current, "--land-hero-h", `${height}px`);
+      if (DRIVEN) return;
+      sheetTop = sheet.current.getBoundingClientRect().top + window.scrollY;
+      // offsetTop ignores the transform this sets, so a block cannot chase its own position.
+      blocks = [...sheet.current.querySelectorAll("[data-depth]")].map((block) => {
+        let offset = 0;
+        for (let node = block; node && node !== sheet.current; node = node.offsetParent) offset += node.offsetTop;
+        return [block, offset];
+      });
+    };
     const paint = () => {
       frame = 0;
-      const height = hero.current.offsetHeight;
-      hero.current.style.setProperty("--land-hero-h", `${height}px`);
-      if (!deep()) return;
+      if (!deep.matches) return;
       const covered = Math.min(1, window.scrollY / height);
-      hero.current.style.setProperty("--covered", covered.toFixed(3));
       hero.current.classList.toggle("land-hero-gone", covered === 1);
-      const top = sheet.current.getBoundingClientRect().top;
-      for (const block of sheet.current.querySelectorAll("[data-depth]")) {
-        // offsetTop ignores the transform this sets, so a block cannot chase its own position.
-        const rise = (window.innerHeight - top - block.offsetTop) / (window.innerHeight * 0.45);
-        block.style.setProperty("--rise", Math.min(1, Math.max(0, rise)).toFixed(3));
+      if (DRIVEN) return;
+      write(hero.current, "--covered", covered.toFixed(3));
+      const view = window.innerHeight;
+      const top = sheetTop - window.scrollY;
+      for (const [block, offset] of blocks) {
+        const rise = (view - top - offset) / (view * 0.45);
+        write(block, "--rise", Math.min(1, Math.max(0, rise)).toFixed(3));
       }
     };
     const request = () => {
       frame ||= requestAnimationFrame(paint);
     };
-    paint();
+    // Courses loading, a typed answer or another feature tab move the blocks below; the sheet's size says when.
+    const sizes = new ResizeObserver(() => {
+      measure();
+      request();
+    });
+    sizes.observe(hero.current);
+    sizes.observe(sheet.current);
     window.addEventListener("scroll", request, { passive: true });
     window.addEventListener("resize", request);
+    deep.addEventListener("change", request);
     return () => {
       cancelAnimationFrame(frame);
+      sizes.disconnect();
       window.removeEventListener("scroll", request);
       window.removeEventListener("resize", request);
+      deep.removeEventListener("change", request);
     };
   }, [hero, sheet]);
 }
@@ -164,10 +259,10 @@ function useTyped(text, run, delay, speed) {
 function Speech() {
   const typed = useTyped(INTRO, true, 800, 35);
   return (
-    <div className="speech mat mat-panel" aria-live="polite">
+    <p aria-live="polite">
       {typed}
       {typed.length < INTRO.length && <span className="caret" />}
-    </div>
+    </p>
   );
 }
 
@@ -275,72 +370,64 @@ function Samples({ tabs, sample, onPick, onAsk, onView }) {
   }, [onView]);
 
   return (
-    <section id="land-samples" className="land-section land-samples" aria-labelledby="land-samples-title">
-      <SectionHead
-        id="land-samples-title"
-        kicker="نمونه‌ی گفت‌وگو با زیتو"
-        title="از کارهای روزمره تا مهارت‌های تخصصی، از زیتو بپرس"
-        intro="یک موضوع انتخاب کن و ببین زیتو چطور از روی محتوای همان دوره جواب می‌دهد."
-      />
-      <TopicTabs tabs={tabs} sample={sample} onPick={onPick} />
-      <div className="land-sample" ref={box} data-depth>
-        <div className="ov-cert-copy">
-          <h3>{sample.title}</h3>
-          <p>{sample.text}</p>
-          <ul className="ov-points">
-            {sample.points.map((point) => (
-              <li key={point}>
-                <Check /> {point}
-              </li>
-            ))}
-          </ul>
+    <section id="land-samples" className="land-band land-samples" aria-labelledby="land-samples-title">
+      <div className="land-wrap">
+        <SectionHead
+          id="land-samples-title"
+          kicker="نمونه‌ی گفت‌وگو با زیتو"
+          title="از کارهای روزمره تا مهارت‌های تخصصی، از زیتو بپرس"
+          intro="یک موضوع انتخاب کن و ببین زیتو چطور از روی محتوای همان دوره جواب می‌دهد."
+        />
+        <TopicTabs tabs={tabs} sample={sample} onPick={onPick} />
+        <div className="land-split" ref={box} data-depth>
+          <div className="land-copy">
+            <h3>{sample.title}</h3>
+            <p>{sample.text}</p>
+            <ul className="land-checks">
+              {sample.points.map((point) => (
+                <li key={point}>
+                  <Check /> {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <SampleChat key={sample.key} sample={sample} run={seen} onAsk={onAsk} />
         </div>
-        <SampleChat key={sample.key} sample={sample} run={seen} onAsk={onAsk} />
       </div>
     </section>
   );
 }
 
-function InfoRow({ id, kicker, title, text, points, children }) {
+function CoachProof() {
   return (
-    <section id={id} className="land-info mat mat-panel" aria-labelledby={`${id}-title`} data-depth>
-      <div className="ov-cert-copy">
-        <span className="ov-kicker">{kicker}</span>
-        <h2 id={`${id}-title`}>{title}</h2>
-        <p>{text}</p>
-        <ul className="ov-points">
-          {points.map(([icon, point]) => (
-            <li key={point}>
-              {icon} {point}
-            </li>
-          ))}
-        </ul>
+    <div className="land-proof">
+      <div className="msg msg-coach">
+        <CoachAvatar size="2.2rem" />
+        <div className="bubble mat mat-raised">
+          <span className="badge badge-ok" style={{ justifySelf: "start" }}>
+            جواب مستند
+          </span>
+          <span>«فعلاً وقت ندارم» اعتراض تاکتیکی است و معمولاً برای فرار از تصمیم‌گیری گفته می‌شود. جواب کوتاه و هدفمند بده و پیگیری در زمان مناسب را پیشنهاد کن.</span>
+          <div className="next-step">
+            <Footprints />
+            <span>
+              <b>قدم بعدی پیشنهادی: </b>اعتراض بعدی‌ای را که شنیدی، منطقی، احساسی یا تاکتیکی دسته‌بندی کن.
+            </span>
+          </div>
+          <Sources sources={[SAMPLES[3].source]} />
+          <AIBar meta={{ status: "ready" }} sources={1} />
+        </div>
       </div>
-      <div className="land-info-art">{children}</div>
-    </section>
-  );
-}
-
-// Sticky tabs over the intro sections: the open one follows the section at the middle of the screen, a press jumps there.
-function IntroTabs() {
-  const [active, setActive] = useState(INTRO_TABS[0][0]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => entries.forEach((entry) => entry.isIntersecting && setActive(entry.target.id)),
-      { rootMargin: "-45% 0px -50% 0px" },
-    );
-    INTRO_TABS.forEach(([id]) => observer.observe(document.getElementById(id)));
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div className="seg land-spy" role="tablist" aria-label="بخش‌های معرفی">
-      {INTRO_TABS.map(([id, label]) => (
-        <button key={id} role="tab" aria-selected={id === active} onClick={() => jump(id)}>
-          {label}
-        </button>
-      ))}
+      <div className="msg msg-coach">
+        <CoachAvatar size="2.2rem" />
+        <div className="bubble mat mat-raised">
+          <span className="badge badge-warn" style={{ justifySelf: "start" }}>
+            <Info /> بیرون از حوزه‌ی درس
+          </span>
+          <span>در منابع تأییدشده‌ی این سرفصل، پاسخ قابل اتکایی برای این سؤال پیدا نکردم.</span>
+          <AIBar meta={{ status: "review" }} sources={0} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -348,10 +435,8 @@ function IntroTabs() {
 function ExampleDemo() {
   const [picked, setPicked] = useState(0);
   return (
-    <div className="land-example mat mat-raised">
-      <span className="badge badge-accent" style={{ justifySelf: "start" }}>
-        درس: برنامه‌ی اگر-آنگاه
-      </span>
+    <div className="land-example">
+      <span className="badge badge-accent">درس: برنامه‌ی اگر-آنگاه</span>
       <div className="choice-row" role="group" aria-label="یک شغل نمونه انتخاب کن">
         {EXAMPLES.map(([job], i) => (
           <button key={job} className="chip" aria-pressed={i === picked} onClick={() => setPicked(i)}>
@@ -359,79 +444,161 @@ function ExampleDemo() {
           </button>
         ))}
       </div>
-      <h3>{STAGE_TITLES.personalized_work_example}</h3>
-      <p aria-live="polite">«{EXAMPLES[picked][1]}»</p>
+      <div className="bubble mat mat-raised">
+        <h3>{STAGE_TITLES.personalized_work_example}</h3>
+        <p aria-live="polite">«{EXAMPLES[picked][1]}»</p>
+      </div>
     </div>
   );
 }
 
-const REEL_PACE = 30; // pixels per second
-const REEL_REST = 1500; // ms the row waits after a hand leaves it, so a swipe can finish
-
-// The course row: a row wider than the screen slides by itself and loops on a hidden copy; one that fits stands still.
-function CourseGallery({ courses, onOpen }) {
-  const box = useRef(null);
-  const set = useRef(null);
-  const held = useRef(false);
-  const wakeAt = useRef(0);
-  const [loops, setLoops] = useState(false);
-
-  useEffect(() => {
-    const observer = new ResizeObserver(() => setLoops(!calm() && set.current.offsetWidth > box.current.clientWidth));
-    observer.observe(box.current);
-    return () => observer.disconnect();
-  }, [courses.length]);
-
-  useEffect(() => {
-    if (!loops) return undefined;
-    const el = box.current;
-    let position = 0;
-    let inView = false;
-    let frame;
-    let last = performance.now();
-    const watcher = new IntersectionObserver(([entry]) => {
-      inView = entry.isIntersecting;
-    });
-    watcher.observe(el);
-    const tick = (now) => {
-      // The page is right-to-left, so the next card lies toward a negative scrollLeft.
-      if (held.current || now < wakeAt.current) position = Math.abs(el.scrollLeft);
-      else if (inView) {
-        position = (position + (Math.min(now - last, 50) / 1000) * REEL_PACE) % set.current.offsetWidth;
-        el.scrollLeft = -position;
-      }
-      last = now;
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(frame);
-      watcher.disconnect();
-    };
-  }, [loops]);
-
-  const hold = () => {
-    held.current = true;
-  };
-  const release = () => {
-    held.current = false;
-    wakeAt.current = performance.now() + REEL_REST;
-  };
-  const cards = courses.map((course) => <CourseCard key={course.id} course={course} onOpen={onOpen} />);
-
+function PathDemo() {
   return (
-    <div className="land-gallery" ref={box} onPointerEnter={hold} onPointerLeave={release} onFocus={hold} onBlur={release}>
-      <div className="land-reel">
-        <div className="land-reel-set" ref={set}>
-          {cards}
-        </div>
-        {loops && (
-          <div className="land-reel-set" aria-hidden="true" inert>
-            {cards}
-          </div>
-        )}
+    <div className="land-path">
+      <ol className="land-steps">
+        {Object.values(STAGE_TITLES).map((title, i) => (
+          <li key={title}>
+            <span className="ov-num">{fa(i + 1)}</span> {title}
+          </li>
+        ))}
+      </ol>
+      <div className="ov-cert-card" aria-label="نمونه‌ی گواهی پایان دوره زیتو">
+        <Logo compact />
+        <span>گواهی پایان دوره زیتو</span>
+        <strong>شماره‌دار و قابل استعلام</strong>
+        <Sprig className="ov-cert-sprig" flowers={7} />
       </div>
     </div>
+  );
+}
+
+const DEMOS = { coach: CoachProof, example: ExampleDemo, path: PathDemo };
+
+// What every course has, one tab at a time: what it is beside how it looks in the course.
+function FeatureTabs({ active, onPick }) {
+  const feature = FEATURES.find((f) => f.id === active);
+  const Demo = DEMOS[active];
+  // Arrow keys move between tabs; in a right-to-left page the left arrow is the next one.
+  const step = (event) => {
+    const move = { ArrowLeft: 1, ArrowRight: -1 }[event.key];
+    if (!move) return;
+    const index = FEATURES.findIndex((f) => f.id === active);
+    const next = FEATURES[(index + move + FEATURES.length) % FEATURES.length].id;
+    onPick(next);
+    document.getElementById(`land-ftab-${next}`)?.focus();
+  };
+  return (
+    <section id="land-features" className="land-band land-features" aria-labelledby="land-features-title">
+      <div className="land-wrap">
+        <SectionHead
+          id="land-features-title"
+          kicker="همراه هر دوره"
+          title="کوچ، مثال شخصی و مسیر تا گواهی"
+          intro="هر سرفصل را با یک کوچ همراه، مثالی از کار خودت و مسیری روشن تا گواهی جلو می‌بری."
+        />
+        <div className="land-ftabs" role="tablist" aria-label="امکانات هر دوره" onKeyDown={step}>
+          {FEATURES.map((f) => (
+            <button
+              key={f.id}
+              id={`land-ftab-${f.id}`}
+              role="tab"
+              aria-selected={f.id === active}
+              aria-controls="land-fpanel"
+              tabIndex={f.id === active ? 0 : -1}
+              onClick={() => onPick(f.id)}
+            >
+              {f.icon} {f.tab}
+            </button>
+          ))}
+        </div>
+        <div id="land-fpanel" className="land-split land-fpanel" role="tabpanel" aria-labelledby={`land-ftab-${active}`} data-depth>
+          <div className="land-copy">
+            <h3>{feature.heading}</h3>
+            <p>{feature.lead}</p>
+            <ul className="land-checks">
+              {feature.points.map(([icon, point]) => (
+                <li key={point}>
+                  {icon} {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="land-demo">
+            <Demo />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// The strip under the banner: category tiles, and Zito saying hello in the corner.
+function Strip({ onBrowse }) {
+  return (
+    <div className="land-strip">
+      <div className="land-wrap land-strip-in">
+        <nav className="land-cats" aria-label="دسته‌بندی دوره‌ها">
+          {CATEGORIES.map(([label, icon, tint]) => (
+            <button key={label} className="land-cat" onClick={onBrowse}>
+              <span className={`tile tile-lg tile-${tint}`}>{icon}</span>
+              {label}
+            </button>
+          ))}
+          <button className="link-btn land-cats-all" onClick={onBrowse}>
+            مشاهده‌ی همه <ArrowLeft />
+          </button>
+        </nav>
+        <div className="land-meet">
+          <div className="land-meet-copy">
+            <div className="land-bubble">
+              <Speech />
+            </div>
+            <button className="btn btn-soft btn-sm" onClick={() => jump("land-about")}>
+              زیتو چیه؟
+            </button>
+          </div>
+          <Mascot motion="wave" height="7rem" className="land-mascot" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// The second screen: published courses, then what every course has, each opening its tab further down.
+function CourseRow({ courses, loading, onStart, onOpen, onFeature }) {
+  return (
+    <section id="land-courses" className="land-band land-courses" aria-labelledby="land-courses-title">
+      <div className="land-wrap" data-depth>
+        <div className="land-row-head">
+          <SectionHead id="land-courses-title" kicker="دوره‌های زیتو" title="از همین دوره‌ها شروع کن" />
+          <button className="link-btn" onClick={onStart}>
+            مشاهده‌ی همه <ArrowLeft />
+          </button>
+        </div>
+        {courses.length ? (
+          <div className="course-grid">
+            {courses.slice(0, ROW_SIZE).map((course) => (
+              <CourseCard key={course.id} course={course} onOpen={onOpen} />
+            ))}
+          </div>
+        ) : (
+          loading && <Skel lines={4} />
+        )}
+        <ul className="land-perks">
+          {FEATURES.map((f) => (
+            <li key={f.id}>
+              <button onClick={() => onFeature(f.id)}>
+                <span className={`tile tile-lg tile-${f.tint}`}>{f.icon}</span>
+                <span>
+                  <b>{f.title}</b>
+                  <small>{f.text}</small>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
 
@@ -461,6 +628,7 @@ export function Landing() {
   const [picked, setPicked] = useState(null);
   const [rolling, setRolling] = useState(() => !calm()); // the hero's slides turn until a person picks a topic
   const [chatInView, setChatInView] = useState(false);
+  const [feature, setFeature] = useState(FEATURES[0].id);
   const held = useRef(null); // a click made before the session is known
   const hero = useRef(null);
   const sheet = useRef(null);
@@ -508,6 +676,10 @@ export function Landing() {
   };
   const nextTab = () => setPicked(tabs[(tabs.indexOf(sample) + 1) % tabs.length].key);
   const nav = NAV.filter(([id]) => (id !== "land-courses" || hasCourses) && (id !== "land-samples" || sample));
+  const openFeature = (id) => {
+    setFeature(id);
+    jump("land-features");
+  };
 
   return (
     <div className="landing">
@@ -542,164 +714,60 @@ export function Landing() {
         </div>
       </header>
       <section className="land-hero" ref={hero}>
-        <div className="land-hero-copy">
-          <span className="badge badge-accent">آموزش فارسی با کوچ هوشمند</span>
-          <h1>
-            از روزمره‌ترین مهارت‌ها تا <em>تخصصی‌ترین آموزش‌ها</em>، با زیتو
-          </h1>
-          <p className="lead">
-            زیتو هر درس را با شغل و هدف تو تطبیق می‌دهد، کنار هر مرحله به سؤال‌هایت از روی محتوای همان دوره جواب می‌دهد
-            و در پایان گواهی قابل استعلام می‌گیری.
-          </p>
-        </div>
-        <div className="land-hero-core">
-          <HeroAsk key={sample?.key} sample={sample} onAsk={start} />
-          <div className="land-stage">
-            <div className="land-orb" aria-hidden="true" />
-            <div className="land-stage-depth">
-              <Speech />
-              <Mascot motion="wave" height="15rem" className="land-mascot" />
-            </div>
-          </div>
-        </div>
-        <TopicTabs tabs={tabs} sample={sample} onPick={pick} onNext={rolling ? nextTab : undefined} paused={chatInView || authOpen} />
-        <div className="row land-hero-cta">
-          <button className="btn btn-primary btn-lg" onClick={start}>
-            {startLabel} <ArrowLeft />
-          </button>
-          <button className="btn btn-ghost btn-lg" onClick={() => jump("land-about")}>
-            زیتو چیه؟
-          </button>
-        </div>
-        <Sprig className="land-sprig" flowers={12} />
-      </section>
-      <div className="land-sheet" ref={sheet}>
-        {sample && <Samples tabs={tabs} sample={sample} onPick={pick} onAsk={start} onView={setChatInView} />}
-        <div className="land-section land-infos">
-          <IntroTabs />
-          <InfoRow
-            id="land-coach"
-            kicker="کوچ با منبع"
-            title="جواب‌ها از محتوای همان دوره می‌آید، نه از حدس"
-            text="زیتو کنار هر مرحله به سؤال‌هایت جواب می‌دهد و نشان می‌دهد جواب از کدام بخش دوره آمده است."
-            points={[
-              [<MessageCircleHeart key="1" />, "جواب‌ها فقط از محتوای تأییدشده‌ی همان دوره و با منبع."],
-              [<Footprints key="2" />, "بعد از هر جواب، یک قدم بعدی روشن پیشنهاد می‌شود."],
-              [<ShieldCheck key="3" />, "سؤال نامرتبط جواب ساختگی نمی‌گیرد."],
-            ]}
-          >
-            <div className="land-proof">
-              <div className="msg msg-coach">
-                <CoachAvatar size="2.2rem" />
-                <div className="bubble mat mat-raised">
-                  <span className="badge badge-ok" style={{ justifySelf: "start" }}>
-                    جواب مستند
-                  </span>
-                  <span>«فعلاً وقت ندارم» اعتراض تاکتیکی است و معمولاً برای فرار از تصمیم‌گیری گفته می‌شود. جواب کوتاه و هدفمند بده و پیگیری در زمان مناسب را پیشنهاد کن.</span>
-                  <div className="next-step">
-                    <Footprints />
-                    <span>
-                      <b>قدم بعدی پیشنهادی: </b>اعتراض بعدی‌ای را که شنیدی، منطقی، احساسی یا تاکتیکی دسته‌بندی کن.
-                    </span>
-                  </div>
-                  <Sources sources={[SAMPLES[3].source]} />
-                  <AIBar meta={{ status: "ready" }} sources={1} />
-                </div>
-              </div>
-              <div className="msg msg-coach">
-                <CoachAvatar size="2.2rem" />
-                <div className="bubble mat mat-raised">
-                  <span className="badge badge-warn" style={{ justifySelf: "start" }}>
-                    <Info /> بیرون از حوزه‌ی درس
-                  </span>
-                  <span>در منابع تأییدشده‌ی این سرفصل، پاسخ قابل اتکایی برای این سؤال پیدا نکردم.</span>
-                  <AIBar meta={{ status: "review" }} sources={0} />
-                </div>
-              </div>
-            </div>
-          </InfoRow>
-          <InfoRow
-            id="land-example"
-            kicker="مثال در شغل تو"
-            title="هر درس یک مثال از دنیای کاری خودت دارد"
-            text="زیتو از همان اول چند سؤال کوتاه درباره‌ی کار و هدفت می‌پرسد و مثال هر سرفصل را برای تو می‌سازد."
-            points={[
-              [<BookOpenCheck key="1" />, "مثال‌ها از روی محتوای درس و پروفایل خودت ساخته می‌شوند."],
-              [<Sparkles key="2" />, "درس همان است؛ مثالش به زبان کار تو می‌آید."],
-            ]}
-          >
-            <ExampleDemo />
-          </InfoRow>
-          <InfoRow
-            id="land-path"
-            kicker="از قدم اول تا گواهی"
-            title="مسیر هشت‌مرحله‌ای، تا گواهی قابل استعلام"
-            text="هر سرفصل از نقشه تا آزمونک هشت مرحله دارد؛ همیشه می‌دانی کجای مسیری و قدم بعدی چیست."
-            points={[
-              [<Route key="1" />, "پیشرفتت مرحله‌به‌مرحله ذخیره می‌شود."],
-              [<ShieldCheck key="2" />, "گواهی شماره‌دار است و هر کارفرمایی بدون ورود می‌تواند بررسی‌اش کند."],
-            ]}
-          >
-            <div className="land-path">
-              <ol className="land-steps">
-                {Object.values(STAGE_TITLES).map((title, i) => (
-                  <li key={title} className="mat mat-raised">
-                    <span className="ov-num">{fa(i + 1)}</span> {title}
-                  </li>
-                ))}
-              </ol>
-              <div className="ov-cert-card" aria-label="نمونه‌ی گواهی پایان دوره زیتو">
-                <Logo compact />
-                <span>گواهی پایان دوره زیتو</span>
-                <strong>شماره‌دار و قابل استعلام</strong>
-                <Sprig className="ov-cert-sprig" flowers={7} />
-              </div>
-            </div>
-          </InfoRow>
-        </div>
-        <section id="land-about" className="land-about mat mat-panel" aria-labelledby="land-about-title" data-depth>
-          <div className="land-about-art" aria-hidden="true">
-            <Mascot motion="intro" height="13rem" />
-          </div>
-          <div className="ov-finish-copy">
-            <span className="ov-kicker">زیتو چیه؟</span>
-            <h2 id="land-about-title">یک همراه یادگیری که تا آخر مسیر کنارت می‌ماند</h2>
-            <p>
-              دوره‌ها را تیم محتوا با کمک هوش مصنوعی می‌سازد و بازبینی می‌کند. تو سرفصل‌به‌سرفصل جلو می‌روی و هر جا گیر کردی، از
-              زیتو می‌پرسی؛ از مهارت‌های روزمره‌ای که هر روز به کارت می‌آید تا آموزش‌های تخصصی شغلت.
-            </p>
-          </div>
-        </section>
-        {hasCourses && (
-          <section id="land-courses" className="land-courses" aria-labelledby="land-courses-title">
-            <div className="land-section land-courses-head" data-depth>
-              <SectionHead
-                id="land-courses-title"
-                kicker="دوره‌های زیتو"
-                title="از همین دوره‌ها شروع کن"
-                intro="روی هر دوره بزن تا مسیر و سرفصل‌هایش را ببینی."
-              />
+        <div className="land-banner">
+          <DuskScene className="land-dusk" />
+          <Sprig className="land-banner-sprig" flowers={12} />
+          <div className="land-wrap">
+            <div className="land-hero-copy">
+              <h1>
+                از روزمره‌ترین مهارت‌ها تا <em>تخصصی‌ترین آموزش‌ها</em>، با زیتو
+              </h1>
+              <p className="lead">زیتو هر درس را با شغل و هدف تو تطبیق می‌دهد و کنار هر مرحله، از روی همان دوره جوابت را می‌دهد.</p>
+              <HeroAsk key={sample?.key} sample={sample} onAsk={start} />
+              <TopicTabs tabs={tabs} sample={sample} onPick={pick} onNext={rolling ? nextTab : undefined} paused={chatInView || authOpen} />
               <button className="btn btn-primary btn-lg" onClick={start}>
                 {startLabel} <ArrowLeft />
               </button>
             </div>
-            {published.length ? (
-              <CourseGallery courses={published} onOpen={(course) => enter({ name: "course", slug: course.slug })} />
-            ) : (
-              <div className="land-section">
-                <Skel lines={4} />
-              </div>
-            )}
-          </section>
-        )}
-        <section className="land-section land-finish ov-finish mat mat-panel" aria-labelledby="land-finish" data-depth>
-          <div className="ov-finish-art" aria-hidden="true">
-            <span className="ov-portal" />
-            <MascotStill pose="laptop" height="10.5rem" />
           </div>
-          <div className="ov-finish-copy">
+        </div>
+        <Strip onBrowse={start} />
+      </section>
+      <div className="land-sheet" ref={sheet}>
+        {hasCourses && (
+          <CourseRow
+            courses={published}
+            loading={courses.loading}
+            onStart={start}
+            onOpen={(course) => enter({ name: "course", slug: course.slug })}
+            onFeature={openFeature}
+          />
+        )}
+        {sample && <Samples tabs={tabs} sample={sample} onPick={pick} onAsk={start} onView={setChatInView} />}
+        <FeatureTabs active={feature} onPick={setFeature} />
+        <section id="land-about" className="land-band land-about" aria-labelledby="land-about-title">
+          <div className="land-wrap land-split" data-depth>
+            <div className="land-about-art" aria-hidden="true">
+              <Mascot motion="intro" height="15rem" />
+            </div>
+            <div className="land-copy">
+              <span className="ov-kicker">زیتو چیه؟</span>
+              <h2 id="land-about-title">یک همراه یادگیری که تا آخر مسیر کنارت می‌ماند</h2>
+              <p>
+                دوره‌ها را تیم محتوا با کمک هوش مصنوعی می‌سازد و بازبینی می‌کند. تو سرفصل‌به‌سرفصل جلو می‌روی و هر جا گیر کردی، از
+                زیتو می‌پرسی؛ از مهارت‌های روزمره‌ای که هر روز به کارت می‌آید تا آموزش‌های تخصصی شغلت.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section className="land-band land-finish" aria-labelledby="land-finish">
+          <div className="land-wrap land-finish-in" data-depth>
+            <div className="ov-finish-art" aria-hidden="true">
+              <span className="ov-portal" />
+              <MascotStill pose="laptop" height="10.5rem" />
+            </div>
             <span className="ov-kicker">قدم اول همین‌جاست</span>
-            <h2 id="land-finish">همین حالا شروع کنید</h2>
+            <h2 id="land-finish">همین حالا شروع کن</h2>
             <p>یک دوره انتخاب کن، چند سؤال کوتاه جواب بده و زیتو مسیر را با کار و هدف خودت همراه می‌کند.</p>
             <button className="btn btn-primary btn-lg" onClick={start}>
               {startLabel} <ArrowLeft />
@@ -707,6 +775,21 @@ export function Landing() {
             <CertLookup />
           </div>
         </section>
+        <footer className="land-foot">
+          <div className="land-wrap land-foot-in">
+            <Logo />
+            <nav aria-label="پیوندهای پایین صفحه">
+              {nav.map(([id, label]) => (
+                <button key={id} className="link-btn" onClick={() => jump(id)}>
+                  {label}
+                </button>
+              ))}
+              <button className="link-btn" onClick={() => go({ name: "certificate" })}>
+                استعلام گواهی
+              </button>
+            </nav>
+          </div>
+        </footer>
       </div>
       {authOpen && <AuthDialog onClose={closeAuth} />}
     </div>

@@ -1,0 +1,38 @@
+/* Full-width learner and public pages (sprint 2.2): content fills the screen, text keeps a readable width. */
+
+/* Course and certificate lists: the cards share the row instead of leaving empty columns. */
+.course-grid { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.course-grid .course-cover { height: clamp(8.2rem, 12vw, 14rem); }
+
+/* Profile: two columns of fields */
+.profile-form { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.4rem; }
+.profile-form > .btn { grid-column: 1 / -1; justify-self: start; }
+
+/* Onboarding: the chat beside a card that fills as the answers come, laid out like the coach page */
+.onb-page { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; align-items: start; gap: 0.85rem; }
+.onb-page .onb { width: 100%; max-width: none; }
+.onb-side { position: sticky; top: 0; display: grid; gap: 0.85rem; }
+.onb-side .kv dd { overflow-wrap: anywhere; }
+.onb-side .kv dd.pending { color: var(--ink-4); }
+.onb-side .kv dt[aria-current] { color: var(--accent-ink); font-weight: 600; }
+.onb-side p { font-size: var(--t-small); color: var(--ink-2); line-height: 1.9; }
+
+/* Public certificate: a full-width bar, the certificate beside its check */
+.public { --page-max: 98rem; /* the landing's width cap */ padding-inline: clamp(1rem, 4vw, 3rem); }
+.public-top.mat { max-width: var(--page-max); padding: 0.5rem 0.9rem; border-radius: var(--r-xl); }
+.public-cert { display: grid; grid-template-columns: minmax(0, 62rem) minmax(18rem, 30rem); justify-content: center; align-items: start; gap: 1rem; width: 100%; max-width: var(--page-max); margin-inline: auto; }
+.public-cert .cert { max-width: none; }
+.public .cert-empty { max-width: var(--page-max); padding-block: 3rem; }
+.public-cert .row { justify-content: flex-start; }
+
+@media (width <= 1200px) {
+  .onb-page { grid-template-columns: minmax(0, 1fr); }
+  .onb-side { display: none; }
+  .public-cert { grid-template-columns: minmax(0, 1fr); }
+}
+@media (width <= 900px) {
+  .profile-form { grid-template-columns: minmax(0, 1fr); }
+}
+@media print {
+  .public-cert { display: block; }
+}

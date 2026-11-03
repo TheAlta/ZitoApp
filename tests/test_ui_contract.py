@@ -146,14 +146,21 @@ class UiContractTests(unittest.TestCase):
         styles = source("styles/landing.css")
         # Reduced motion ends every animation at once, so the slides must not depend on one finishing.
         self.assertIn("useState(() => !calm())", landing)
-        self.assertIn("setLoops(!calm() &&", landing)
-        self.assertIn("(width > 900px) and (prefers-reduced-motion: no-preference)", styles)
-        # The looping copy of the course row is never reached by keyboard or screen reader.
-        self.assertIn('aria-hidden="true" inert', landing)
+        motion = styles.index("(width > 900px) and (prefers-reduced-motion: no-preference)")
+        # The banner's ridges move only inside that query.
+        self.assertGreater(styles.index(".land-dusk .dusk-near"), motion)
         # With no published topic the sample section is gone rather than showing another course's sample.
         self.assertIn("{sample && <Samples", landing)
         package = json.loads(Path("frontend/package.json").read_text(encoding="utf-8"))
         self.assertEqual(sorted(package["dependencies"]), ["lucide-react", "react", "react-dom"])
+
+    def test_landing_top_shows_real_courses_and_no_made_up_figures(self) -> None:
+        landing = source("pages/Landing.jsx")
+        # The category tiles are for show until courses have categories, and each one opens the course list.
+        self.assertIn("<Strip onBrowse={start} />", landing)
+        self.assertIn("courses={published}", landing)
+        for made_up in ("محبوب", "تیزر", "۶۰ آموزش"):
+            self.assertNotIn(made_up, landing)
 
     def test_cms_screens_cover_the_authoring_lifecycle(self) -> None:
         studio = source("pages/admin/Studio.jsx")

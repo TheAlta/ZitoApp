@@ -5,7 +5,7 @@ import { useCached } from "../lib/cache.js";
 import { fa, jalali } from "../lib/format.js";
 import { useStore } from "../lib/store.jsx";
 import { Drop, Logo, Sprig } from "../ui/art.jsx";
-import { Empty, Field, Form, Skel } from "../ui/kit.jsx";
+import { Empty, Field, Form, Panel, Skel } from "../ui/kit.jsx";
 
 export function Certificate({ id }) {
   const { session, go, toast } = useStore();
@@ -26,7 +26,7 @@ export function Certificate({ id }) {
 
   return (
     <div className="public">
-      <div className="public-top no-print">
+      <div className="public-top mat mat-panel no-print">
         <button onClick={back} aria-label="بازگشت">
           <Logo />
         </button>
@@ -36,15 +36,15 @@ export function Certificate({ id }) {
         </Form>
       </div>
       {!number ? (
-        <div className="cert">
+        <div className="cert cert-empty">
           <Empty icon={<BadgeCheck />} title="استعلام گواهی زیتو" text="شماره‌ی گواهی را وارد کن تا اصالتش بررسی شود. نمونه: ZITO-2026-39BC6E0453BF" />
         </div>
       ) : lookup.loading && !cert ? (
-        <div className="cert">
+        <div className="cert cert-empty">
           <Skel lines={6} />
         </div>
       ) : cert ? (
-        <>
+        <div className="public-cert">
           <article className="cert" aria-label="گواهی پایان دوره">
             <Sprig className="cert-sprig" flowers={12} />
             <span className="seal">
@@ -80,17 +80,29 @@ export function Certificate({ id }) {
               {cert.certificate_number}
             </small>
           </article>
-          <div className="row no-print" style={{ justifyContent: "center" }}>
-            <button className="btn btn-primary" onClick={() => window.print()}>
-              <Printer /> چاپ یا ذخیره PDF
-            </button>
-            <button className="btn btn-soft" onClick={copy}>
-              <Share2 /> کپی لینک استعلام
-            </button>
-          </div>
-        </>
+          <Panel className="no-print" title="نتیجه‌ی استعلام" action={<span className="badge badge-ok">معتبر</span>}>
+            <dl className="kv">
+              <dt>دارنده</dt>
+              <dd>{cert.recipient_name}</dd>
+              <dt>دوره</dt>
+              <dd>{cert.course_title}</dd>
+              <dt>تاریخ صدور</dt>
+              <dd>{jalali(cert.issued_at)}</dd>
+              <dt>شماره</dt>
+              <dd className="ltr">{cert.certificate_number}</dd>
+            </dl>
+            <div className="row" style={{ marginTop: "1rem" }}>
+              <button className="btn btn-primary" onClick={() => window.print()}>
+                <Printer /> چاپ یا ذخیره PDF
+              </button>
+              <button className="btn btn-soft" onClick={copy}>
+                <Share2 /> کپی لینک استعلام
+              </button>
+            </div>
+          </Panel>
+        </div>
       ) : (
-        <div className="cert">
+        <div className="cert cert-empty">
           <Empty icon={<BadgeCheck />} title="گواهی قابل نمایش نیست" text="شماره‌ای که وارد کردی در زیتو ثبت نشده. شماره را دوباره و با دقت بررسی کن." />
         </div>
       )}

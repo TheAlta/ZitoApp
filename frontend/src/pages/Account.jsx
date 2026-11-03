@@ -91,7 +91,7 @@ export function Profile() {
   };
 
   return (
-    <div className="stack" style={{ maxWidth: "44rem" }}>
+    <div className="stack">
       <div className="page-head">
         <div>
           <h1>پروفایل من</h1>
@@ -102,7 +102,7 @@ export function Profile() {
         </div>
       </div>
       <Panel>
-        <Form onSubmit={save}>
+        <Form className="form profile-form" onSubmit={save}>
           {PROFILE_KEYS.map((key) => {
             const q = PROFILE_QUESTIONS[key];
             return (
@@ -127,7 +127,7 @@ export function Profile() {
               </Field>
             );
           })}
-          <button className="btn btn-primary" type="submit" style={{ justifySelf: "start" }} disabled={busy}>
+          <button className="btn btn-primary" type="submit" disabled={busy}>
             <Save /> {busy ? "در حال ذخیره…" : "ذخیره‌ی پروفایل"}
           </button>
         </Form>

@@ -60,7 +60,7 @@
   display: grid;
   align-items: center;
   min-height: 24rem;
-  padding-block: calc(var(--land-bar) + 1.2rem) clamp(1.6rem, 5vh, 3.6rem);
+  padding-block: calc(var(--land-bar) + 1.2rem) clamp(1rem, 3.5svh, 3.6rem);
   overflow: hidden;
   background: linear-gradient(160deg, var(--ink), var(--accent-ink)); /* under the art */
 }
@@ -69,8 +69,9 @@
 /* Keeps the copy readable over the lighter part of the sky */
 .land-banner::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to left, #1d1636d9, #1d163680 45%, #1d163600 72%); }
 .land-banner-sprig { position: absolute; inset-block-end: -1.4rem; inset-inline-end: 2rem; z-index: -1; width: 4rem; height: 11rem; opacity: 0.9; pointer-events: none; }
-.land-hero-copy { position: relative; display: grid; justify-items: start; gap: 1rem; width: min(100%, 42rem); text-align: start; }
-.land-hero h1 { max-width: none; font-weight: 700; color: var(--on-accent); text-wrap: balance; }
+/* Spacing and the title also follow the window's height, so on a short laptop window the strip and Zito still fit the first screen. */
+.land-hero-copy { position: relative; display: grid; justify-items: start; gap: clamp(0.6rem, 1.9svh, 1rem); width: min(100%, 42rem); text-align: start; }
+.land-hero h1 { max-width: none; font-size: clamp(2rem, min(3.6vw, 6.4svh), 3.1rem); font-weight: 700; color: var(--on-accent); text-wrap: balance; }
 .land-hero h1 em { background-image: linear-gradient(90deg, #ffb6c8, #ffc9a3 55%, #cdb8ff); }
 .land-hero p.lead { max-width: 36rem; margin-block: 0; font-size: 1.02rem; line-height: 2; color: var(--on-accent); opacity: 0.9; }
 .land-hero .land-ask { width: 100%; min-height: 4rem; margin: 0; font-size: var(--t-body); color: var(--ink-2); box-shadow: 0 1.4rem 3rem -1.6rem #000c, 0 0 0 1px #ffffffcc inset; }
@@ -119,7 +120,7 @@
 .land-meet-copy { flex: 1; display: grid; justify-items: start; gap: 0.55rem; min-width: 0; padding-block-end: 1rem; }
 .land-bubble { width: 100%; padding: 0.7rem 0.95rem; border-radius: var(--r-lg) var(--r-lg) var(--r-lg) 0.3rem; background: #fff; box-shadow: 0 0.8rem 1.6rem -1.2rem #5631c966; }
 .land-bubble p { min-height: 5.6em; font-size: var(--t-small); line-height: 1.9; color: var(--ink); }
-.land-meet .land-mascot { flex: none; margin-block-end: 1.3rem; }
+.land-meet .land-mascot { flex: none; margin-block-end: 1rem; } /* feet level with the category labels */
 
 /* What rises over the first screen */
 .land-sheet { position: relative; z-index: 1; display: flex; flex-direction: column; background: var(--sky-0); box-shadow: 0 -1.4rem 3rem -2rem #1d163673; }

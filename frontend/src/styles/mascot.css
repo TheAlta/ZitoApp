@@ -52,10 +52,6 @@
 }
 
 /* Placements that replace the demo's glass drop. */
-.land-mascot { position: relative; z-index: 1; margin-top: 4.5rem; }
 .about-mascot { display: grid; place-items: center; margin-block-end: 0.8rem; }
 .assistant-hero { overflow: hidden; align-items: end; }
 .assistant-hero .mascot-img { margin-bottom: -1.3rem; }
-@media (width <= 900px) {
-  .land-mascot { height: 12rem !important; }
-}

@@ -54,6 +54,7 @@ The SSH server password belongs in this local vault or a real password manager, 
 - Set `APP_ENV=production` on the server.
 - Use PostgreSQL for `DATABASE_URL`.
 - Use `ARVAN_MOCK_AI=false`.
+- Use `OTP_MOCK=false` and `AUTO_CREATE_TABLES=false`. The app refuses to start in production otherwise.
 - Use a strong `ADMIN_PASSWORD` and a long random `ADMIN_SESSION_SECRET`.
 - `ADMIN_PASSWORD` is only used when the very first admin is seeded. Existing admins keep their hashed password in the database.
 - Rotate any secret that was ever posted in chat, issue trackers, screenshots, or logs.

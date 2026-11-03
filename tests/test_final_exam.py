@@ -149,7 +149,11 @@ class FinalExamTests(unittest.TestCase):
             certificate = client.get(f"/api/learning/enrollments/{enrollment_id}/certificate")
             certificate_number = result.json()["certificate"]["certificate_number"]
             verification = client.get(f"/api/certificates/{certificate_number}")
+            # Opening the path again after passing must leave the enrollment completed.
+            path = client.get("/api/learning/enrollments/current")
+            client.get(f"/api/learning/enrollments/{enrollment_id}")
 
+        self.assertEqual(path.status_code, 200)
         self.assertEqual(result.status_code, 200)
         self.assertTrue(result.json()["passed"])
         self.assertEqual(result.json()["score"], 82)
@@ -168,6 +172,7 @@ class FinalExamTests(unittest.TestCase):
                 select(Certificate).where(Certificate.exam_attempt_id == attempt_payload["id"])
             ).all()
         self.assertEqual(enrollment.status, "completed")
+        self.assertIsNotNone(enrollment.completed_at)
         self.assertEqual(len(certificates), 1)
 
     def test_failed_attempt_can_start_a_new_attempt(self) -> None:

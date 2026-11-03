@@ -504,8 +504,10 @@ def _sync_module_enrollment_progress(
     if total and completed_count == total:
         enrollment.current_stage_number = total
         if requires_final_exam:
-            enrollment.status = "awaiting_final_exam"
-            enrollment.completed_at = None
+            # Only a passed exam sets "completed"; reading the path must not undo it.
+            if enrollment.status != "completed":
+                enrollment.status = "awaiting_final_exam"
+                enrollment.completed_at = None
         else:
             enrollment.status = "completed"
             enrollment.completed_at = enrollment.completed_at or datetime.now(timezone.utc)

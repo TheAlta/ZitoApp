@@ -91,6 +91,10 @@ class Settings(BaseSettings):
         if missing:
             joined = ", ".join(missing)
             raise ValueError(f"Unsafe production configuration. Set secure values for: {joined}")
+        # Both default to on for local work, so a missing line must stop production rather than open it.
+        enabled = [name for name, on in (("OTP_MOCK", self.otp_mock), ("AUTO_CREATE_TABLES", self.auto_create_tables)) if on]
+        if enabled:
+            raise ValueError(f"Unsafe production configuration. Turn off: {', '.join(enabled)}")
         if self.arvan_embedding_dimensions != 3072:
             raise ValueError("ARVAN_EMBEDDING_DIMENSIONS must match the configured Bge-m3 endpoint (3072).")
         return self
